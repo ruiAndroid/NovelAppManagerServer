@@ -1,0 +1,61 @@
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# Eclipse
+.classpath
+.project
+.settings/
+.loadpath
+
+# NetBeans
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Log files
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Local configuration files
+application-local.properties
+application-dev.properties
+application-test.properties
+
+# Lombok
+lombok.config
+
+# Gradle
+.gradle/
+build/
+
+# JRebel
+rebel-*.xml
+
+# OS generated files
+ehthumbs.db
+Desktop.ini
