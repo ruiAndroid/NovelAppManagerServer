@@ -1,9 +1,9 @@
 package com.fun.novel.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.fun.novel.entity.NovelWeijuBanner;
-import com.fun.novel.mapper.NovelWeijuBannerMapper;
-import com.fun.novel.service.NovelWeijuBannerService;
+import com.fun.novel.entity.AppWeijuBanner;
+import com.fun.novel.mapper.AppWeijuBannerMapper;
+import com.fun.novel.service.AppWeijuBannerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,28 +11,28 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
-public class NovelWeijuBannerServiceImpl implements NovelWeijuBannerService {
+public class AppWeijuBannerServiceImpl implements AppWeijuBannerService {
     
     @Autowired
-    private NovelWeijuBannerMapper bannerMapper;
+    private AppWeijuBannerMapper bannerMapper;
 
     @Override
     @Transactional
-    public NovelWeijuBanner addBanner(NovelWeijuBanner banner) {
+    public AppWeijuBanner addBanner(AppWeijuBanner banner) {
         bannerMapper.insert(banner);
         return banner;
     }
 
     @Override
-    public List<NovelWeijuBanner> getBannerList() {
+    public List<AppWeijuBanner> getBannerList() {
         return bannerMapper.selectList(new LambdaQueryWrapper<>());
     }
 
     @Override
     @Transactional
-    public NovelWeijuBanner updateBanner(NovelWeijuBanner banner) {
+    public AppWeijuBanner updateBanner(AppWeijuBanner banner) {
         // 先检查记录是否存在
-        NovelWeijuBanner existingBanner = bannerMapper.selectById(banner.getAdId());
+        AppWeijuBanner existingBanner = bannerMapper.selectById(banner.getAdId());
         if (existingBanner == null) {
             throw new IllegalArgumentException("要更新的Banner记录不存在");
         }
@@ -49,17 +49,17 @@ public class NovelWeijuBannerServiceImpl implements NovelWeijuBannerService {
 
 
     @Override
-    public NovelWeijuBanner getBannerByBannerId(String bannerId) {
-        LambdaQueryWrapper<NovelWeijuBanner> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(NovelWeijuBanner::getBannerId, bannerId);
+    public AppWeijuBanner getBannerByBannerId(String bannerId) {
+        LambdaQueryWrapper<AppWeijuBanner> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(AppWeijuBanner::getBannerId, bannerId);
         return bannerMapper.selectOne(queryWrapper);
     }
 
     @Override
     @Transactional
     public boolean deleteBannerByBannerId(String bannerId) {
-        LambdaQueryWrapper<NovelWeijuBanner> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(NovelWeijuBanner::getBannerId, bannerId);
+        LambdaQueryWrapper<AppWeijuBanner> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(AppWeijuBanner::getBannerId, bannerId);
         return bannerMapper.delete(queryWrapper) > 0;
     }
 } 

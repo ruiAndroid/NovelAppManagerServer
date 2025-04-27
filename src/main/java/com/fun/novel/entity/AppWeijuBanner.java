@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @Data
 @TableName("app_weiju_banner")
 @Schema(description = "小说微距banner信息")
-public class NovelWeijuBanner {
+public class AppWeijuBanner {
     @TableId(type = IdType.AUTO)
     @TableField("ad_id")
     @Schema(description = "主键ID")

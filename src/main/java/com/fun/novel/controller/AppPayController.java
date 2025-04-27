@@ -1,7 +1,6 @@
 package com.fun.novel.controller;
 
 import com.fun.novel.common.Result;
-import com.fun.novel.entity.AppPay;
 import com.fun.novel.service.AppPayService;
 import com.fun.novel.dto.CreateAppPayRequest;
 import com.fun.novel.dto.UpdateAppPayRequest;
@@ -18,7 +17,7 @@ import javax.validation.Valid;
 @RequestMapping("/api/novel-pay")
 @Tag(name = "支付管理", description = "小程序支付配置管理接口")
 @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
-public class NovelPayController {
+public class AppPayController {
 
     @Autowired
     private AppPayService appPayService;

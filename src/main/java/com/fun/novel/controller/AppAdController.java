@@ -14,13 +14,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/novel-ad")
 @Tag(name = "广告管理", description = "小程序广告和广告配置管理接口")
 @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
-public class NovelAdController {
+public class AppAdController {
 
     @Autowired
     private AppAdService appAdService;

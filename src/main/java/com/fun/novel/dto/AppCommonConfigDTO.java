@@ -11,7 +11,7 @@ public class AppCommonConfigDTO {
     
     @NotBlank(message = "应用ID不能为空")
     @Schema(description = "应用ID")
-    private String appid;
+    private String appId;
     
     @Schema(description = "联系方式")
     private String contact;

@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Data
 @TableName("app_weiju_deliver")
 @Schema(description = "小说微距deliver信息")
-public class NovelWeijuDeliver {
+public class AppWeijuDeliver {
     @TableId(type = IdType.AUTO)
     @TableField("ad_id")
     @Schema(description = "主键ID")
