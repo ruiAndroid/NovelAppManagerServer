@@ -38,6 +38,14 @@ public class AppCommonConfig {
     @TableField("kuaishou_client_secret")
     private String kuaishouClientSecret;
     
+    @Schema(description = "支付卡片样式")
+    @TableField("pay_card_style")
+    private Integer payCardStyle;
+    
+    @Schema(description = "首页卡片样式")
+    @TableField("home_card_style")
+    private Integer homeCardStyle;
+    
     @Schema(description = "创建时间")
     @TableField("create_time")
     private LocalDateTime createTime;
