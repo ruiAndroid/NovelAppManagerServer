@@ -1,5 +1,6 @@
 package com.fun.novel.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fun.novel.entity.AppPay;
@@ -195,5 +196,12 @@ public class AppPayServiceImpl extends ServiceImpl<AppPayMapper, AppPay> impleme
         queryWrapper.eq("appid", appId).eq("pay_type", payType);
         
         return remove(queryWrapper);
+    }
+
+    @Override
+    public boolean deleteAppPayByAppId(String appId) {
+        LambdaQueryWrapper<AppPay> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(AppPay::getAppid, appId);
+        return remove(wrapper);
     }
 } 

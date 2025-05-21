@@ -35,4 +35,11 @@ public interface NovelAppService {
      * @throws IllegalArgumentException 当应用不存在时抛出
      */
     NovelApp updateNovelApp(NovelApp novelApp);
+
+    /**
+     * 根据应用ID获取应用信息
+     * @param appId 应用ID
+     * @return 应用信息
+     */
+    NovelApp getByAppId(String appId);
 }

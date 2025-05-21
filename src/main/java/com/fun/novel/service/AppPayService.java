@@ -26,4 +26,11 @@ public interface AppPayService {
      * Delete app pay configuration by appId and payType
      */
     boolean deleteAppPayByAppIdAndType(String appId, String payType);
+    
+    /**
+     * 删除应用的所有支付配置
+     * @param appId 应用ID
+     * @return 是否删除成功
+     */
+    boolean deleteAppPayByAppId(String appId);
 } 

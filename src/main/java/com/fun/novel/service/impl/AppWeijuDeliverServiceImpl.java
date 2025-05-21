@@ -1,44 +1,54 @@
 package com.fun.novel.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fun.novel.entity.AppWeijuDeliver;
 import com.fun.novel.mapper.AppWeijuDeliverMapper;
 import com.fun.novel.service.AppWeijuDeliverService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
-public class AppWeijuDeliverServiceImpl implements AppWeijuDeliverService {
-
-    @Autowired
-    private AppWeijuDeliverMapper deliverMapper;
-
+public class AppWeijuDeliverServiceImpl extends ServiceImpl<AppWeijuDeliverMapper, AppWeijuDeliver> implements AppWeijuDeliverService {
+    
     @Override
     @Transactional
     public AppWeijuDeliver addDeliver(AppWeijuDeliver deliver) {
-        deliverMapper.insert(deliver);
+        save(deliver);
         return deliver;
+    }
+
+    @Override
+    public List<AppWeijuDeliver> getDeliverList() {
+        return list(new LambdaQueryWrapper<>());
     }
 
     @Override
     @Transactional
     public AppWeijuDeliver updateDeliver(AppWeijuDeliver deliver) {
-        deliverMapper.updateById(deliver);
-        return deliver;
-    }
-
-    @Override
-    @Transactional
-    public void deleteDeliver(Integer id) {
-        deliverMapper.deleteById(id);
+        // 先检查记录是否存在
+        AppWeijuDeliver existingDeliver = getById(deliver.getAdId());
+        if (existingDeliver == null) {
+            throw new IllegalArgumentException("要更新的Deliver记录不存在");
+        }
+        
+        // 执行更新操作
+        boolean updated = updateById(deliver);
+        if (!updated) {
+            throw new IllegalArgumentException("更新Deliver失败");
+        }
+        
+        // 返回更新后的完整记录
+        return getById(deliver.getAdId());
     }
 
     @Override
     public AppWeijuDeliver getDeliverByDeliverId(String deliverId) {
         LambdaQueryWrapper<AppWeijuDeliver> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(AppWeijuDeliver::getDeliverId, deliverId);
-        return deliverMapper.selectOne(queryWrapper);
+        return getOne(queryWrapper);
     }
 
     @Override
@@ -46,6 +56,6 @@ public class AppWeijuDeliverServiceImpl implements AppWeijuDeliverService {
     public boolean deleteByDeliverId(String deliverId) {
         LambdaQueryWrapper<AppWeijuDeliver> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(AppWeijuDeliver::getDeliverId, deliverId);
-        return deliverMapper.delete(queryWrapper) > 0;
+        return remove(queryWrapper);
     }
 } 

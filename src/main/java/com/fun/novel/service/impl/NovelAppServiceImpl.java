@@ -1,98 +1,113 @@
 package com.fun.novel.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fun.novel.entity.NovelApp;
 import com.fun.novel.mapper.NovelAppMapper;
 import com.fun.novel.service.NovelAppService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.fun.novel.service.AppAdService;
+import com.fun.novel.service.AppPayService;
+import com.fun.novel.service.AppWeijuBannerService;
+import com.fun.novel.service.AppWeijuDeliverService;
+import com.fun.novel.service.AppCommonConfigService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
-public class NovelAppServiceImpl implements NovelAppService {
-    
-    @Autowired
-    private NovelAppMapper novelAppMapper;
+@RequiredArgsConstructor
+public class NovelAppServiceImpl extends ServiceImpl<NovelAppMapper, NovelApp> implements NovelAppService {
+
+    private final AppAdService appAdService;
+    private final AppPayService appPayService;
+    private final AppWeijuBannerService bannerService;
+    private final AppWeijuDeliverService deliverService;
+    private final AppCommonConfigService commonConfigService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public NovelApp addNovelApp(NovelApp novelApp) {
-        if (checkAppIdExists(novelApp.getAppid())) {
-            throw new IllegalArgumentException("应用ID已存在");
-        }
-        novelAppMapper.insert(novelApp);
+        save(novelApp);
         return novelApp;
-    }
-
-    /**
-     * 检查应用ID是否已存在
-     */
-    private boolean checkAppIdExists(String appId) {
-        LambdaQueryWrapper<NovelApp> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(NovelApp::getAppid, appId);
-        return novelAppMapper.selectCount(wrapper) > 0;
     }
 
     @Override
     public Map<String, List<NovelApp>> getNovelAppsByPlatform() {
-        // 获取所有小说应用
-        List<NovelApp> allApps = novelAppMapper.selectList(null);
-        
-        // 按平台分组
-        return allApps.stream()
-                .collect(Collectors.groupingBy(
-                        NovelApp::getPlatform,
-                        Collectors.toList()
-                ));
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public boolean deleteByAppId(String appId) {
-        // 先检查应用是否存在
-        LambdaQueryWrapper<NovelApp> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(NovelApp::getAppid, appId);
-        NovelApp existingApp = novelAppMapper.selectOne(queryWrapper);
-        
-        if (existingApp == null) {
-            throw new IllegalArgumentException("应用不存在");
-        }
-
-        // 执行删除操作
-        int rows = novelAppMapper.delete(queryWrapper);
-        return rows > 0;
+        List<NovelApp> apps = list();
+        return apps.stream()
+                .collect(Collectors.groupingBy(NovelApp::getPlatform));
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public NovelApp updateNovelApp(NovelApp novelApp) {
-        if (novelApp == null || novelApp.getAppid() == null) {
-            throw new IllegalArgumentException("应用信息不能为空");
-        }
-
-        // 检查应用是否存在
-        NovelApp existingApp = getByAppId(novelApp.getAppid());
-        if (existingApp == null) {
-            throw new IllegalArgumentException("应用不存在");
-        }
-        // 设置ID
-        novelApp.setId(existingApp.getId());
-        
-        // 执行更新
-        novelAppMapper.updateById(novelApp);
-        
-        // 重新查询并返回最新数据
-        return getByAppId(novelApp.getAppid());
+        updateById(novelApp);
+        return novelApp;
     }
 
-    private NovelApp getByAppId(String appId) {
+    @Override
+    public NovelApp getByAppId(String appId) {
         LambdaQueryWrapper<NovelApp> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(NovelApp::getAppid, appId);
-        return novelAppMapper.selectOne(wrapper);
+        return getOne(wrapper);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteByAppId(String appId) {
+        try {
+            log.info("开始删除应用及其所有相关数据，appId: {}", appId);
+            
+            // 获取应用信息
+            NovelApp existingApp = getByAppId(appId);
+            if (existingApp == null) {
+                log.warn("未找到对应的应用记录，appId: {}", appId);
+                return false;
+            }
+            
+            // 1. 删除通用配置
+            commonConfigService.deleteAppCommonConfig(appId);
+            log.info("已删除通用配置");
+            
+            // 2. 删除广告配置
+            appAdService.deleteAppAdByAppId(appId);
+            log.info("已删除广告配置");
+            
+            // 3. 删除支付配置
+            appPayService.deleteAppPayByAppId(appId);
+            log.info("已删除支付配置");
+            
+            // 4. 删除微距Banner
+            if (existingApp.getBannerId() != null && !existingApp.getBannerId().isEmpty()) {
+                bannerService.deleteBannerByBannerId(existingApp.getBannerId());
+                log.info("已删除微距Banner");
+            }
+            
+            // 5. 删除微距Deliver
+            if (existingApp.getDeliverId() != null && !existingApp.getDeliverId().isEmpty()) {
+                deliverService.deleteByDeliverId(existingApp.getDeliverId());
+                log.info("已删除微距Deliver");
+            }
+            
+            // 6. 最后删除应用本身
+            boolean result = removeById(existingApp.getId());
+            
+            if (result) {
+                log.info("应用删除成功，appId: {}", appId);
+                return true;
+            } else {
+                log.warn("应用删除失败，appId: {}", appId);
+                return false;
+            }
+        } catch (Exception e) {
+            log.error("删除应用及其相关数据时发生错误，appId: {}, error: {}", appId, e.getMessage(), e);
+            throw new RuntimeException("删除应用及其相关数据失败: " + e.getMessage());
+        }
     }
 }
