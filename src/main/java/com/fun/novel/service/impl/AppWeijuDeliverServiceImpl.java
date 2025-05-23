@@ -29,10 +29,13 @@ public class AppWeijuDeliverServiceImpl extends ServiceImpl<AppWeijuDeliverMappe
     @Transactional
     public AppWeijuDeliver updateDeliver(AppWeijuDeliver deliver) {
         // 先检查记录是否存在
-        AppWeijuDeliver existingDeliver = getById(deliver.getAdId());
+        AppWeijuDeliver existingDeliver = getDeliverByDeliverId(deliver.getDeliverId());
         if (existingDeliver == null) {
             throw new IllegalArgumentException("要更新的Deliver记录不存在");
         }
+        
+        // 设置主键ID
+        deliver.setAdId(existingDeliver.getAdId());
         
         // 执行更新操作
         boolean updated = updateById(deliver);

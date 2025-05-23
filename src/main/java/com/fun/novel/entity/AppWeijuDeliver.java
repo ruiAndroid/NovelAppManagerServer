@@ -1,6 +1,7 @@
 package com.fun.novel.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -102,11 +103,13 @@ public class AppWeijuDeliver {
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
     @JsonProperty("create_time")
+    @JsonIgnore
     private LocalDateTime createTime;
 
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间")
     @JsonProperty("update_time")
+    @JsonIgnore
     private LocalDateTime updateTime;
 
     public String getDeliverId() {

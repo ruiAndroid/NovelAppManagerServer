@@ -29,10 +29,13 @@ public class AppWeijuBannerServiceImpl extends ServiceImpl<AppWeijuBannerMapper,
     @Transactional
     public AppWeijuBanner updateBanner(AppWeijuBanner banner) {
         // 先检查记录是否存在
-        AppWeijuBanner existingBanner = getById(banner.getAdId());
+        AppWeijuBanner existingBanner = getBannerByBannerId(banner.getBannerId());
         if (existingBanner == null) {
             throw new IllegalArgumentException("要更新的Banner记录不存在");
         }
+        
+        // 设置主键ID
+        banner.setAdId(existingBanner.getAdId());
         
         // 执行更新操作
         boolean updated = updateById(banner);

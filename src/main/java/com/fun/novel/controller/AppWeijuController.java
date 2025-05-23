@@ -95,6 +95,19 @@ public class AppWeijuController {
         return Result.success("创建成功", createdDeliver);
     }
 
+    @PostMapping("/deliver/updateDeliver")
+    @Operation(summary = "更新Deliver", description = "更新Deliver信息")
+    public Result<AppWeijuDeliver> updateDeliver(
+            @Parameter(description = "Deliver对象", required = true)
+            @Valid @RequestBody AppWeijuDeliver deliver) {
+        try {
+            AppWeijuDeliver updatedDeliver = deliverService.updateDeliver(deliver);
+            return Result.success("更新成功", updatedDeliver);
+        } catch (IllegalArgumentException e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
     @GetMapping("/deliver/deleteByDeliverId")
     @Operation(summary = "根据deliverId删除Deliver", description = "根据deliverId删除对应的Deliver记录")
     public Result<String> deleteDeliverByDeliverId(

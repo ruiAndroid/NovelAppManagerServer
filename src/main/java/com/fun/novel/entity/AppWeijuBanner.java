@@ -172,6 +172,16 @@ public class AppWeijuBanner {
     @JsonProperty("mediapage_banner_08")
     private String mediapageBanner08;
 
+    @TableField("mine_banner_01")
+    @Schema(description = "我的页面Banner01")
+    @JsonProperty("mine_banner_01")
+    private String mineBanner01;
+
+    @TableField("mine_banner_02")
+    @Schema(description = "我的页面Banner02")
+    @JsonProperty("mine_banner_02")
+    private String mineBanner02;
+
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
     @JsonProperty("create_time")
@@ -320,5 +330,13 @@ public class AppWeijuBanner {
 
     public String getMediapageBanner08() {
         return mediapageBanner08 == null ? "" : mediapageBanner08;
+    }
+
+    public String getMineBanner01() {
+        return mineBanner01 == null ? "" : mineBanner01;
+    }
+
+    public String getMineBanner02() {
+        return mineBanner02 == null ? "" : mineBanner02;
     }
 } 
