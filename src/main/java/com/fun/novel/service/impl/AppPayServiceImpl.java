@@ -73,9 +73,9 @@ public class AppPayServiceImpl extends ServiceImpl<AppPayMapper, AppPay> impleme
                 appPay.setDouzuanPayGatewayIos(request.getGatewayIos());
                 break;
             case "wxVirtualPay":
-                appPay.setDouzuanPayEnabled(enabledValue);
-                appPay.setDouzuanPayGatewayAndroid(request.getGatewayAndroid());
-                appPay.setDouzuanPayGatewayIos(request.getGatewayIos());
+                appPay.setWxVirtualPayEnabled(enabledValue);
+                appPay.setWxVirtualPayGatewayAndroid(request.getGatewayAndroid());
+                appPay.setWxVirtualPayGatewayIos(request.getGatewayIos());
                 break;
         }
 
