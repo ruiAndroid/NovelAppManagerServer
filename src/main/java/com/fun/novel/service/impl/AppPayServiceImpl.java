@@ -19,8 +19,7 @@ import java.util.List;
 public class AppPayServiceImpl extends ServiceImpl<AppPayMapper, AppPay> implements AppPayService {
 
     private static final List<String> VALID_PAY_TYPES = Arrays.asList(
-            "normalPay", "orderPay", "renewPay", "douzuanPay"
-    );
+            "normalPay", "orderPay", "renewPay", "douzuanPay", "wxVirtualPay");
 
     @Override
     public AppPayWithConfigDTO createAppPay(CreateAppPayRequest request) {
@@ -32,7 +31,7 @@ public class AppPayServiceImpl extends ServiceImpl<AppPayMapper, AppPay> impleme
         // 检查是否已存在相同appid和payType的配置
         QueryWrapper<AppPay> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("appid", request.getAppId())
-                   .eq("pay_type", request.getPayType());
+                .eq("pay_type", request.getPayType());
         if (getOne(queryWrapper) != null) {
             throw new IllegalArgumentException("该小程序已存在相同类型的支付配置");
         }
@@ -73,10 +72,15 @@ public class AppPayServiceImpl extends ServiceImpl<AppPayMapper, AppPay> impleme
                 appPay.setDouzuanPayGatewayAndroid(request.getGatewayAndroid());
                 appPay.setDouzuanPayGatewayIos(request.getGatewayIos());
                 break;
+            case "wxVirtualPay":
+                appPay.setDouzuanPayEnabled(enabledValue);
+                appPay.setDouzuanPayGatewayAndroid(request.getGatewayAndroid());
+                appPay.setDouzuanPayGatewayIos(request.getGatewayIos());
+                break;
         }
 
         save(appPay);
-        
+
         // 返回完整的配置信息
         return getAppPayByAppId(request.getAppId());
     }
@@ -86,7 +90,7 @@ public class AppPayServiceImpl extends ServiceImpl<AppPayMapper, AppPay> impleme
         QueryWrapper<AppPay> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("appid", appid);
         List<AppPay> appPays = list(queryWrapper);
-        
+
         if (appPays.isEmpty()) {
             return null;
         }
@@ -124,6 +128,12 @@ public class AppPayServiceImpl extends ServiceImpl<AppPayMapper, AppPay> impleme
                     douzuanConfig.setGatewayIos(appPay.getDouzuanPayGatewayIos());
                     result.setDouzuanPay(douzuanConfig);
                     break;
+                case "wxVirtualPay":
+                    WxVirtualPayConfigDetail wxVirtualPayConfig = new WxVirtualPayConfigDetail();
+                    wxVirtualPayConfig.setEnabled(appPay.getWxVirtualPayEnabled() == 1);
+                    wxVirtualPayConfig.setGatewayAndroid(appPay.getWxVirtualPayGatewayAndroid());
+                    wxVirtualPayConfig.setGatewayIos(appPay.getWxVirtualPayGatewayIos());
+                    result.setWxVirtualPay(wxVirtualPayConfig);
             }
         }
 
@@ -146,7 +156,7 @@ public class AppPayServiceImpl extends ServiceImpl<AppPayMapper, AppPay> impleme
         AppPay existingAppPay = getOne(new QueryWrapper<AppPay>()
                 .eq("appid", request.getAppId())
                 .eq("pay_type", request.getPayType()));
-                
+
         if (existingAppPay == null) {
             throw new IllegalArgumentException("该小程序支付配置不存在");
         }
@@ -175,12 +185,16 @@ public class AppPayServiceImpl extends ServiceImpl<AppPayMapper, AppPay> impleme
                 existingAppPay.setDouzuanPayEnabled(enabledValue);
                 existingAppPay.setDouzuanPayGatewayAndroid(request.getGatewayAndroid());
                 existingAppPay.setDouzuanPayGatewayIos(request.getGatewayIos());
+            case "wxVirtualPay":
+                existingAppPay.setWxVirtualPayEnabled(enabledValue);
+                existingAppPay.setWxVirtualPayGatewayAndroid(request.getGatewayAndroid());
+                existingAppPay.setWxVirtualPayGatewayIos(request.getGatewayIos());
                 break;
         }
 
         existingAppPay.setUpdateTime(LocalDateTime.now());
         updateById(existingAppPay);
-        
+
         // 返回完整的配置信息
         return getAppPayByAppId(request.getAppId());
     }
@@ -191,10 +205,10 @@ public class AppPayServiceImpl extends ServiceImpl<AppPayMapper, AppPay> impleme
         if (!VALID_PAY_TYPES.contains(payType)) {
             throw new IllegalArgumentException("不支持的支付类型");
         }
-        
+
         QueryWrapper<AppPay> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("appid", appId).eq("pay_type", payType);
-        
+
         return remove(queryWrapper);
     }
 
@@ -204,4 +218,4 @@ public class AppPayServiceImpl extends ServiceImpl<AppPayMapper, AppPay> impleme
         wrapper.eq(AppPay::getAppid, appId);
         return remove(wrapper);
     }
-} 
+}

@@ -21,6 +21,8 @@ public class AppPayWithConfigDTO {
     @Schema(description = "抖钻支付配置")
     private DouzuanPayConfigDetail douzuanPay;
 
+    @Schema(description = "微信虚拟支付配置")
+    private WxVirtualPayConfigDetail wxVirtualPay;
     @Data
     @Schema(description = "普通支付配置详情")
     public static class NormalPayConfigDetail {
@@ -63,6 +65,20 @@ public class AppPayWithConfigDTO {
     @Data
     @Schema(description = "豆钻支付配置详情")
     public static class DouzuanPayConfigDetail {
+        @Schema(description = "是否启用")
+        private Boolean enabled;
+
+        @Schema(description = "安卓支付网关")
+        private Integer gatewayAndroid;
+
+        @Schema(description = "iOS支付网关")
+        private Integer gatewayIos;
+    }
+
+
+    @Data
+    @Schema(description = "微信虚拟支付配置详情")
+    public static class WxVirtualPayConfigDetail {
         @Schema(description = "是否启用")
         private Boolean enabled;
 
