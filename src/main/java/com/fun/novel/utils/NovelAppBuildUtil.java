@@ -1,100 +1,84 @@
 package com.fun.novel.utils;
 
-import com.fun.novel.websocket.BuildLogWebSocketHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import javax.annotation.PreDestroy;
 
 @Component
 public class NovelAppBuildUtil {
     private static final Logger logger = LoggerFactory.getLogger(NovelAppBuildUtil.class);
-    private final BuildLogWebSocketHandler webSocketHandler;
+    private final ExecutorService executorService = Executors.newCachedThreadPool();
 
-    public NovelAppBuildUtil(BuildLogWebSocketHandler webSocketHandler) {
-        this.webSocketHandler = webSocketHandler;
-    }
+    @Autowired
+    private BuildTaskManager taskManager;
 
-    /**
-     * 异步构建uni-app项目
-     * @param
-     */
-    public void buildNovelApp(String cmd) {
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
+    public String buildNovelApp(String cmd) {
+        String taskId = taskManager.createTask();
         CompletableFuture.runAsync(() -> {
-            ProcessBuilder processBuilder = new ProcessBuilder();
-            String projectPath="D:\\dev\\h5\\code\\talos\\";
-            // 设置工作目录
-            processBuilder.directory(new File(projectPath));
-
-            // 根据操作系统设置命令
-            if (System.getProperty("os.name").toLowerCase().contains("windows")) {
-                processBuilder.command("cmd.exe", "/c", cmd);
-            } else {
-                processBuilder.command("sh", "-c", cmd);
-            }
-
+            Process process = null;
             try {
-                // 启动进程
-                Process process = processBuilder.start();
+                String workPath="D:\\dev\\h5\\code\\talos\\";
+                // 设置工作目录为uni-app项目根目录
+                File workDir = new File(workPath);
+                if (!workDir.exists()) {
+                    throw new RuntimeException("工作目录不存在: " + workDir.getAbsolutePath());
+                }
 
-                // 读取标准输出
-                try (BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(process.getInputStream()))) {
+                logger.info("start Build cmd: {},workPath:{}",cmd, workPath);
+                ProcessBuilder processBuilder = new ProcessBuilder();
+                processBuilder.command("cmd.exe", "/c", cmd);
+                processBuilder.directory(workDir);
+                processBuilder.redirectErrorStream(true);
+                process = processBuilder.start();
+                taskManager.addTask(taskId, process);
+
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        logger.info("Build log: {}", line);
-                        // 通过WebSocket发送日志
-                        webSocketHandler.sendBuildLog(line);
+                        messagingTemplate.convertAndSend("/topic/build-logs/" + taskId, line);
+                        logger.info("Build log for task {}: {}", taskId, line);
                     }
                 }
 
-                // 读取错误输出
-                try (BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(process.getErrorStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        logger.error("Build error: {}", line);
-                        String errorLog = "ERROR: " + line;
-                        // 通过WebSocket发送错误日志
-                        webSocketHandler.sendBuildLog(errorLog);
-                    }
-                }
-
-                // 等待进程完成
                 int exitCode = process.waitFor();
-                String completionMessage;
                 if (exitCode != 0) {
-                    completionMessage = "Build failed with exit code: " + exitCode;
-                    logger.error("Build process exited with code: {}", exitCode);
-                } else {
-                    completionMessage = "Build completed successfully";
-                    logger.info("Build completed successfully");
+                    String errorMsg = "Build process for task " + taskId + " exited with code: " + exitCode;
+                    logger.error(errorMsg);
+                    messagingTemplate.convertAndSend("/topic/build-logs/" + taskId, "ERROR: " + errorMsg);
                 }
-                webSocketHandler.sendBuildLog(completionMessage);
-
             } catch (Exception e) {
-                String errorMessage = "Error during build process: " + e.getMessage();
-                logger.error("Error during build process", e);
-                webSocketHandler.sendBuildLog(errorMessage);
+                String errorMsg = "Build error for task " + taskId + ": " + e.getMessage();
+                logger.error(errorMsg);
+                messagingTemplate.convertAndSend("/topic/build-logs/" + taskId, "ERROR: " + errorMsg);
+            } finally {
+                if (process != null) {
+                    taskManager.removeTask(taskId);
+                }
             }
-        });
+        }, executorService);
+
+        return taskId;
     }
 
-    /**
-     * 停止构建进程
-     * @param process 构建进程
-     */
-    public void stopBuild(Process process) {
-        if (process != null && process.isAlive()) {
-            process.destroy();
-            logger.info("Build process stopped");
-            webSocketHandler.sendBuildLog("Build process stopped");
-        }
+    public void stopBuild(String taskId) {
+        taskManager.stopTask(taskId);
+    }
+
+    @PreDestroy
+    public void cleanup() {
+        logger.info("Shutting down executor service...");
+        executorService.shutdown();
     }
 } 

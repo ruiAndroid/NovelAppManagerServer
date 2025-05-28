@@ -11,7 +11,7 @@ public class BuildLogWebSocketHandler {
         this.messagingTemplate = messagingTemplate;
     }
 
-    public void sendBuildLog(String log) {
-        messagingTemplate.convertAndSend("/topic/build-logs", log);
+    public void sendBuildLog(String taskId, String log) {
+        messagingTemplate.convertAndSend("/topic/build-logs/" + taskId, log);
     }
 } 
