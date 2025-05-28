@@ -45,7 +45,11 @@ public class AppCommonConfig {
     @Schema(description = "首页卡片样式")
     @TableField("home_card_style")
     private Integer homeCardStyle;
-    
+
+    @Schema(description = "编译编码")
+    @TableField("build_code")
+    private String buildCode;
+
     @Schema(description = "创建时间")
     @TableField("create_time")
     private LocalDateTime createTime;

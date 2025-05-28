@@ -24,6 +24,9 @@ public class AppCommonConfigDTO {
     
     @Schema(description = "快手Client Secret")
     private String kuaishouClientSecret;
+
+    @Schema(description = "编译编码")
+    private String buildCode;
     
     @Schema(description = "支付卡片样式")
     private Integer payCardStyle;
