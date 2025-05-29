@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -50,11 +51,17 @@ public class AppCommonConfig {
     @TableField("build_code")
     private String buildCode;
 
+    @Schema(description = "抖音apptoken")
+    @TableField("douyin_app_token")
+    private String douyinAppToken;
+
     @Schema(description = "创建时间")
     @TableField("create_time")
+    @JsonIgnore
     private LocalDateTime createTime;
     
     @Schema(description = "更新时间")
     @TableField("update_time")
+    @JsonIgnore
     private LocalDateTime updateTime;
 } 

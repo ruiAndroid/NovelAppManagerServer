@@ -27,6 +27,9 @@ public class NovelAppBuildController {
     public Result<String> buildNovelApp(
             @Parameter(description = "构建命令", required = true)
             @RequestParam String cmd) {
+        if (cmd == null || cmd.trim().isEmpty()) {
+            return Result.error("构建命令不能为空");
+        }
         try {
             String taskId = novelAppBuildUtil.buildNovelApp(cmd);
             return Result.success("构建任务已启动，请使用任务ID订阅WebSocket日志", taskId);

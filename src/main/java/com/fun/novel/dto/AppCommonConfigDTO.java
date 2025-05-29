@@ -27,7 +27,9 @@ public class AppCommonConfigDTO {
 
     @Schema(description = "编译编码")
     private String buildCode;
-    
+
+    @Schema(description = "抖音app token")
+    private String douyinAppToken;
     @Schema(description = "支付卡片样式")
     private Integer payCardStyle;
     

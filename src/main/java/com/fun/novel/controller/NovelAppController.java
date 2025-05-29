@@ -36,6 +36,21 @@ public class NovelAppController {
         return Result.success("获取成功", groupedApps);
     }
 
+    @GetMapping("/getByAppId")
+    @Operation(summary = "根据应用ID获取小说应用", description = "根据应用ID获取小说应用的详细信息")
+    public Result<NovelApp> getNovelAppByAppId(
+            @Parameter(description = "应用ID", required = true)
+            @RequestParam String appId) {
+        try {
+            NovelApp novelApp = novelAppService.getByAppId(appId);
+            return novelApp != null ? 
+                Result.success("获取成功", novelApp) : 
+                Result.error("未找到对应的应用");
+        } catch (Exception e) {
+            return Result.error("获取应用失败: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/update")
     @Operation(summary = "修改小说应用", description = "根据传入的小说应用信息修改记录")
     public Result<NovelApp> updateNovelApp(@Valid @RequestBody NovelApp novelApp) {

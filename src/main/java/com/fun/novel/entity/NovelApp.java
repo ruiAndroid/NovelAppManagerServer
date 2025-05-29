@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fun.novel.validation.UniqueAppId;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -62,10 +63,12 @@ public class NovelApp {
 
     @Schema(description = "创建时间")
     @TableField(value = "create_time", fill = FieldFill.INSERT)
+    @JsonIgnore
     private LocalDateTime createTime;
 
     @Schema(description = "更新时间")
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
+    @JsonIgnore
     private LocalDateTime updateTime;
 
     // 新增字段 main_theme
@@ -78,13 +81,19 @@ public class NovelApp {
     @TableField("second_theme")
     private String secondTheme;
 
-    // 新增字段 deliver_id
+    // deliver_id
     @Schema(description = "deliver_id")
     @TableField("deliver_id")
     private String deliverId;
 
-    // 新增字段 banner_id
+    // banner_id
     @Schema(description = "banner_id")
     @TableField("banner_id")
     private String bannerId;
+
+    // version 版本号
+    @NotBlank(message = "version不能为空")
+    @Schema(description = "version")
+    @TableField("version")
+    private String version;
 }
