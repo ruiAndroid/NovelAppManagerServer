@@ -7,12 +7,20 @@ import javax.annotation.PreDestroy;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 
 @Component
 public class PublishTaskManager {
     private static final Logger logger = LoggerFactory.getLogger(PublishTaskManager.class);
     private final Map<String, Process> runningTasks = new ConcurrentHashMap<>();
     private final Map<String, String> platformRunningTasks = new ConcurrentHashMap<>();
+    private final Map<String, String> taskPlatforms = new ConcurrentHashMap<>();
+    private final Map<String, String> taskProjectPaths = new ConcurrentHashMap<>();
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     /**
      * 创建发布任务
@@ -20,17 +28,14 @@ public class PublishTaskManager {
      * @return 任务ID，如果平台已有任务在运行则返回null
      */
     public String createTask(String platformCode) {
-        // 检查平台是否已有任务在运行
-        if (platformRunningTasks.containsKey(platformCode)) {
-            String runningTaskId = platformRunningTasks.get(platformCode);
-            logger.warn("平台 {} 已有任务 {} 在运行中", platformCode, runningTaskId);
-            return null;
-        }
-
         String taskId = UUID.randomUUID().toString();
-        platformRunningTasks.put(platformCode, taskId);
-        logger.info("创建发布任务: {}, 平台: {}", taskId, platformCode);
-        return taskId;
+        if (platformRunningTasks.putIfAbsent(platformCode, taskId) == null) {
+            taskPlatforms.put(taskId, platformCode);
+            logger.info("创建发布任务: {}, 平台: {}", taskId, platformCode);
+            return taskId;
+        }
+        logger.warn("平台 {} 已有任务在运行", platformCode);
+        return null;
     }
 
     /**
@@ -58,20 +63,40 @@ public class PublishTaskManager {
      */
     public void removeTask(String taskId) {
         Process process = runningTasks.remove(taskId);
-        if (process != null && process.isAlive()) {
+        if (process != null) {
+            logger.info("尝试停止并移除发布任务进程: {}", taskId);
             try {
-                process.destroy();
                 if (process.isAlive()) {
-                    process.destroyForcibly();
+                    logger.info("正在终止进程: {}", taskId);
+                    process.destroy();
+                    // Wait for process to exit
+                    if (!process.waitFor(10, TimeUnit.SECONDS)) { // Increased wait time
+                        logger.warn("进程未能在10秒内终止，强制终止: {}", taskId);
+                        process.destroyForcibly();
+                         if (!process.waitFor(10, TimeUnit.SECONDS)) { // Wait again after forceful destruction
+                             logger.warn("进程强制终止后{}秒内仍未停止: {}", 10, taskId);
+                         }
+                    }
                 }
             } catch (Exception e) {
-                logger.error("移除发布任务失败 {}: {}", taskId, e.getMessage());
+                logger.error("停止发布任务进程失败 {}: {}", taskId, e.getMessage());
             }
+             if (process != null && process.isAlive()) {
+                 logger.warn("进程 {} 停止失败，可能仍在运行", taskId);
+             }
         }
         
         // 从平台任务映射中移除
         platformRunningTasks.entrySet().removeIf(entry -> entry.getValue().equals(taskId));
-        logger.info("移除发布任务: {}", taskId);
+        
+        // 延迟移除任务信息，以便前端可以获取二维码
+        scheduler.schedule(() -> {
+            String platformCode = taskPlatforms.remove(taskId);
+            taskProjectPaths.remove(taskId);
+            logger.info("延迟移除发布任务信息: {}", taskId);
+        }, 5, TimeUnit.MINUTES);
+        
+        logger.info("任务进程处理完成: {}", taskId);
     }
 
     /**
@@ -79,22 +104,9 @@ public class PublishTaskManager {
      * @param taskId 任务ID
      */
     public void stopTask(String taskId) {
-        Process process = runningTasks.get(taskId);
-        if (process != null && process.isAlive()) {
-            try {
-                process.destroy();
-                if (process.isAlive()) {
-                    process.destroyForcibly();
-                }
-            } catch (Exception e) {
-                logger.error("停止发布任务失败 {}: {}", taskId, e.getMessage());
-            }
-        }
-        runningTasks.remove(taskId);
-        
-        // 从平台任务映射中移除
-        platformRunningTasks.entrySet().removeIf(entry -> entry.getValue().equals(taskId));
-        logger.info("停止发布任务: {}", taskId);
+        logger.info("开始停止任务（通过removeTask处理进程终止）: {}", taskId);
+        removeTask(taskId); // Delegate process termination to removeTask
+        logger.info("停止任务指令已发送: {}", taskId);
     }
 
     /**
@@ -106,6 +118,18 @@ public class PublishTaskManager {
         return platformRunningTasks.get(platformCode);
     }
 
+    public String getPlatformCode(String taskId) {
+        return taskPlatforms.get(taskId);
+    }
+
+    public void setProjectPath(String taskId, String projectPath) {
+        taskProjectPaths.put(taskId, projectPath);
+    }
+
+    public String getProjectPath(String taskId) {
+        return taskProjectPaths.get(taskId);
+    }
+
     /**
      * 清理所有任务
      */
@@ -115,10 +139,7 @@ public class PublishTaskManager {
         runningTasks.forEach((taskId, process) -> {
             try {
                 if (process != null && process.isAlive()) {
-                    process.destroy();
-                    if (process.isAlive()) {
-                        process.destroyForcibly();
-                    }
+                    process.destroyForcibly(); // Forcefully destroy on cleanup
                 }
             } catch (Exception e) {
                 logger.error("清理发布任务失败 {}: {}", taskId, e.getMessage());
@@ -126,6 +147,9 @@ public class PublishTaskManager {
         });
         runningTasks.clear();
         platformRunningTasks.clear();
+        taskPlatforms.clear();
+        taskProjectPaths.clear();
+        scheduler.shutdown();
         logger.info("所有发布任务已清理");
     }
 } 

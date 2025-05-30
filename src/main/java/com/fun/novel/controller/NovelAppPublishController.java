@@ -9,12 +9,15 @@ import com.fun.novel.entity.NovelApp;
 import com.fun.novel.service.NovelAppService;
 import com.fun.novel.utils.NovelAppBuildUtil;
 import com.fun.novel.utils.NovelAppPublishUtil;
+import com.fun.novel.utils.PublishTaskManager;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.io.File;
@@ -44,6 +47,9 @@ public class NovelAppPublishController {
 
     @Autowired
     private NovelAppService novelAppService;
+
+    @Autowired
+    private PublishTaskManager publishTaskManager;
 
     private static final Map<String, String> PLATFORM_NAMES = new HashMap<>();
     static {
@@ -158,6 +164,7 @@ public class NovelAppPublishController {
             String appId = params.get("appId");
             String projectPath = params.get("projectPath");
             String douyinAppToken = params.get("douyinAppToken");
+            String kuaishouAppToken = params.get("kuaishouAppToken");
             String version = params.get("version");
             String log = params.get("log");
 
@@ -182,12 +189,18 @@ public class NovelAppPublishController {
                 return Result.error("抖音平台发布需要提供 douyinAppToken");
             }
 
+            // 如果是快手平台，验证token
+            if ("mp-kuaishou".equals(platformCode) && (kuaishouAppToken == null || kuaishouAppToken.trim().isEmpty())) {
+                return Result.error("快手平台发布需要提供 kuaishouAppToken");
+            }
+
             // 创建发布任务
             String taskId = novelAppPublishUtil.publishNovelApp(
                 platformCode,
                 appId,
                 projectPath,
                 douyinAppToken,
+                kuaishouAppToken,
                 version,
                 log
             );
@@ -211,6 +224,60 @@ public class NovelAppPublishController {
         } catch (Exception e) {
             logger.error("停止发布任务失败", e);
             return Result.error("停止发布失败: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/qrcode/{taskId}")
+    @Operation(summary = "获取发布任务的二维码", description = "获取指定发布任务生成的二维码图片")
+    public ResponseEntity<byte[]> getQrcodeImage(@PathVariable String taskId) {
+        try {
+            logger.info("开始获取二维码图片，任务ID: {}", taskId);
+            
+            // 获取任务信息
+            String platformCode = publishTaskManager.getPlatformCode(taskId);
+            logger.info("任务平台代码: {}", platformCode);
+            
+            if (platformCode == null) {
+                logger.warn("任务不存在: {}", taskId);
+                return ResponseEntity.notFound().build();
+            }
+            
+            if (!"mp-kuaishou".equals(platformCode)) {
+                logger.warn("不是快手平台任务: {}", platformCode);
+                return ResponseEntity.notFound().build();
+            }
+
+            // 获取项目路径
+            String projectPath = publishTaskManager.getProjectPath(taskId);
+            logger.info("项目路径: {}", projectPath);
+            
+            if (projectPath == null) {
+                logger.warn("未找到项目路径");
+                return ResponseEntity.notFound().build();
+            }
+
+            // 构建二维码文件路径
+            String qrcodePath = projectPath + "\\ks_qrcode.png";
+            logger.info("二维码文件路径: {}", qrcodePath);
+
+            // 读取二维码文件
+            File qrcodeFile = new File(qrcodePath);
+            if (!qrcodeFile.exists()) {
+                logger.warn("二维码文件不存在: {}", qrcodePath);
+                return ResponseEntity.notFound().build();
+            }
+
+            // 读取文件内容
+            byte[] imageBytes = java.nio.file.Files.readAllBytes(qrcodeFile.toPath());
+            logger.info("成功读取二维码文件，大小: {} bytes", imageBytes.length);
+
+            // 返回图片
+            return ResponseEntity.ok()
+                    .contentType(MediaType.IMAGE_PNG)
+                    .body(imageBytes);
+        } catch (Exception e) {
+            logger.error("获取二维码图片失败", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 } 

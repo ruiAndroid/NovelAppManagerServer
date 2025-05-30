@@ -35,7 +35,7 @@ public class BuildTaskManager {
                     process.destroyForcibly();
                 }
             } catch (Exception e) {
-                logger.error("Error destroying process for task {}: {}", taskId, e.getMessage());
+                logger.error("移除构建任务失败{}: {}", taskId, e.getMessage());
             }
         }
     }
@@ -49,16 +49,17 @@ public class BuildTaskManager {
                     process.destroyForcibly();
                 }
                 runningTasks.remove(taskId);
-                logger.info("Successfully stopped task: {}", taskId);
+                logger.info("停止构建任务成功: {}", taskId);
             } catch (Exception e) {
-                logger.error("Error stopping task {}: {}", taskId, e.getMessage());
+                logger.error("停止构建任务失败 {}: {}", taskId, e.getMessage());
             }
         }
     }
 
     @PreDestroy
     public void cleanup() {
-        logger.info("Cleaning up all running tasks...");
+        logger.info("清理所有构建任务...");
+
         runningTasks.forEach((taskId, process) -> {
             try {
                 if (process != null && process.isAlive()) {
@@ -68,10 +69,10 @@ public class BuildTaskManager {
                     }
                 }
             } catch (Exception e) {
-                logger.error("Error cleaning up task {}: {}", taskId, e.getMessage());
+                logger.error("清理构建任务失败 {}: {}", taskId, e.getMessage());
             }
         });
         runningTasks.clear();
-        logger.info("All tasks cleaned up");
+        logger.info("所有构建任务已清理");
     }
 } 

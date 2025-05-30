@@ -109,7 +109,7 @@ public class NovelAppBuildUtil {
 
     @PreDestroy
     public void cleanup() {
-        logger.info("Shutting down executor service...");
+        logger.info("关闭构建工具线程池...");
         executorService.shutdown();
     }
 } 
