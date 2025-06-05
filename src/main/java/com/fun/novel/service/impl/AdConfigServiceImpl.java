@@ -55,6 +55,28 @@ public class AdConfigServiceImpl implements AdConfigService {
                 throw new IllegalArgumentException("reward类型的启用状态不能为空");
             }
         }
+
+
+        // 对interstitial类型进行特殊验证
+        if ("interstitial".equalsIgnoreCase(adConfig.getAdType())) {
+            // 验证interstitialAdId
+            if (adConfig.getInterstitialAdId() == null || adConfig.getInterstitialAdId().trim().isEmpty()) {
+                throw new IllegalArgumentException("interstitial类型的广告ID不能为空");
+            }
+
+            // 验证interstitialCount
+            if (adConfig.getInterstitialCount() == null) {
+                throw new IllegalArgumentException("interstitial类型的奖励次数不能为空");
+            }
+            if (adConfig.getInterstitialCount() < 0) {
+                throw new IllegalArgumentException("interstitial类型的奖励次数不能为负数");
+            }
+
+            // 验证isInterstitialAdEnabled
+            if (adConfig.getIsInterstitialAdEnabled() == null) {
+                throw new IllegalArgumentException("interstitial类型的启用状态不能为空");
+            }
+        }
         
         adConfigMapper.insert(adConfig);
         return adConfig;
@@ -93,12 +115,38 @@ public class AdConfigServiceImpl implements AdConfigService {
             if (request.getIsRewardAdEnabled() == null) {
                 throw new IllegalArgumentException("reward类型的启用状态不能为空");
             }
+
+            // 更新配置
+            adConfig.setRewardAdId(request.getRewardAdId());
+            adConfig.setRewardCount(request.getRewardCount());
+            adConfig.setIsRewardAdEnabled(request.getIsRewardAdEnabled());
         }
 
-        // 更新配置
-        adConfig.setRewardAdId(request.getRewardAdId());
-        adConfig.setRewardCount(request.getRewardCount());
-        adConfig.setIsRewardAdEnabled(request.getIsRewardAdEnabled());
+        // 对interstitial类型进行特殊验证
+        if ("interstitial".equalsIgnoreCase(adConfig.getAdType())) {
+            // 验证interstitialAdId
+            if (adConfig.getInterstitialAdId() == null || adConfig.getInterstitialAdId().trim().isEmpty()) {
+                throw new IllegalArgumentException("interstitial类型的广告ID不能为空");
+            }
+
+            // 验证interstitialCount
+            if (adConfig.getInterstitialCount() == null) {
+                throw new IllegalArgumentException("interstitial类型的奖励次数不能为空");
+            }
+            if (adConfig.getInterstitialCount() < 0) {
+                throw new IllegalArgumentException("interstitial类型的奖励次数不能为负数");
+            }
+
+            // 验证isInterstitialAdEnabled
+            if (adConfig.getIsInterstitialAdEnabled() == null) {
+                throw new IllegalArgumentException("interstitial类型的启用状态不能为空");
+            }
+
+            // 更新配置
+            adConfig.setInterstitialAdId(request.getInterstitialAdId());
+            adConfig.setInterstitialCount(request.getInterstitialCount());
+            adConfig.setIsInterstitialAdEnabled(request.getIsInterstitialAdEnabled());
+        }
 
         adConfigMapper.updateById(adConfig);
         return adConfig;

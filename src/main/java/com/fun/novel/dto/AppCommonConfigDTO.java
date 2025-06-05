@@ -28,6 +28,9 @@ public class AppCommonConfigDTO {
     @Schema(description = "快手app token")
     private String kuaishouAppToken;
 
+    @Schema(description = "微信app token")
+    private String weixinAppToken;
+
     @Schema(description = "编译编码")
     private String buildCode;
 

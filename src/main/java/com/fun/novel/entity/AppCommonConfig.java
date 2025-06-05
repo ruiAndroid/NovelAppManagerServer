@@ -43,7 +43,11 @@ public class AppCommonConfig {
     @Schema(description = "快手app token")
     @TableField("kuaishou_app_token")
     private String kuaishouAppToken;
-    
+
+    @Schema(description = "微信app token")
+    @TableField("weixin_app_token")
+    private String weixinAppToken;
+
     @Schema(description = "支付卡片样式")
     @TableField("pay_card_style")
     private Integer payCardStyle;

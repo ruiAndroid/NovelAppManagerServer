@@ -39,7 +39,14 @@ public class AppAdWithConfigDTO {
     @Data
     @Schema(description = "插屏广告配置详情")
     public static class InterstitialAdConfigDetail {
+        @Schema(description = "插屏广告ID")
+        private String interstitialAdId;
 
+        @Schema(description = "插屏次数")
+        private Integer interstitialCount;
+
+        @Schema(description = "是否启用")
+        private Boolean isInterstitialAdEnabled;
     }
 
     @Data

@@ -100,7 +100,9 @@ public class AppAdServiceImpl implements AppAdService {
                     break;
                 case "interstitial":
                     AppAdWithConfigDTO.InterstitialAdConfigDetail interstitialAdConfigDetail = new AppAdWithConfigDTO.InterstitialAdConfigDetail();
-
+                    interstitialAdConfigDetail.setInterstitialAdId(config.getInterstitialAdId());
+                    interstitialAdConfigDetail.setInterstitialCount(config.getInterstitialCount());
+                    interstitialAdConfigDetail.setIsInterstitialAdEnabled(config.getIsInterstitialAdEnabled());
                     dto.setInterstitial(interstitialAdConfigDetail);
                     break;
                 case "native":
