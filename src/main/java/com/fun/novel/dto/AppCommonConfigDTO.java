@@ -1,9 +1,11 @@
 package com.fun.novel.dto;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 
 @Data
 @Schema(description = "应用通用配置信息")
@@ -36,9 +38,17 @@ public class AppCommonConfigDTO {
 
     @Schema(description = "抖音app token")
     private String douyinAppToken;
+
     @Schema(description = "支付卡片样式")
     private Integer payCardStyle;
-    
+
+
+    @Schema(description = "阅读页登录类型")
+    private String readerLoginType;
+
+    @Schema(description = "我的页登录类型")
+    private String mineLoginType;
+
     @Schema(description = "首页卡片样式")
     private Integer homeCardStyle;
-} 
+}

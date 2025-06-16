@@ -34,7 +34,7 @@ public class AppCommonConfigServiceImpl implements AppCommonConfigService {
         // 创建新配置
         AppCommonConfig config = new AppCommonConfig();
         BeanUtils.copyProperties(dto, config);
-        
+
         // 设置创建时间和更新时间
         LocalDateTime now = LocalDateTime.now();
         config.setCreateTime(now);

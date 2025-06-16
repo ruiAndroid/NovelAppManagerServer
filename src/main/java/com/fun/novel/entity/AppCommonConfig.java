@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
 @Data
@@ -55,6 +56,17 @@ public class AppCommonConfig {
     @Schema(description = "首页卡片样式")
     @TableField("home_card_style")
     private Integer homeCardStyle;
+
+
+    @NotNull(message = "阅读页登录类型不能为空")
+    @Schema(description = "阅读页登录类型")
+    @TableField("reader_login_type")
+    private String readerLoginType;
+
+    @NotNull(message = "我的页登录类型不能为空")
+    @Schema(description = "我的页登录类型")
+    @TableField("mine_login_type")
+    private String mineLoginType;
 
     @Schema(description = "编译编码")
     @TableField("build_code")

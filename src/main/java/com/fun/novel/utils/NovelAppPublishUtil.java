@@ -27,7 +27,7 @@ public class NovelAppPublishUtil {
     /**
      * 发布小程序到指定平台
      */
-    public String publishNovelApp(String platformCode, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken, String version, String log) {
+    public String publishNovelApp(String platformCode, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken,String weixinAppToken, String version, String log) {
         // 创建任务，检查平台是否已有任务在运行
         String taskId = publishTaskManager.createTask(platformCode);
         if (taskId == null) {
@@ -61,9 +61,9 @@ public class NovelAppPublishUtil {
                 // 根据平台选择对应的发布处理器
                 PlatformPublishHandler handler = getPlatformHandler(platformCode);
                 if (handler != null) {
-                    handler.handlePublish(taskId, appId, projectPath, douyinAppToken, kuaishouAppToken, version, log, processBuilder);
+                    handler.handlePublish(taskId, appId, projectPath, douyinAppToken, kuaishouAppToken,weixinAppToken, version, log, processBuilder);
                     // 发送成功状态
-                    messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish success");
+//                    messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish success");
                 } else {
                     // 默认处理流程
                     String publishCmd = buildPublishCommand(platformCode, appId, projectPath, douyinAppToken, version, log);
@@ -96,6 +96,8 @@ public class NovelAppPublishUtil {
                 return new DouyinPublishHandler();
             case "mp-kuaishou":
                 return new KuaishouPublishHandler();
+            case "mp-weixin":
+                return new WeixinPublishHandler();
             default:
                 return null;
         }
@@ -154,14 +156,14 @@ public class NovelAppPublishUtil {
 
             int exitCode = process.waitFor();
             if (exitCode != 0) {
-                String errorMsg = "命令执行失败，退出码: " + exitCode;
+                String errorMsg = "executeCommand fail 命令执行失败，退出码: " + exitCode;
                 logger.error(errorMsg);
                 messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, errorMsg);
                 return false;
             }
             return true;
         } catch (Exception e) {
-            String errorMsg = "命令执行错误: " + e.getMessage();
+            String errorMsg = "executeCommand error" + e.getMessage();
             logger.error(errorMsg);
             messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, errorMsg);
             return false;
@@ -176,7 +178,7 @@ public class NovelAppPublishUtil {
      * 平台发布处理器接口
      */
     private interface PlatformPublishHandler {
-        void handlePublish(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken, String version, String log, ProcessBuilder processBuilder);
+        void handlePublish(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken,String weixinAppToken, String version, String log, ProcessBuilder processBuilder);
     }
 
     /**
@@ -191,53 +193,43 @@ public class NovelAppPublishUtil {
      */
     private class DouyinPublishHandler implements PlatformPublishHandler {
         @Override
-        public void handlePublish(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken, String version, String log, ProcessBuilder processBuilder) {
+        public void handlePublish(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken, String weixinAppToken,String version, String log, ProcessBuilder processBuilder) {
             // 步骤1：设置token
             messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[抖音] 开始设置Token...");
             String tokenCmd = buildDouyinTokenCommand(appId, douyinAppToken);
-            if (!executeCommand(taskId, tokenCmd, processBuilder, line -> {
-                if (line.startsWith("Upload Error")) {
-                    throw new RuntimeException("Token设置失败: " + line);
-                }
-                if (line.contains("Set app config success")) {
-                    messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[抖音] Token设置成功");
-                    throw new RuntimeException("success");
-                }
-            })) {
-                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[抖音] Token设置失败");
+            logger.info("[抖音] tokenCmd :{}",tokenCmd);
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[抖音] tokenCmd :"+tokenCmd);
+            boolean publishExecuteCommandResult = executeCommand(taskId, tokenCmd, processBuilder, line -> {});
+            if(!publishExecuteCommandResult){
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish error [抖音]设置小程序Token失败");
                 return;
             }
 
             // 步骤2：上传
             messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[抖音] 开始上传小程序...");
             String uploadCmd = buildDouyinUploadCommand(version, log, projectPath);
-            if (!executeCommand(taskId, uploadCmd, processBuilder, line -> {
-                if (line.startsWith("Upload Error")) {
-                    throw new RuntimeException("上传失败: " + line);
-                }
-                if (line.contains("总体积")) {
-                    messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[抖音] 小程序上传成功");
-                    throw new RuntimeException("success");
-                }
-            })) {
-                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[抖音] 小程序上传失败");
-                return;
+            boolean uploadExecuteCommandResult = executeCommand(taskId, uploadCmd, processBuilder, line -> {});
+            if(!uploadExecuteCommandResult){
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish error [抖音]上传小程序失败");
             }
+
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[抖音]上传小程序成功");
 
             // 步骤3：生成二维码
             messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[抖音] 开始生成二维码...");
             String previewCmd = buildDouyinPreviewCommand(projectPath);
-            if (!executeCommand(taskId, previewCmd, processBuilder, line -> {
+            boolean previewExecuteCommandResult = executeCommand(taskId, previewCmd, processBuilder, line -> {
                 if (line.contains("二维码信息：")) {
                     String qrCodeUrl = line.substring(line.indexOf("二维码信息：") + 6);
                     messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[抖音] 二维码生成成功: " + qrCodeUrl);
-                    throw new RuntimeException("success");
                 }
-            })) {
-                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[抖音] 二维码生成失败");
-                return;
+            });
+            if(!previewExecuteCommandResult){
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish error [抖音] 二维码生成失败");
             }
-            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[抖音] 发布流程全部完成");
+
+
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish success [抖音] 发布流程全部完成");
         }
     }
 
@@ -246,7 +238,7 @@ public class NovelAppPublishUtil {
      */
     private class KuaishouPublishHandler implements PlatformPublishHandler {
         @Override
-        public void handlePublish(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken, String version, String log, ProcessBuilder processBuilder) {
+        public void handlePublish(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken,String weixinAppToken, String version, String log, ProcessBuilder processBuilder) {
             // 步骤1：生成密钥
             try {
                 // 发送开始生成密钥的消息
@@ -258,49 +250,94 @@ public class NovelAppPublishUtil {
 
             } catch (Exception e) {
                 String errorMsg = "[快手] 密钥文件生成失败: " + e.getMessage();
-                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[快手] 密钥文件生成失败:" + errorMsg);
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish error [快手] 密钥文件生成失败:" + errorMsg);
                 return;
             }
+            logger.info("[快手] 开始发布小程序...");
 
             // 步骤2：发布
             messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[快手] 开始发布小程序...");
 
             String publishCmd = buildKuaishouUploadCommand(appId, projectPath, version, log);
-            if (!executeCommand(taskId, publishCmd, processBuilder, line -> {
-                if (line.contains("Upload Error")) {
-                    throw new RuntimeException("发布失败: " + line);
-                }
+
+            boolean publishExecuteCommandResult = executeCommand(taskId, publishCmd, processBuilder, line -> {
                 if (line.contains("[ks upload]  done.")) {
                     messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[快手] 小程序发布成功");
-                    throw new RuntimeException("success");
                 }
-            })) {
-                String errorMsg = "[快手] 小程序发布失败";
-                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[快手] 小程序发布失败:" + errorMsg);
-                return;
+            });
+            if(!publishExecuteCommandResult){
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish error [快手]上传小程序失败");
+
             }
 
             // 步骤3：生成二维码
             messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[快手] 开始生成二维码...");
 
             String previewCmd = buildKuaishouPreviewCommand(appId, projectPath);
-            if (!executeCommand(taskId, previewCmd, processBuilder, line -> {
-                if (line.contains("Preview Error")) {
-                    throw new RuntimeException("二维码生成失败: " + line);
-                }
+            boolean previewExecuteCommandResult = executeCommand(taskId, previewCmd, processBuilder, line -> {
                 if (line.contains("[ks preview]  done.")) {
                     String qrcodePath = projectPath + "\\ks_qrcode.png";
                     messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[快手] 二维码生成成功: " + qrcodePath);
-                    throw new RuntimeException("success");
+
                 }
-            })) {
-                String errorMsg = "[快手] 二维码生成失败";
-                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, errorMsg);
+            });
+            if(!previewExecuteCommandResult){
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish error [快手] 二维码生成失败");
+            }
+
+            String completeMsg = "Publish success [快手] 发布流程全部完成";
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, completeMsg);
+        }
+    }
+
+    /**
+     * 微信平台发布处理器
+     */
+    private class WeixinPublishHandler implements PlatformPublishHandler {
+        @Override
+        public void handlePublish(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken,String weixinAppToken, String version, String log, ProcessBuilder processBuilder) {
+            // 步骤1：生成密钥
+            try {
+                // 发送开始生成密钥的消息
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[微信] 开始生成密钥文件...");
+
+                // 使用现有的方法生成密钥文件
+                buildWeixinKeyFile(appId, projectPath, weixinAppToken);
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[微信] 密钥文件生成成功");
+
+            } catch (Exception e) {
+                String errorMsg = "[微信] 密钥文件生成失败: " + e.getMessage();
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish error [微信] 密钥文件生成失败:" + errorMsg);
+                return;
+            }
+            logger.info("[微信] 开始发布小程序...");
+
+            //步骤2：发布
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[微信] 开始发布小程序...");
+
+            String publishCmd = buildWeixinUploadCommand(appId, projectPath,version,log);
+            logger.info("[微信] publishCmd :{}",publishCmd);
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[微信] publishCmd :"+publishCmd);
+
+            boolean publishExecuteCommandResult=executeCommand(taskId, publishCmd, processBuilder, line -> {});
+            logger.info("[微信] publishExecuteCommandResult :{}",publishExecuteCommandResult);
+            if(!publishExecuteCommandResult){
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish error [微信]发布小程序失败");
+                return;
+            }
+            //步骤3：预览生成二维码
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[微信] 开始生成二维码...");
+            String previewCmd = buildWeixinPreviewCommand(appId, projectPath,version,log);
+            boolean previewExecuteCommandResult=executeCommand(taskId, previewCmd, processBuilder, line -> {});
+            if(!previewExecuteCommandResult){
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish error [微信]预览二维码失败");
                 return;
             }
 
-            String completeMsg = "[快手] 发布流程全部完成";
+            String completeMsg = "[微信] 发布流程全部完成";
             messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, completeMsg);
+
+
         }
     }
 
@@ -327,6 +364,31 @@ public class NovelAppPublishUtil {
         }
         
         logger.info("快手密钥文件生成成功: {}", keyFile.getAbsolutePath());
+    }
+
+    /**
+     * 微信平台：生成密钥文件
+     */
+    private void buildWeixinKeyFile(String appId, String projectPath, String weixinAppToken) {
+        // 构建密钥文件路径
+        File keyFile = new File(projectPath, "private." + appId + ".key");
+
+        // 确保父目录存在
+        if (!keyFile.getParentFile().exists()) {
+            keyFile.getParentFile().mkdirs();
+        }
+
+        // 写入token内容到文件，使用UTF-8编码
+        try (java.io.OutputStreamWriter writer = new java.io.OutputStreamWriter(
+                new java.io.FileOutputStream(keyFile), java.nio.charset.StandardCharsets.UTF_8)) {
+            writer.write(weixinAppToken);
+        } catch (Exception e) {
+            String errorMsg = "生成微信密钥文件失败: " + e.getMessage();
+            logger.error(errorMsg);
+            throw new RuntimeException(errorMsg);
+        }
+
+        logger.info("微信密钥文件生成成功: {}", keyFile.getAbsolutePath());
     }
 
     /**
@@ -383,6 +445,48 @@ public class NovelAppPublishUtil {
             appId,
             projectPath + "\\private." + appId + ".key",
             qrcodePath);
+    }
+
+    /**
+     * 微信平台：发布命令
+     */
+    private String buildWeixinUploadCommand(String appId, String projectPath, String version, String log) {
+        // 构建密钥文件路径
+        File keyFile = new File(projectPath, "private." + appId + ".key");
+        if (!keyFile.exists()) {
+            throw new RuntimeException("密钥文件不存在: " + keyFile.getAbsolutePath());
+        }
+
+        // 构建发布命令
+        return String.format(
+                "miniprogram-ci upload --pp %s --appid %s --pkp %s --uv %s --ud \"%s\"",
+                projectPath,
+                appId,
+                keyFile.getAbsolutePath(),
+                version,
+                log
+        );
+    }
+
+    /**
+     * 微信平台：预览生成二维码命令
+     */
+    private String buildWeixinPreviewCommand(String appId, String projectPath, String version, String log) {
+        // 构建密钥文件路径
+        File keyFile = new File(projectPath, "private." + appId + ".key");
+        if (!keyFile.exists()) {
+            throw new RuntimeException("密钥文件不存在: " + keyFile.getAbsolutePath());
+        }
+
+        // 构建发布命令
+        return String.format(
+                "miniprogram-ci preview --pp %s --appid %s --pkp %s --uv %s --ud \"%s\"",
+                projectPath,
+                appId,
+                keyFile.getAbsolutePath(),
+                version,
+                log
+        );
     }
 
     /**

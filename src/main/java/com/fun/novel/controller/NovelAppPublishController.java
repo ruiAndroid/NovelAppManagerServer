@@ -165,6 +165,7 @@ public class NovelAppPublishController {
             String projectPath = params.get("projectPath");
             String douyinAppToken = params.get("douyinAppToken");
             String kuaishouAppToken = params.get("kuaishouAppToken");
+            String weixinAppToken = params.get("weixinAppToken");
             String version = params.get("version");
             String log = params.get("log");
 
@@ -194,13 +195,18 @@ public class NovelAppPublishController {
                 return Result.error("快手平台发布需要提供 kuaishouAppToken");
             }
 
+            // 如果是微信平台，验证token
+            if ("mp-weixin".equals(platformCode) && (weixinAppToken == null || weixinAppToken.trim().isEmpty())) {
+                return Result.error("微信平台发布需要提供 weixinAppToken");
+            }
+
             // 创建发布任务
             String taskId = novelAppPublishUtil.publishNovelApp(
                 platformCode,
                 appId,
                 projectPath,
                 douyinAppToken,
-                kuaishouAppToken,
+                kuaishouAppToken, weixinAppToken,
                 version,
                 log
             );
