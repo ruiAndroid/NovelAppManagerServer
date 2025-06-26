@@ -51,4 +51,7 @@ public class AppCommonConfigDTO {
 
     @Schema(description = "首页卡片样式")
     private Integer homeCardStyle;
+
+    @Schema(description = "是否iaa模式")
+    private Boolean iaaMode;
 }

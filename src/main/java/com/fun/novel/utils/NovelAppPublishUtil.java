@@ -459,7 +459,7 @@ public class NovelAppPublishUtil {
 
         // 构建发布命令
         return String.format(
-                "miniprogram-ci upload --pp %s --appid %s --pkp %s --uv %s --ud \"%s\"",
+                "miniprogram-ci upload --pp %s --appid %s --pkp %s --uv %s --ud %s --enable-es6 true --enable-es7 true --enable-minify-wxss true --enable-minify-js true --enable-minify-wxml true --enable-minify true",
                 projectPath,
                 appId,
                 keyFile.getAbsolutePath(),
@@ -480,7 +480,7 @@ public class NovelAppPublishUtil {
 
         // 构建发布命令
         return String.format(
-                "miniprogram-ci preview --pp %s --appid %s --pkp %s --uv %s --ud \"%s\"",
+                "miniprogram-ci preview --pp %s --appid %s --pkp %s --uv %s --ud %s --enable-es6 true --enable-es7 true --enable-minify-wxss true --enable-minify-js true --enable-minify-wxml true --enable-minify true",
                 projectPath,
                 appId,
                 keyFile.getAbsolutePath(),

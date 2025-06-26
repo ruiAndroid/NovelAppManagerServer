@@ -88,6 +88,16 @@ public class AppWeijuBanner {
     @JsonProperty("is_im")
     private String isIm;
 
+    @TableField("ad_interstitial_switch")
+    @Schema(description = "插屏广告配置")
+    @JsonProperty("ad_interstitial_switch")
+    private String adInterstitialSwitch;
+
+    @TableField("ad_banner_switch")
+    @Schema(description = "ad banner 配置")
+    @JsonProperty("ad_banner_switch")
+    private String adBannerSwitch;
+
     @TableField("homepage_pop_01")
     @Schema(description = "首页弹窗01")
     @JsonProperty("homepage_pop_01")

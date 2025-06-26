@@ -76,6 +76,11 @@ public class AppCommonConfig {
     @TableField("douyin_app_token")
     private String douyinAppToken;
 
+
+    @Schema(description = "是否iaa模式")
+    @TableField("iaa_mode")
+    private Boolean iaaMode;
+
     @Schema(description = "创建时间")
     @TableField("create_time")
     @JsonIgnore
