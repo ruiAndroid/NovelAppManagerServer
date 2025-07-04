@@ -22,29 +22,59 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
 
     @Override
     public void processLocalCodeFiles(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions) {
+        doProcessLocalCodeFiles(taskId, params, rollbackActions, true);
+    }
+
+    public void processLocalCodeFilesSimple(CreateNovelAppRequest params, List<Runnable> rollbackActions) {
+        doProcessLocalCodeFiles(null, params, rollbackActions, false);
+    }
+
+    private void doProcessLocalCodeFiles(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions, boolean withLogAndDelay) {
         CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
         CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
         String buildCode = commonConfig.getBuildCode();
         String platform = baseConfig.getPlatform();
-        processPrebuildBuildDir(taskId, buildCode, platform, baseConfig, rollbackActions);
-        processThemeFile(taskId, buildCode, baseConfig, rollbackActions);
-        processDouyinPrefetchFile(taskId, buildCode, platform, rollbackActions);
-        processBaseConfigFile(taskId, buildCode, platform, baseConfig, commonConfig, rollbackActions);
-        processAdConfigFile(taskId, buildCode, platform, params.getAdConfig(), rollbackActions);
-        processPayConfigFile(taskId, buildCode, platform, params.getPaymentConfig(), rollbackActions);
-        processDeliverConfigFile(taskId, buildCode, platform, params.getDeliverConfig(), rollbackActions);
-        processCommonConfigFile(taskId, buildCode, platform, commonConfig, rollbackActions);
-        processAppConfigFile(taskId, buildCode, rollbackActions);
-        processPackageJsonFile(taskId, buildCode, platform, rollbackActions);
+        processPrebuildBuildDir(taskId, buildCode, platform, baseConfig, rollbackActions, withLogAndDelay);
+        processThemeFile(taskId, buildCode, baseConfig, rollbackActions, withLogAndDelay);
+        processDouyinPrefetchFile(taskId, buildCode, platform, rollbackActions, withLogAndDelay);
+        processBaseConfigFile(taskId, buildCode, platform, baseConfig, commonConfig, rollbackActions, withLogAndDelay);
+        processAdConfigFile(taskId, buildCode, platform, params.getAdConfig(), rollbackActions, withLogAndDelay);
+        processPayConfigFile(taskId, buildCode, platform, params.getPaymentConfig(), rollbackActions, withLogAndDelay);
+        processDeliverConfigFile(taskId, buildCode, platform, params.getDeliverConfig(), rollbackActions, withLogAndDelay);
+        processCommonConfigFile(taskId, buildCode, platform, commonConfig, rollbackActions, withLogAndDelay);
+        processAppConfigFile(taskId, buildCode, rollbackActions, withLogAndDelay);
+        processPackageJsonFile(taskId, buildCode, platform, rollbackActions, withLogAndDelay);
+    }
+
+    @Override
+    public void updateBaseConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions) {
+        CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
+        CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
+        
+        String buildCode = commonConfig.getBuildCode();
+        String platform = baseConfig.getPlatform();
+        //修改基础设置
+        processBaseConfigFile(null, buildCode, platform, baseConfig, commonConfig, rollbackActions, false);
+        //修改主题颜色
+        processThemeFile(null, buildCode, baseConfig, rollbackActions, false);
+        //处理preBuild
+        processPrebuildBuildDir(null, buildCode,platform, baseConfig, rollbackActions, false);
+        //修改deliver 配置
+        processDeliverConfigFile(null, buildCode, platform,  params.getDeliverConfig(), rollbackActions, false);
+        
+
     }
 
     // 以下为迁移自NovelAppCreationServiceImpl的所有私有方法和工具方法
     // 1. processPrebuildBuildDir
-    private void processPrebuildBuildDir(String taskId, String buildCode, String platform, CreateNovelAppRequest.BaseConfig baseConfig, List<Runnable> rollbackActions) {
+    private void processPrebuildBuildDir(String taskId, String buildCode, String platform, CreateNovelAppRequest.BaseConfig baseConfig, List<Runnable> rollbackActions, boolean withLogAndDelay) {
+        if (withLogAndDelay) {
+            taskLogger.log(taskId, "[2-1-1] 处理目录prebuild/build: ", CreateNovelLogType.PROCESSING);
+            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        }
         String prebuildDir = buildWorkPath + File.separator + "prebuild" + File.separator + "build";
-        String srcDir = prebuildDir + File.separator + "xingchen";
+        String srcDir = prebuildDir + File.separator + "sample";
         String destDir = prebuildDir + File.separator + buildCode;
-        taskLogger.log(taskId, "[2-1-1] 处理目录prebuild/build: ", CreateNovelLogType.PROCESSING);
         try {
             Path destPath = java.nio.file.Paths.get(destDir);
             if (java.nio.file.Files.exists(destPath)) {
@@ -103,18 +133,24 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
                 } catch (Exception ignore) {}
             });
             // 2-1-2 编辑manifest.json内容
-            taskLogger.log(taskId, "[2-1-2] 开始编辑manifest.json", CreateNovelLogType.PROCESSING);
-            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            if (withLogAndDelay) {
+                taskLogger.log(taskId, "[2-1-2] 开始编辑manifest.json", CreateNovelLogType.PROCESSING);
+                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            }
             try {
                 taskLogger.log(taskId, "[2-1-2-1] 读取manifest.json", CreateNovelLogType.INFO);
                 String manifestContent = new String(java.nio.file.Files.readAllBytes(manifestDest), java.nio.charset.StandardCharsets.UTF_8);
                 com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
                 com.fasterxml.jackson.databind.node.ObjectNode manifestNode = (com.fasterxml.jackson.databind.node.ObjectNode) objectMapper.readTree(manifestContent);
-                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                if (withLogAndDelay) {
+                    try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                }
                 // 替换name字段
                 taskLogger.log(taskId, "[2-1-2-2] 替换name字段", CreateNovelLogType.INFO);
                 manifestNode.put("name", baseConfig.getAppName());
-                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                if (withLogAndDelay) {
+                    try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                }
                 // 替换平台appid
                 taskLogger.log(taskId, "[2-1-2-3] 替换平台appid", CreateNovelLogType.INFO);
                 switch (platform) {
@@ -134,7 +170,9 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
                         }
                         break;
                 }
-                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                if (withLogAndDelay) {
+                    try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                }
                 // 写回文件
                 taskLogger.log(taskId, "[2-1-2-4] 写回manifest.json", CreateNovelLogType.INFO);
                 objectMapper.writerWithDefaultPrettyPrinter().writeValue(manifestDest.toFile(), manifestNode);
@@ -151,14 +189,18 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
                 throw new RuntimeException("manifest.json内容编辑失败: " + e.getMessage(), e);
             }
             //2-1-3 编辑pages-xx.json文件
-            taskLogger.log(taskId, "[2-1-3] 开始编辑" + pagesFileName, CreateNovelLogType.PROCESSING);
-            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            if (withLogAndDelay) {
+                taskLogger.log(taskId, "[2-1-3] 开始编辑" + pagesFileName, CreateNovelLogType.PROCESSING);
+                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            }
             try {
                 taskLogger.log(taskId, "[2-1-3-1] 读取" + pagesFileName, CreateNovelLogType.INFO);
                 String pagesContent = new String(java.nio.file.Files.readAllBytes(pagesDest), java.nio.charset.StandardCharsets.UTF_8);
                 com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
                 com.fasterxml.jackson.databind.JsonNode rootNode = objectMapper.readTree(pagesContent);
-                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                if (withLogAndDelay) {
+                    try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                }
                 if (rootNode.has("pages") && rootNode.get("pages").isArray()) {
                     for (com.fasterxml.jackson.databind.JsonNode pageNode : rootNode.get("pages")) {
                         if (!pageNode.has("path") || !pageNode.has("style")) continue;
@@ -170,11 +212,22 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
                         }
                         // navigationBarBackgroundColor
                         if (path.equals("pages/homePage/homePage") || path.equals("pages/bookPage/bookPage") || path.equals("pages/filterPage/filterPage") || path.equals("pages/detailPage/detailPage") || path.equals("pages/minePage/minePage")) {
-                            styleNode.put("navigationBarBackgroundColor", baseConfig.getMainTheme());
+                            String secondTheme = baseConfig.getSecondTheme();
+                            if (secondTheme != null && secondTheme.matches("#?[A-Fa-f0-9]{8}")) {
+                                // 转换#RRGGBBAA为#RRGGBB
+                                if (secondTheme.startsWith("#")) {
+                                    secondTheme = secondTheme.substring(0, 7);
+                                } else {
+                                    secondTheme = "#" + secondTheme.substring(0, 6);
+                                }
+                            }
+                            styleNode.put("navigationBarBackgroundColor", secondTheme);
                         }
                     }
                 }
-                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                if (withLogAndDelay) {
+                    try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                }
                 // 写回文件
                 taskLogger.log(taskId, "[2-1-3-2] 写回" + pagesFileName, CreateNovelLogType.INFO);
                 objectMapper.writerWithDefaultPrettyPrinter().writeValue(pagesDest.toFile(), rootNode);
@@ -202,12 +255,14 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
         }
     }
     // 2. processThemeFile
-    private void processThemeFile(String taskId, String buildCode, CreateNovelAppRequest.BaseConfig baseConfig, List<Runnable> rollbackActions) {
+    private void processThemeFile(String taskId, String buildCode, CreateNovelAppRequest.BaseConfig baseConfig, List<Runnable> rollbackActions, boolean withLogAndDelay) {
+        if (withLogAndDelay) {
+            taskLogger.log(taskId, "[2-2] 开始处理主题文件: " + buildWorkPath + File.separator + "src" + File.separator + "common" + File.separator + "styles" + File.separator + "theme.less", CreateNovelLogType.PROCESSING);
+            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        }
         String themeFilePath = buildWorkPath + File.separator + "src" + File.separator + "common" + File.separator + "styles" + File.separator + "theme.less";
         java.nio.file.Path themePath = java.nio.file.Paths.get(themeFilePath);
         String backupPath = themeFilePath + ".bak";
-        taskLogger.log(taskId, "[2-2] 开始处理主题文件: " + themeFilePath, CreateNovelLogType.PROCESSING);
-        try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
         try {
             // 备份原文件
             java.nio.file.Files.copy(themePath, java.nio.file.Paths.get(backupPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
@@ -220,7 +275,9 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
                 } catch (Exception ignore) {}
             });
             taskLogger.log(taskId, "[2-2-1] 备份主题文件完成", CreateNovelLogType.INFO);
-            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            if (withLogAndDelay) {
+                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            }
             // 读取原内容
             java.util.List<String> lines = java.nio.file.Files.readAllLines(themePath, java.nio.charset.StandardCharsets.UTF_8);
             // 构造新主题色变量
@@ -228,26 +285,27 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
             String secondTheme = baseConfig.getSecondTheme();
             String line1 = "@primary-color-" + buildCode + ": " + mainTheme + ";";
             String line2 = "@second-color-" + buildCode + ": " + secondTheme + ";";
-            int insertIndex = -1;
+            boolean foundPrimary = false, foundSecond = false;
             for (int i = 0; i < lines.size(); i++) {
                 String line = lines.get(i).trim();
-                if (line.startsWith("@primary-color-") || line.startsWith("@second-color-")) {
-                    insertIndex = i;
+                if (line.startsWith("@primary-color-" + buildCode + ":")) {
+                    lines.set(i, line1);
+                    foundPrimary = true;
+                }
+                if (line.startsWith("@second-color-" + buildCode + ":")) {
+                    lines.set(i, line2);
+                    foundSecond = true;
                 }
             }
-            if (insertIndex != -1) {
-                lines.add(insertIndex + 1, line2);
-                lines.add(insertIndex + 1, line1);
-            } else {
-                // fallback: 追加到末尾
-                lines.add(line1);
-                lines.add(line2);
-            }
+            if (!foundPrimary) lines.add(line1);
+            if (!foundSecond) lines.add(line2);
             // 写回文件
             java.nio.file.Files.write(themePath, lines, java.nio.charset.StandardCharsets.UTF_8);
             taskLogger.log(taskId, "[2-2-2] 新增主题色变量完成", CreateNovelLogType.SUCCESS);
             taskLogger.log(taskId, "[2-2-3] 新增内容：\n" + line1 + "\n" + line2, CreateNovelLogType.INFO);
-            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            if (withLogAndDelay) {
+                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            }
             // 操作成功后删除theme.bak
             try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath)); } catch (Exception ignore) {}
         } catch (Exception e) {
@@ -257,7 +315,11 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
         }
     }
     // 3. processDouyinPrefetchFile
-    private void processDouyinPrefetchFile(String taskId, String buildCode, String platform, List<Runnable> rollbackActions) {
+    private void processDouyinPrefetchFile(String taskId, String buildCode, String platform, List<Runnable> rollbackActions, boolean withLogAndDelay) {
+        if (withLogAndDelay) {
+            taskLogger.log(taskId, "[2-3] 开始处理抖音预取文件: " + buildWorkPath + File.separator + "prefetchbuild" + File.separator + "prelaunch-" + buildCode + ".js", CreateNovelLogType.PROCESSING);
+            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        }
         if (!"douyin".equals(platform)) return;
         String prefetchDir = buildWorkPath + File.separator + "prefetchbuild";
         String srcFile = prefetchDir + File.separator + "prelaunch-fun.js";
@@ -265,8 +327,6 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
         java.nio.file.Path srcPath = java.nio.file.Paths.get(srcFile);
         java.nio.file.Path destPath = java.nio.file.Paths.get(destFile);
         String backupPath = destFile + ".bak";
-        taskLogger.log(taskId, "[2-3] 开始处理抖音预取文件: " + destFile, CreateNovelLogType.PROCESSING);
-        try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
         try {
             // 复制原文件
             java.nio.file.Files.copy(srcPath, destPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
@@ -287,7 +347,9 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
                 } catch (Exception ignore) {}
             });
             taskLogger.log(taskId, "[2-3-1] 复制prelaunch-fun.js完成", CreateNovelLogType.INFO);
-            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            if (withLogAndDelay) {
+                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            }
             // 读取内容并修改brand
             String content = new String(java.nio.file.Files.readAllBytes(destPath), java.nio.charset.StandardCharsets.UTF_8);
             // 简单正则替换 param.brand = 'xxx' 或 param.brand: 'xxx'
@@ -295,7 +357,9 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
             java.nio.file.Files.write(destPath, newContent.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             taskLogger.log(taskId, "[2-3-2] 修改param.brand为" + buildCode + "完成", CreateNovelLogType.SUCCESS);
             taskLogger.log(taskId, newContent, CreateNovelLogType.INFO);
-            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            if (withLogAndDelay) {
+                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            }
             // 操作成功后删除prelaunch.bak
             try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath)); } catch (Exception ignore) {}
         } catch (Exception e) {
@@ -305,13 +369,15 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
         }
     }
     // 4. processBaseConfigFile
-    private void processBaseConfigFile(String taskId, String buildCode, String platform, CreateNovelAppRequest.BaseConfig baseConfig, CreateNovelAppRequest.CommonConfig commonConfig, List<Runnable> rollbackActions) {
+    private void processBaseConfigFile(String taskId, String buildCode, String platform, CreateNovelAppRequest.BaseConfig baseConfig, CreateNovelAppRequest.CommonConfig commonConfig, List<Runnable> rollbackActions, boolean withLogAndDelay) {
+        if (withLogAndDelay) {
+            taskLogger.log(taskId, "[2-4-1] 开始处理baseConfig配置文件: " + buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "baseConfigs" + File.separator + buildCode + ".js", CreateNovelLogType.PROCESSING);
+            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        }
         String configDir = buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "baseConfigs";
         String configFile = configDir + File.separator + buildCode + ".js";
         java.nio.file.Path configPath = java.nio.file.Paths.get(configFile);
         String backupPath = configFile + ".bak";
-        taskLogger.log(taskId, "[2-4-1] 开始处理baseConfig配置文件: " + configFile, CreateNovelLogType.PROCESSING);
-        try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
         try {
             // 确保目录存在
             java.nio.file.Files.createDirectories(java.nio.file.Paths.get(configDir));
@@ -337,59 +403,69 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
             // 构造内容
             StringBuilder sb = new StringBuilder();
             sb.append("export default {\n");
-            // 抖音
-            sb.append("\tAppConfig: {\n");
+            sb.append("  AppConfig: {\n");
+
+            // tt
+            sb.append("    'tt': {");
             if ("douyin".equals(platform)) {
-                sb.append("\t\t'tt': {\n");
-                sb.append("\t\t\t\"app_name\": \"").append(baseConfig.getAppName()).append("\",\n");
-                sb.append("\t\t\t\"app_code\": \"").append(baseConfig.getAppCode()).append("\",\n");
-                sb.append("\t\t\t\"code\": \"").append(baseConfig.getPlatform()).append("\",\n");
-                sb.append("\t\t\t\"product\": \"").append(baseConfig.getProduct()).append("\",\n");
-                sb.append("\t\t\t\"customer\": \"").append(baseConfig.getCustomer()).append("\",\n");
-                sb.append("\t\t\t\"appid\": \"").append(baseConfig.getAppid()).append("\",\n");
-                sb.append("\t\t\t\"token_id\": ").append(baseConfig.getTokenId()).append(",\n");
-                sb.append("\t\t\t\"version\": \"").append(baseConfig.getVersion()).append("\",\n");
-                sb.append("\t\t\t\"cl\": \"").append(baseConfig.getCl()).append("\"\n");
+                sb.append("\n");
+                sb.append("      \"app_name\": \"").append(baseConfig.getAppName()).append("\",\n");
+                sb.append("      \"app_code\": \"").append(baseConfig.getAppCode()).append("\",\n");
+                sb.append("      \"code\": \"").append(baseConfig.getPlatform()).append("\",\n");
+                sb.append("      \"product\": \"").append(baseConfig.getProduct()).append("\",\n");
+                sb.append("      \"customer\": \"").append(baseConfig.getCustomer()).append("\",\n");
+                sb.append("      \"appid\": \"").append(baseConfig.getAppid()).append("\",\n");
+                sb.append("      \"token_id\": ").append(baseConfig.getTokenId()).append(",\n");
+                sb.append("      \"version\": \"").append(baseConfig.getVersion()).append("\",\n");
+                sb.append("      \"cl\": \"").append(baseConfig.getCl()).append("\"\n");
             }
-            sb.append("\t\t},\n");
-            // 快手
-            sb.append("\t\t'ks': {\n");
+            sb.append("    },\n");
+
+            // ks
+            sb.append("    'ks': {");
             if ("kuaishou".equals(platform)) {
-                sb.append("\t\t\t\"app_name\": \"").append(baseConfig.getAppName()).append("\",\n");
-                sb.append("\t\t\t\"app_code\": \"").append(baseConfig.getAppCode()).append("\",\n");
-                sb.append("\t\t\t\"code\": \"").append(baseConfig.getPlatform()).append("\",\n");
-                sb.append("\t\t\t\"client_id\": \"").append(commonConfig.getKuaishouClientId()).append("\",\n");
-                sb.append("\t\t\t\"client_secret\": \"").append(commonConfig.getKuaishouClientSecret()).append("\",\n");
-                sb.append("\t\t\t\"product\": \"").append(baseConfig.getProduct()).append("\",\n");
-                sb.append("\t\t\t\"customer\": \"").append(baseConfig.getCustomer()).append("\",\n");
-                sb.append("\t\t\t\"appid\": \"").append(baseConfig.getAppid()).append("\",\n");
-                sb.append("\t\t\t\"token_id\": ").append(baseConfig.getTokenId()).append(",\n");
-                sb.append("\t\t\t\"version\": \"").append(baseConfig.getVersion()).append("\",\n");
-                sb.append("\t\t\t\"cl\": \"").append(baseConfig.getCl()).append("\"\n");
+                sb.append("\n");
+                sb.append("      \"app_name\": \"").append(baseConfig.getAppName()).append("\",\n");
+                sb.append("      \"app_code\": \"").append(baseConfig.getAppCode()).append("\",\n");
+                sb.append("      \"code\": \"").append(baseConfig.getPlatform()).append("\",\n");
+                sb.append("      \"client_id\": \"").append(commonConfig.getKuaishouClientId()).append("\",\n");
+                sb.append("      \"client_secret\": \"").append(commonConfig.getKuaishouClientSecret()).append("\",\n");
+                sb.append("      \"product\": \"").append(baseConfig.getProduct()).append("\",\n");
+                sb.append("      \"customer\": \"").append(baseConfig.getCustomer()).append("\",\n");
+                sb.append("      \"appid\": \"").append(baseConfig.getAppid()).append("\",\n");
+                sb.append("      \"token_id\": ").append(baseConfig.getTokenId()).append(",\n");
+                sb.append("      \"version\": \"").append(baseConfig.getVersion()).append("\",\n");
+                sb.append("      \"cl\": \"").append(baseConfig.getCl()).append("\"\n");
             }
-            sb.append("\t\t},\n");
-            // 微信
-            sb.append("\t\t'wx': {\n");
+            sb.append("    },\n");
+
+            // wx
+            sb.append("    'wx': {");
             if ("weixin".equals(platform)) {
-                sb.append("\t\t\t\"app_name\": \"").append(baseConfig.getAppName()).append("\",\n");
-                sb.append("\t\t\t\"app_code\": \"").append(baseConfig.getAppCode()).append("\",\n");
-                sb.append("\t\t\t\"product\": \"").append(baseConfig.getProduct()).append("\",\n");
-                sb.append("\t\t\t\"customer\": \"").append(baseConfig.getCustomer()).append("\",\n");
-                sb.append("\t\t\t\"appid\": \"").append(baseConfig.getAppid()).append("\",\n");
-                sb.append("\t\t\t\"token_id\": ").append(baseConfig.getTokenId()).append(",\n");
-                sb.append("\t\t\t\"version\": \"").append(baseConfig.getVersion()).append("\",\n");
-                sb.append("\t\t\t\"cl\": \"").append(baseConfig.getCl()).append("\"\n");
+                sb.append("\n");
+                sb.append("      \"app_name\": \"").append(baseConfig.getAppName()).append("\",\n");
+                sb.append("      \"app_code\": \"").append(baseConfig.getAppCode()).append("\",\n");
+                sb.append("      \"product\": \"").append(baseConfig.getProduct()).append("\",\n");
+                sb.append("      \"customer\": \"").append(baseConfig.getCustomer()).append("\",\n");
+                sb.append("      \"appid\": \"").append(baseConfig.getAppid()).append("\",\n");
+                sb.append("      \"token_id\": ").append(baseConfig.getTokenId()).append(",\n");
+                sb.append("      \"version\": \"").append(baseConfig.getVersion()).append("\",\n");
+                sb.append("      \"cl\": \"").append(baseConfig.getCl()).append("\"\n");
             }
-            sb.append("\t\t},\n");
-            // 百度
-            sb.append("\t\t'bd': {\n\t\t}\n");
-            sb.append("\t}\n");
+            sb.append("    },\n");
+
+            // bd
+            sb.append("    'bd': {}\n");
+
+            sb.append("  }\n");
             sb.append("}\n");
             String fileContent = sb.toString();
             java.nio.file.Files.write(configPath, fileContent.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             taskLogger.log(taskId, "[2-4-1] baseConfig配置文件写入完成", CreateNovelLogType.SUCCESS);
             taskLogger.log(taskId, fileContent, CreateNovelLogType.INFO);
-            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            if (withLogAndDelay) {
+                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            }
             // 操作成功后删除.bak
             try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath)); } catch (Exception ignore) {}
         } catch (Exception e) {
@@ -399,13 +475,15 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
         }
     }
     // 5. processAdConfigFile
-    private void processAdConfigFile(String taskId, String buildCode, String platform, CreateNovelAppRequest.AdConfig adConfig, List<Runnable> rollbackActions) {
+    private void processAdConfigFile(String taskId, String buildCode, String platform, CreateNovelAppRequest.AdConfig adConfig, List<Runnable> rollbackActions, boolean withLogAndDelay) {
+        if (withLogAndDelay) {
+            taskLogger.log(taskId, "[2-4-3] 开始处理adConfig配置文件: " + buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "adConfigs" + File.separator + buildCode + ".js", CreateNovelLogType.PROCESSING);
+            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        }
         String configDir = buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "adConfigs";
         String configFile = configDir + File.separator + buildCode + ".js";
         java.nio.file.Path configPath = java.nio.file.Paths.get(configFile);
         String backupPath = configFile + ".bak";
-        taskLogger.log(taskId, "[2-4-3] 开始处理adConfig配置文件: " + configFile, CreateNovelLogType.PROCESSING);
-        try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
         try {
             // 确保目录存在
             java.nio.file.Files.createDirectories(java.nio.file.Paths.get(configDir));
@@ -508,7 +586,9 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
             java.nio.file.Files.write(configPath, finalSb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
             taskLogger.log(taskId, "[2-4-3] adConfig配置文件写入完成", CreateNovelLogType.SUCCESS);
             taskLogger.log(taskId, finalSb.toString(), CreateNovelLogType.INFO);
-            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            if (withLogAndDelay) {
+                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            }
             // 操作成功后删除.bak
             try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath)); } catch (Exception ignore) {}
         } catch (Exception e) {
@@ -518,13 +598,15 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
         }
     }
     // 6. processPayConfigFile
-    private void processPayConfigFile(String taskId, String buildCode, String platform, CreateNovelAppRequest.PaymentConfig payConfig, List<Runnable> rollbackActions) {
+    private void processPayConfigFile(String taskId, String buildCode, String platform, CreateNovelAppRequest.PaymentConfig payConfig, List<Runnable> rollbackActions, boolean withLogAndDelay) {
+        if (withLogAndDelay) {
+            taskLogger.log(taskId, "[2-4-4] 开始处理payConfig配置文件: " + buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "payConfigs" + File.separator + buildCode + ".js", CreateNovelLogType.PROCESSING);
+            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        }
         String configDir = buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "payConfigs";
         String configFile = configDir + File.separator + buildCode + ".js";
         java.nio.file.Path configPath = java.nio.file.Paths.get(configFile);
         String backupPath = configFile + ".bak";
-        taskLogger.log(taskId, "[2-4-4] 开始处理payConfig配置文件: " + configFile, CreateNovelLogType.PROCESSING);
-        try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
         try {
             // 确保目录存在
             java.nio.file.Files.createDirectories(java.nio.file.Paths.get(configDir));
@@ -605,7 +687,9 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
             java.nio.file.Files.write(configPath, finalSb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
             taskLogger.log(taskId, "[2-4-4] payConfig配置文件写入完成", CreateNovelLogType.SUCCESS);
             taskLogger.log(taskId, finalSb.toString(), CreateNovelLogType.INFO);
-            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            if (withLogAndDelay) {
+                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            }
             // 操作成功后删除.bak
             try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath)); } catch (Exception ignore) {}
         } catch (Exception e) {
@@ -615,13 +699,15 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
         }
     }
     // 7. processDeliverConfigFile
-    private void processDeliverConfigFile(String taskId, String buildCode, String platform, CreateNovelAppRequest.DeliverConfig deliverConfig, List<Runnable> rollbackActions) {
+    private void processDeliverConfigFile(String taskId, String buildCode, String platform, CreateNovelAppRequest.DeliverConfig deliverConfig, List<Runnable> rollbackActions, boolean withLogAndDelay) {
+        if (withLogAndDelay) {
+            taskLogger.log(taskId, "[2-4-5] 开始处理deliverConfig配置文件: " + buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "deliverConfigs" + File.separator + buildCode + ".js", CreateNovelLogType.PROCESSING);
+            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        }
         String configDir = buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "deliverConfigs";
         String configFile = configDir + File.separator + buildCode + ".js";
         java.nio.file.Path configPath = java.nio.file.Paths.get(configFile);
         String backupPath = configFile + ".bak";
-        taskLogger.log(taskId, "[2-4-5] 开始处理deliverConfig配置文件: " + configFile, CreateNovelLogType.PROCESSING);
-        try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
         try {
             // 确保目录存在
             java.nio.file.Files.createDirectories(java.nio.file.Paths.get(configDir));
@@ -673,7 +759,9 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
             java.nio.file.Files.write(configPath, finalSb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
             taskLogger.log(taskId, "[2-4-5] deliverConfig配置文件写入完成", CreateNovelLogType.SUCCESS);
             taskLogger.log(taskId, finalSb.toString(), CreateNovelLogType.INFO);
-            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            if (withLogAndDelay) {
+                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            }
             // 操作成功后删除.bak
             try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath)); } catch (Exception ignore) {}
         } catch (Exception e) {
@@ -683,13 +771,15 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
         }
     }
     // 8. processCommonConfigFile
-    private void processCommonConfigFile(String taskId, String buildCode, String platform, CreateNovelAppRequest.CommonConfig commonConfig, List<Runnable> rollbackActions) {
+    private void processCommonConfigFile(String taskId, String buildCode, String platform, CreateNovelAppRequest.CommonConfig commonConfig, List<Runnable> rollbackActions, boolean withLogAndDelay) {
+        if (withLogAndDelay) {
+            taskLogger.log(taskId, "[2-4-6] 开始处理commonConfig配置文件: " + buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "commonConfigs" + File.separator + buildCode + ".js", CreateNovelLogType.PROCESSING);
+            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        }
         String configDir = buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "commonConfigs";
         String configFile = configDir + File.separator + buildCode + ".js";
         java.nio.file.Path configPath = java.nio.file.Paths.get(configFile);
         String backupPath = configFile + ".bak";
-        taskLogger.log(taskId, "[2-4-6] 开始处理commonConfig配置文件: " + configFile, CreateNovelLogType.PROCESSING);
-        try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
         try {
             // 确保目录存在
             java.nio.file.Files.createDirectories(java.nio.file.Paths.get(configDir));
@@ -762,7 +852,9 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
             java.nio.file.Files.write(configPath, finalSb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
             taskLogger.log(taskId, "[2-4-6] commonConfig配置文件写入完成", CreateNovelLogType.SUCCESS);
             taskLogger.log(taskId, finalSb.toString(), CreateNovelLogType.INFO);
-            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            if (withLogAndDelay) {
+                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            }
             // 操作成功后删除.bak
             try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath)); } catch (Exception ignore) {}
         } catch (Exception e) {
@@ -772,13 +864,15 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
         }
     }
     // 9. processAppConfigFile
-    private void processAppConfigFile(String taskId, String buildCode, List<Runnable> rollbackActions) {
+    private void processAppConfigFile(String taskId, String buildCode, List<Runnable> rollbackActions, boolean withLogAndDelay) {
+        if (withLogAndDelay) {
+            taskLogger.log(taskId, "[2-5] 开始处理AppConfig.js: " + buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "AppConfig.js", CreateNovelLogType.PROCESSING);
+            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        }
         String configDir = buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config";
         String configFile = configDir + File.separator + "AppConfig.js";
         java.nio.file.Path configPath = java.nio.file.Paths.get(configFile);
         String backupPath = configFile + ".bak";
-        taskLogger.log(taskId, "[2-5] 开始处理AppConfig.js: " + configFile, CreateNovelLogType.PROCESSING);
-        try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
         try {
             // 备份原文件
             if (java.nio.file.Files.exists(configPath)) {
@@ -916,7 +1010,9 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
             java.nio.file.Files.write(configPath, sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
             taskLogger.log(taskId, "[2-5] AppConfig.js写入完成", CreateNovelLogType.SUCCESS);
             taskLogger.log(taskId, sb.toString(), CreateNovelLogType.INFO);
-            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            if (withLogAndDelay) {
+                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            }
             // 操作成功后删除.bak
             try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath)); } catch (Exception ignore) {}
         } catch (Exception e) {
@@ -926,12 +1022,14 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
         }
     }
     // 10. processPackageJsonFile
-    private void processPackageJsonFile(String taskId, String buildCode, String platform, List<Runnable> rollbackActions) {
+    private void processPackageJsonFile(String taskId, String buildCode, String platform, List<Runnable> rollbackActions, boolean withLogAndDelay) {
+        if (withLogAndDelay) {
+            taskLogger.log(taskId, "[2-6] 开始处理package.json: " + buildWorkPath + File.separator + "package.json", CreateNovelLogType.PROCESSING);
+            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        }
         String packageJsonPath = buildWorkPath + File.separator + "package.json";
         java.nio.file.Path jsonPath = java.nio.file.Paths.get(packageJsonPath);
         String backupPath = packageJsonPath + ".bak";
-        taskLogger.log(taskId, "[2-6] 开始处理package.json: " + packageJsonPath, CreateNovelLogType.PROCESSING);
-        try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
         try {
             // 备份原文件
             if (java.nio.file.Files.exists(jsonPath)) {
@@ -996,7 +1094,9 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
             java.nio.file.Files.write(jsonPath, finalContent.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             taskLogger.log(taskId, "[2-6] package.json写入完成", CreateNovelLogType.SUCCESS);
             taskLogger.log(taskId, finalContent, CreateNovelLogType.INFO);
-            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            if (withLogAndDelay) {
+                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            }
             // 操作成功后删除.bak
             try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath)); } catch (Exception ignore) {}
         } catch (Exception e) {
