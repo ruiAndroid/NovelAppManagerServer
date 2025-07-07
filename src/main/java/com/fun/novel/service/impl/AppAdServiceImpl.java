@@ -120,4 +120,11 @@ public class AppAdServiceImpl implements AppAdService {
     public List<AppAd> getAllAppAds() {
         return appAdMapper.selectList(new LambdaQueryWrapper<>());
     }
+
+    @Override
+    public String getAppIdByAppAdId(Integer appAdId) {
+        if (appAdId == null) return null;
+        AppAd appAd = appAdMapper.selectById(appAdId);
+        return appAd != null ? appAd.getAppid() : null;
+    }
 } 

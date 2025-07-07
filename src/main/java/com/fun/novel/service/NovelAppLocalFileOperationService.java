@@ -24,4 +24,11 @@ public interface NovelAppLocalFileOperationService {
      * @param rollbackActions
      */
     void updateCommonConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions);
+
+    /**
+     * 更新所有广告配置相关的代码文件的原子操作，所有操作成功才提交，否则全部回滚
+     * @param params
+     * @param rollbackActions
+     */
+    void updateAdConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions);
 } 
