@@ -16,5 +16,12 @@ public interface NovelAppLocalFileOperationService {
      * @param params
      * @param rollbackActions
      */
-    void updateBaseConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions);  
+    void updateBaseConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions);
+
+    /**
+     * 更新所有通用配置相关的代码文件的原子操作 ，所有操作成功才提交，否则全部回滚
+     * @param params
+     * @param rollbackActions
+     */
+    void updateCommonConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions);
 } 
