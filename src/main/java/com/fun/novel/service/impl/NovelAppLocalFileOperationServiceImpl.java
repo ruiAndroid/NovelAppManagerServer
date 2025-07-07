@@ -87,6 +87,17 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
         processAdConfigFile(null, buildCode, platform, params.getAdConfig(), rollbackActions, false);
     }
 
+    @Override
+    public void updatePayConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions) {
+        CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
+        CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
+
+        String buildCode = commonConfig.getBuildCode();
+        String platform = baseConfig.getPlatform();
+
+        processPayConfigFile(null, buildCode, platform, params.getPaymentConfig(), rollbackActions, false);
+    }
+
 
     // 以下为迁移自NovelAppCreationServiceImpl的所有私有方法和工具方法
     // 1. processPrebuildBuildDir

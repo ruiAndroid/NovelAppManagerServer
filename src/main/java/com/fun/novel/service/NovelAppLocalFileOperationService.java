@@ -31,4 +31,10 @@ public interface NovelAppLocalFileOperationService {
      * @param rollbackActions
      */
     void updateAdConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions);
+    /**
+     * 更新所有支付配置相关的代码文件的原子操作，所有操作成功才提交，否则全部回滚
+     * @param params
+     * @param rollbackActions
+     */
+    void updatePayConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions);
 } 
