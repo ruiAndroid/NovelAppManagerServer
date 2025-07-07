@@ -140,6 +140,9 @@ public class NovelAppPublishUtil {
                     } else {
                         logger.info("Command output for task {}: {}", taskId, logMessage);
                     }
+                    if(logMessage.contains("Upload Error")){ //TODO 都快微的报错log都不一致，碰到一个加一个
+                        return false;
+                    }
 
                     if (outputHandler != null) {
                         try {
@@ -211,6 +214,7 @@ public class NovelAppPublishUtil {
             boolean uploadExecuteCommandResult = executeCommand(taskId, uploadCmd, processBuilder, line -> {});
             if(!uploadExecuteCommandResult){
                 messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish error [抖音]上传小程序失败");
+                return;
             }
 
             messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[抖音]上传小程序成功");
@@ -267,6 +271,7 @@ public class NovelAppPublishUtil {
             });
             if(!publishExecuteCommandResult){
                 messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish error [快手]上传小程序失败");
+                return;
 
             }
 
