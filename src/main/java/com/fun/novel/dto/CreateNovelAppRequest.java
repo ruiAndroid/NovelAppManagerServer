@@ -155,6 +155,15 @@ public class CreateNovelAppRequest {
         private String douyinAppToken;
         @Schema(description = "是否Iaa模式")
         private Boolean iaaMode;
+        @Schema(description = "iaa弹窗样式")
+        private String iaaDialogStyle;
 
+    }
+
+    public String getIaaDialogStyle() {
+        return commonConfig.getIaaDialogStyle();
+    }
+    public void setIaaDialogStyle(String iaaDialogStyle) {
+        commonConfig.setIaaDialogStyle(iaaDialogStyle);
     }
 } 

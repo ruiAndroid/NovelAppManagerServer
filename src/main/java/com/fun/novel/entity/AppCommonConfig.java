@@ -81,6 +81,10 @@ public class AppCommonConfig {
     @TableField("iaa_mode")
     private Boolean iaaMode;
 
+    @Schema(description = "iaa弹窗样式")
+    @TableField("iaa_dialog_style")
+    private String iaaDialogStyle;
+
     @Schema(description = "创建时间")
     @TableField("create_time")
     @JsonIgnore
@@ -90,4 +94,11 @@ public class AppCommonConfig {
     @TableField("update_time")
     @JsonIgnore
     private LocalDateTime updateTime;
+
+    public String getIaaDialogStyle() {
+        return iaaDialogStyle;
+    }
+    public void setIaaDialogStyle(String iaaDialogStyle) {
+        this.iaaDialogStyle = iaaDialogStyle;
+    }
 } 

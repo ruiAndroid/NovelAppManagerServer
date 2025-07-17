@@ -54,4 +54,14 @@ public class AppCommonConfigDTO {
 
     @Schema(description = "是否iaa模式")
     private Boolean iaaMode;
+
+    @Schema(description = "iaa弹窗样式")
+    private String iaaDialogStyle;
+
+    public String getIaaDialogStyle() {
+        return iaaDialogStyle;
+    }
+    public void setIaaDialogStyle(String iaaDialogStyle) {
+        this.iaaDialogStyle = iaaDialogStyle;
+    }
 }

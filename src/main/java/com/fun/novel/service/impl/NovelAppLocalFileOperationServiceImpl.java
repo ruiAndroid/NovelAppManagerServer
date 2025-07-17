@@ -852,7 +852,11 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
                 pfMap.put("payCard", payCard);
                 pfMap.put("loginType", loginType);
                 pfMap.put("contact", "");
-                pfMap.put("iaaMode", false);
+                // iaaMode
+                java.util.LinkedHashMap<String, Object> iaaModeObj = new java.util.LinkedHashMap<>();
+                iaaModeObj.put("enable", commonConfig.getIaaMode() != null ? commonConfig.getIaaMode() : false);
+                iaaModeObj.put("dialogStyle", commonConfig.getIaaDialogStyle() != null ? commonConfig.getIaaDialogStyle() : 2);
+                pfMap.put("iaaMode", iaaModeObj);
                 if ("tt".equals(pf)) pfMap.put("imId", "");
                 commonConfigMap.put(pf, pfMap);
             }
