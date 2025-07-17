@@ -192,6 +192,11 @@ public class AppWeijuBanner {
     @JsonProperty("mine_banner_02")
     private String mineBanner02;
 
+    @TableField("plays_total")
+    @Schema(description = "播放总数")
+    @JsonProperty("plays_total")
+    private String playsTotal;
+
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
     @JsonProperty("create_time")
@@ -348,5 +353,12 @@ public class AppWeijuBanner {
 
     public String getMineBanner02() {
         return mineBanner02 == null ? "" : mineBanner02;
+    }
+
+    public String getPlaysTotal() {
+        return playsTotal == null ? "" : playsTotal;
+    }
+    public void setPlaysTotal(String playsTotal) {
+        this.playsTotal = playsTotal;
     }
 } 
