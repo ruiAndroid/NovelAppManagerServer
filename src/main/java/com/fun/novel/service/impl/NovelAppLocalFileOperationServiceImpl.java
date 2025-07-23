@@ -852,15 +852,17 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
                 pfMap.put("payCard", payCard);
                 pfMap.put("loginType", loginType);
                 pfMap.put("contact", "");
-                // iaaMode
+                // iaaMode 默认
                 java.util.LinkedHashMap<String, Object> iaaModeObj = new java.util.LinkedHashMap<>();
-                iaaModeObj.put("enable", commonConfig.getIaaMode() != null ? commonConfig.getIaaMode() : false);
-                iaaModeObj.put("dialogStyle", commonConfig.getIaaDialogStyle() != null ? commonConfig.getIaaDialogStyle() : 2);
+                iaaModeObj.put("enable", false);
+                iaaModeObj.put("dialogStyle", 2);
                 pfMap.put("iaaMode", iaaModeObj);
+                pfMap.put("hidePayEntry", false);
+
                 if ("tt".equals(pf)) pfMap.put("imId", "");
                 commonConfigMap.put(pf, pfMap);
             }
-            // 根据platform写入对应数据
+            // 只对当前platform赋值
             String key = platformToKey(platform);
             if (commonConfig != null && commonConfigMap.containsKey(key)) {
                 java.util.Map<String, Object> pfMap = (java.util.Map<String, Object>) commonConfigMap.get(key);
@@ -877,7 +879,11 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
                 // contact
                 pfMap.put("contact", commonConfig.getContact() != null ? commonConfig.getContact() : "");
                 // iaaMode
-                pfMap.put("iaaMode", commonConfig.getIaaMode() != null ? commonConfig.getIaaMode() : false);
+                java.util.LinkedHashMap<String, Object> iaaModeObj = new java.util.LinkedHashMap<>();
+                iaaModeObj.put("enable", commonConfig.getIaaMode() != null ? commonConfig.getIaaMode() : false);
+                iaaModeObj.put("dialogStyle", commonConfig.getIaaDialogStyle() != null ? commonConfig.getIaaDialogStyle() : 2);
+                pfMap.put("iaaMode", iaaModeObj);
+                pfMap.put("hidePayEntry", commonConfig.getHidePayEntry() != null ? commonConfig.getHidePayEntry() : false);
                 // imId 仅tt
                 if ("tt".equals(key)) pfMap.put("imId", commonConfig.getDouyinImId() != null ? commonConfig.getDouyinImId() : "");
             }

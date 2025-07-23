@@ -83,7 +83,11 @@ public class AppCommonConfig {
 
     @Schema(description = "iaa弹窗样式")
     @TableField("iaa_dialog_style")
-    private String iaaDialogStyle;
+    private Integer iaaDialogStyle;
+
+    @Schema(description = "是否屏蔽付费入口")
+    @TableField("hide_pay_entry")
+    private Boolean hidePayEntry;
 
     @Schema(description = "创建时间")
     @TableField("create_time")
@@ -95,10 +99,4 @@ public class AppCommonConfig {
     @JsonIgnore
     private LocalDateTime updateTime;
 
-    public String getIaaDialogStyle() {
-        return iaaDialogStyle;
-    }
-    public void setIaaDialogStyle(String iaaDialogStyle) {
-        this.iaaDialogStyle = iaaDialogStyle;
-    }
 } 

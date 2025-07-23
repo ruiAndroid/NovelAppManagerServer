@@ -156,14 +156,9 @@ public class CreateNovelAppRequest {
         @Schema(description = "是否Iaa模式")
         private Boolean iaaMode;
         @Schema(description = "iaa弹窗样式")
-        private String iaaDialogStyle;
+        private Integer iaaDialogStyle;
+        @Schema(description = "是否屏蔽支付入口")
+        private Boolean hidePayEntry;
 
     }
-
-    public String getIaaDialogStyle() {
-        return commonConfig.getIaaDialogStyle();
-    }
-    public void setIaaDialogStyle(String iaaDialogStyle) {
-        commonConfig.setIaaDialogStyle(iaaDialogStyle);
-    }
-} 
+}
