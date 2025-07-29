@@ -158,6 +158,8 @@ public class AppPayController {
             commonConfig.setWeixinAppToken(dbCommonConfig.getWeixinAppToken());
             commonConfig.setDouyinAppToken(dbCommonConfig.getDouyinAppToken());
             commonConfig.setIaaMode(dbCommonConfig.getIaaMode());
+            commonConfig.setIaaDialogStyle(dbCommonConfig.getIaaDialogStyle());
+
         }
         req.setCommonConfig(commonConfig);
 

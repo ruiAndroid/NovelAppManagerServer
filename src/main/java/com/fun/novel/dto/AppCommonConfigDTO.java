@@ -56,15 +56,8 @@ public class AppCommonConfigDTO {
     private Boolean iaaMode;
 
     @Schema(description = "iaa弹窗样式")
-    private String iaaDialogStyle;
+    private Integer iaaDialogStyle;
 
     @Schema(description = "是否屏蔽付费入口")
     private Boolean hidePayEntry;
-
-    public String getIaaDialogStyle() {
-        return iaaDialogStyle;
-    }
-    public void setIaaDialogStyle(String iaaDialogStyle) {
-        this.iaaDialogStyle = iaaDialogStyle;
-    }
 }

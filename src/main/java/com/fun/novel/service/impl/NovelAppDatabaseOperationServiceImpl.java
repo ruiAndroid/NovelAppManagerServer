@@ -182,6 +182,8 @@ public class NovelAppDatabaseOperationServiceImpl implements NovelAppDatabaseOpe
         commonConfigDTO.setPayCardStyle(commonConfig.getPayCardStyle());
         commonConfigDTO.setHomeCardStyle(commonConfig.getHomeCardStyle());
         commonConfigDTO.setIaaMode(commonConfig.getIaaMode());
+        commonConfigDTO.setIaaDialogStyle(commonConfig.getIaaDialogStyle());
+
         commonConfigDTO.setReaderLoginType(commonConfig.getReaderLoginType());
         commonConfigDTO.setMineLoginType(commonConfig.getMineLoginType());
         AppCommonConfig existingCommonConfig = appCommonConfigService.getAppCommonConfig(appId);
