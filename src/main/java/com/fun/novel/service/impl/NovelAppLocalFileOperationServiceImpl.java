@@ -566,7 +566,7 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
             for (String pf : platforms) {
                 java.util.LinkedHashMap<String, Object> pfMap = new java.util.LinkedHashMap<>();
                 pfMap.put("rewardAd", new java.util.LinkedHashMap<String, Object>() {{ put("enable", false); }});
-                pfMap.put("native", new java.util.LinkedHashMap<String, Object>() {{ put("enable", false); }});
+                pfMap.put("banner", new java.util.LinkedHashMap<String, Object>() {{ put("enable", false); }});
                 pfMap.put("interstitial", new java.util.LinkedHashMap<String, Object>() {{ put("enable", false); }});
                 adConfigMap.put(pf, pfMap);
             }
@@ -601,15 +601,16 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
                     }
                     ((java.util.Map<String, Object>)adConfigMap.get(platformToKey(platform))).put("interstitial", interstitialAd);
                 }
-                // nativeAd
-                if (adConfig.getNativeAd() != null) {
-                    java.util.Map<String, Object> nativeAd = new java.util.LinkedHashMap<>();
-                    boolean enable = Boolean.TRUE.equals(adConfig.getNativeAd().getEnabled());
-                    nativeAd.put("enable", enable);
+                // bannerAd
+                if (adConfig.getBannerAd() != null) {
+                    java.util.Map<String, Object> bannerAd = new java.util.LinkedHashMap<>();
+                    boolean enable = Boolean.TRUE.equals(adConfig.getBannerAd().getEnabled());
+                    bannerAd.put("enable", enable);
                     if (enable) {
-                        nativeAd.put("id", adConfig.getNativeAd().getNativeAdId());
+                        bannerAd.put("id", adConfig.getBannerAd().getBannerAdId());
+                        bannerAd.put("type", 100033797);
                     }
-                    ((java.util.Map<String, Object>)adConfigMap.get(platformToKey(platform))).put("native", nativeAd);
+                    ((java.util.Map<String, Object>)adConfigMap.get(platformToKey(platform))).put("banner", bannerAd);
                 }
             }
             // 生成最终内容

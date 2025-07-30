@@ -96,7 +96,7 @@ public class CreateNovelAppRequest {
     public static class AdConfig {
         private RewardAdConfig rewardAd;
         private InterstitialAdConfig interstitialAd;
-        private NativeAdConfig nativeAd;
+        private BannerAdConfig bannerAd;
     }
 
     @Data
@@ -114,9 +114,9 @@ public class CreateNovelAppRequest {
     }
 
     @Data
-    public static class NativeAdConfig {
+    public static class BannerAdConfig {
         private Boolean enabled;
-        private String nativeAdId;
+        private String bannerAdId;
     }
 
     @Data

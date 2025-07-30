@@ -105,10 +105,11 @@ public class AppAdServiceImpl implements AppAdService {
                     interstitialAdConfigDetail.setIsInterstitialAdEnabled(config.getIsInterstitialAdEnabled());
                     dto.setInterstitial(interstitialAdConfigDetail);
                     break;
-                case "native":
-                    AppAdWithConfigDTO.NativeAdConfigDetail nativeAdConfigDetail = new AppAdWithConfigDTO.NativeAdConfigDetail();
-
-                    dto.setNativeAd(nativeAdConfigDetail);
+                case "banner":
+                    AppAdWithConfigDTO.BannerAdConfigDetail bannerAdConfigDetail = new AppAdWithConfigDTO.BannerAdConfigDetail();
+                    bannerAdConfigDetail.setBannerAdId(config.getBannerAdId());
+                    bannerAdConfigDetail.setIsBannerAdEnabled(config.getIsBannerAdEnabled());
+                    dto.setBanner(bannerAdConfigDetail);
                     break;
             }
         }

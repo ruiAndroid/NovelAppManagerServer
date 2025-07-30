@@ -158,6 +158,14 @@ public class NovelAppDatabaseOperationServiceImpl implements NovelAppDatabaseOpe
                     adConfigEntity.setInterstitialCount(interstitial.getInterstitialCount());
                     break;
                 }
+                case "banner": {
+                    CreateNovelAppRequest.BannerAdConfig banner = (CreateNovelAppRequest.BannerAdConfig) adConfigObj;
+                    enabled = Boolean.TRUE.equals(banner.getEnabled());
+                    if (!enabled) continue;
+                    adConfigEntity.setIsBannerAdEnabled(true);
+                    adConfigEntity.setBannerAdId(banner.getBannerAdId());
+                    break;
+                }
             }
             adConfigService.addAdConfig(adConfigEntity);
             taskLogger.log(taskId, "[1-3-2] " + adType + " 广告配置写入成功", CreateNovelLogType.SUCCESS);

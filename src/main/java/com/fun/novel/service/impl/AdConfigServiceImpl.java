@@ -148,6 +148,24 @@ public class AdConfigServiceImpl implements AdConfigService {
             adConfig.setIsInterstitialAdEnabled(request.getIsInterstitialAdEnabled());
         }
 
+        // 对banner类型进行特殊验证
+        if ("banner".equalsIgnoreCase(adConfig.getAdType())) {
+            // 验证bannerAdId
+            if (adConfig.getBannerAdId() == null || adConfig.getBannerAdId().trim().isEmpty()) {
+                throw new IllegalArgumentException("banner类型的广告ID不能为空");
+            }
+
+
+            // 验证isBannerAdEnabled
+            if (adConfig.getIsBannerAdEnabled() == null) {
+                throw new IllegalArgumentException("banner类型的启用状态不能为空");
+            }
+
+            // 更新配置
+            adConfig.setBannerAdId(request.getBannerAdId());
+            adConfig.setIsBannerAdEnabled(request.getIsBannerAdEnabled());
+        }
+
         adConfigMapper.updateById(adConfig);
         return adConfig;
     }

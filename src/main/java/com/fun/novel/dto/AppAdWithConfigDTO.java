@@ -13,15 +13,15 @@ public class AppAdWithConfigDTO {
     @Schema(description = "应用ID")
     private String appId;
 
-    @Schema(description = "奖励广告配置")
+    @Schema(description = "激励广告配置")
     private RewardAdConfigDetail reward;
 
     @Schema(description = "插屏广告配置")
     private InterstitialAdConfigDetail interstitial;
 
-    @Schema(description = "原生广告配置")
-    @JsonProperty("native")
-    private NativeAdConfigDetail nativeAd;
+    @Schema(description = "Banner广告配置")
+    @JsonProperty("banner")
+    private BannerAdConfigDetail banner;
 
     @Data
     @Schema(description = "奖励广告配置详情")
@@ -50,8 +50,12 @@ public class AppAdWithConfigDTO {
     }
 
     @Data
-    @Schema(description = "信息流广告配置详情")
-    public static class NativeAdConfigDetail {
+    @Schema(description = "Banner广告配置详情")
+    public static class BannerAdConfigDetail {
+        @Schema(description = "banner广告ID")
+        private String bannerAdId;
 
+        @Schema(description = "是否启用")
+        private Boolean isBannerAdEnabled;
     }
 } 

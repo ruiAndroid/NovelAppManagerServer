@@ -36,4 +36,9 @@ public class UpdateAdConfigRequest {
     @Schema(description = "插屏广告是否启用")
     private Boolean isInterstitialAdEnabled;
 
+    @Schema(description = "Banner广告ID")
+    private String bannerAdId;
+
+    @Schema(description = "Banner广告是否启用")
+    private Boolean isBannerAdEnabled;
 } 

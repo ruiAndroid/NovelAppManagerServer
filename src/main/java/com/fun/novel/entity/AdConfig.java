@@ -44,6 +44,11 @@ public class AdConfig {
     @Schema(description = "插屏广告是否启用")
     private Boolean isInterstitialAdEnabled;
 
+    @Schema(description = "Banner广告是否启用")
+    private Boolean isBannerAdEnabled;
+
+    @Schema(description = "Banner广告ID")
+    private String bannerAdId;
     
     @Schema(description = "创建时间")
     @TableField(value = "create_time", fill = FieldFill.INSERT)

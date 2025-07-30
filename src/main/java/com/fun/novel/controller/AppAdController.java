@@ -222,11 +222,12 @@ public class AppAdController {
                 interstitialAdConfig.setInterstitialCount(appAdWithConfig.getInterstitial().getInterstitialCount());
                 adConfig.setInterstitialAd(interstitialAdConfig);
             }
-            // native广告
-            if (appAdWithConfig.getNativeAd() != null) {
-                CreateNovelAppRequest.NativeAdConfig nativeAdConfig = new CreateNovelAppRequest.NativeAdConfig();
-                // 目前NativeAdConfigDetail没有字段，如有需要可补充
-                adConfig.setNativeAd(nativeAdConfig);
+            // banner广告
+            if (appAdWithConfig.getBanner() != null) {
+                CreateNovelAppRequest.BannerAdConfig bannerAdConfig = new CreateNovelAppRequest.BannerAdConfig();
+                bannerAdConfig.setEnabled(appAdWithConfig.getBanner().getIsBannerAdEnabled());
+                bannerAdConfig.setBannerAdId(appAdWithConfig.getBanner().getBannerAdId());
+                adConfig.setBannerAd(bannerAdConfig);
             }
         }
         req.setAdConfig(adConfig);
