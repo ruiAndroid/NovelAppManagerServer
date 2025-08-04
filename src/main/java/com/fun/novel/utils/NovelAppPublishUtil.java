@@ -140,7 +140,7 @@ public class NovelAppPublishUtil {
                     } else {
                         logger.info("Command output for task {}: {}", taskId, logMessage);
                     }
-                    if(logMessage.contains("Upload Error")){ //TODO 都快微的报错log都不一致，碰到一个加一个
+                    if(logMessage.contains("Upload Error")){ //TODO 抖快微的报错log都不一致，碰到一个加一个
                         return false;
                     }
 

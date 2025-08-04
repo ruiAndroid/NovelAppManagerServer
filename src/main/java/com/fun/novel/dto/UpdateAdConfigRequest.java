@@ -41,4 +41,10 @@ public class UpdateAdConfigRequest {
 
     @Schema(description = "Banner广告是否启用")
     private Boolean isBannerAdEnabled;
+
+    @Schema(description = "Feed广告ID")
+    private String feedAdId;
+
+    @Schema(description = "Feed广告是否启用")
+    private Boolean isFeedAdEnabled;
 } 

@@ -63,7 +63,17 @@ public class NovelAppBuildUtil {
 
                 logger.info("start Build cmd: {},workPath:{}", cmd, workPath);
                 ProcessBuilder processBuilder = new ProcessBuilder();
-                processBuilder.command("cmd.exe", "/c", cmd);
+                
+                // 根据操作系统类型选择合适的命令执行方式
+                String osName = System.getProperty("os.name").toLowerCase();
+                if (osName.contains("win")) {
+                    // Windows系统使用cmd.exe
+                    processBuilder.command("cmd.exe", "/c", cmd);
+                } else {
+                    // macOS/Linux系统使用shell
+                    processBuilder.command("sh", "-c", cmd);
+                }
+                
                 processBuilder.directory(workDir);
                 processBuilder.redirectErrorStream(true);
                 process = processBuilder.start();
@@ -112,4 +122,4 @@ public class NovelAppBuildUtil {
         logger.info("关闭构建工具线程池...");
         executorService.shutdown();
     }
-} 
+}

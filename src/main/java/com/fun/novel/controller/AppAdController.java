@@ -229,6 +229,14 @@ public class AppAdController {
                 bannerAdConfig.setBannerAdId(appAdWithConfig.getBanner().getBannerAdId());
                 adConfig.setBannerAd(bannerAdConfig);
             }
+            //feed广告
+            if (appAdWithConfig.getFeed() != null) {
+                CreateNovelAppRequest.FeedAdConfig feedAdConfig = new CreateNovelAppRequest.FeedAdConfig();
+                feedAdConfig.setEnabled(appAdWithConfig.getFeed().getIsFeedAdEnabled());
+                feedAdConfig.setFeedAdId(appAdWithConfig.getFeed().getFeedAdId());
+                adConfig.setFeedAd(feedAdConfig);
+            }
+
         }
         req.setAdConfig(adConfig);
         CreateNovelAppRequest.DeliverConfig deliverConfig = new CreateNovelAppRequest.DeliverConfig();

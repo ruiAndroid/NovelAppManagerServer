@@ -49,7 +49,13 @@ public class AdConfig {
 
     @Schema(description = "Banner广告ID")
     private String bannerAdId;
-    
+
+    @Schema(description = "Feed广告是否启用")
+    private Boolean isFeedAdEnabled;
+
+    @Schema(description = "Feed广告ID")
+    private String feedAdId;
+
     @Schema(description = "创建时间")
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     @JsonIgnore

@@ -23,6 +23,10 @@ public class AppAdWithConfigDTO {
     @JsonProperty("banner")
     private BannerAdConfigDetail banner;
 
+    @Schema(description = "feed广告配置")
+    @JsonProperty("feed")
+    private FeedAdConfigDetail feed;
+
     @Data
     @Schema(description = "奖励广告配置详情")
     public static class RewardAdConfigDetail {
@@ -57,5 +61,15 @@ public class AppAdWithConfigDTO {
 
         @Schema(description = "是否启用")
         private Boolean isBannerAdEnabled;
+    }
+
+    @Data
+    @Schema(description = "feed广告配置详情")
+    public static class FeedAdConfigDetail {
+        @Schema(description = "feed广告ID")
+        private String feedAdId;
+
+        @Schema(description = "是否启用")
+        private Boolean isFeedAdEnabled;
     }
 } 

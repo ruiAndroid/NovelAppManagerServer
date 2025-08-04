@@ -11,7 +11,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class AdConfigServiceImpl implements AdConfigService {
@@ -22,9 +24,24 @@ public class AdConfigServiceImpl implements AdConfigService {
     @Autowired
     private AppAdMapper appAdMapper;
 
+    // 定义支持的广告类型集合
+    private static final Set<String> SUPPORTED_AD_TYPES = new HashSet<>();
+
+    static {
+        SUPPORTED_AD_TYPES.add("reward");
+        SUPPORTED_AD_TYPES.add("interstitial");
+        SUPPORTED_AD_TYPES.add("banner");
+        SUPPORTED_AD_TYPES.add("feed");
+    }
     @Override
     @Transactional
     public AdConfig addAdConfig(AdConfig adConfig) {
+
+        // 检查广告类型是否支持
+        if (adConfig.getAdType() == null || !SUPPORTED_AD_TYPES.contains(adConfig.getAdType().toLowerCase())) {
+            throw new IllegalArgumentException("不支持的广告类型");
+        }
+
         // 检查是否已经存在相同app_ad_id和ad_type的记录
         LambdaQueryWrapper<AdConfig> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(AdConfig::getAppAdId, adConfig.getAppAdId())
@@ -77,7 +94,27 @@ public class AdConfigServiceImpl implements AdConfigService {
                 throw new IllegalArgumentException("interstitial类型的启用状态不能为空");
             }
         }
-        
+
+        //对banner类型进行特殊验证
+        if ("banner".equalsIgnoreCase(adConfig.getAdType())) {
+            if (adConfig.getBannerAdId() == null || adConfig.getBannerAdId().trim().isEmpty()) {
+                throw new IllegalArgumentException("banner类型的广告ID不能为空");
+            }
+
+            if (adConfig.getIsBannerAdEnabled() == null) {
+                throw new IllegalArgumentException("banner类型的启用状态不能为空");
+            }
+        }
+
+        //对feed类型进行特殊验证
+        if ("feed".equalsIgnoreCase(adConfig.getAdType())) {
+            if (adConfig.getFeedAdId() == null || adConfig.getFeedAdId().trim().isEmpty()) {
+                throw new IllegalArgumentException("feed类型的广告ID不能为空");
+            }
+            if (adConfig.getIsFeedAdEnabled() == null) {
+                throw new IllegalArgumentException("feed类型的启用状态不能为空");
+            }
+        }
         adConfigMapper.insert(adConfig);
         return adConfig;
     }
@@ -164,6 +201,24 @@ public class AdConfigServiceImpl implements AdConfigService {
             // 更新配置
             adConfig.setBannerAdId(request.getBannerAdId());
             adConfig.setIsBannerAdEnabled(request.getIsBannerAdEnabled());
+        }
+
+        //对feed类型进行特殊验证
+
+        if ("feed".equalsIgnoreCase(adConfig.getAdType())) {
+            // 验证feedAdId
+            if (adConfig.getFeedAdId() == null || adConfig.getFeedAdId().trim().isEmpty()) {
+                throw new IllegalArgumentException("feed类型的广告ID不能为空");
+            }
+
+            // 验证isFeedAdEnabled
+            if (adConfig.getIsFeedAdEnabled() == null) {
+                throw new IllegalArgumentException("feed类型的启用状态不能为空");
+            }
+
+            // 更新配置
+            adConfig.setFeedAdId(request.getFeedAdId());
+            adConfig.setIsFeedAdEnabled(request.getIsFeedAdEnabled());
         }
 
         adConfigMapper.updateById(adConfig);

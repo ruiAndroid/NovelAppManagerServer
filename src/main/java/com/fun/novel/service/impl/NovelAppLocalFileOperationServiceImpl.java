@@ -551,6 +551,7 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
                 sb.append("        rewardAd: {\n            enable: false\n        },\n");
                 sb.append("        native: {\n            enable: false\n        },\n");
                 sb.append("        interstitial: {\n            enable: false\n        }\n");
+                sb.append("        feed: {\n            enable: false\n        }\n");
                 sb.append("    },\n");
             }
             // 移除最后一个逗号
@@ -568,6 +569,7 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
                 pfMap.put("rewardAd", new java.util.LinkedHashMap<String, Object>() {{ put("enable", false); }});
                 pfMap.put("banner", new java.util.LinkedHashMap<String, Object>() {{ put("enable", false); }});
                 pfMap.put("interstitial", new java.util.LinkedHashMap<String, Object>() {{ put("enable", false); }});
+                pfMap.put("feed", new java.util.LinkedHashMap<String, Object>() {{ put("enable", false); }});
                 adConfigMap.put(pf, pfMap);
             }
             // 写入对应平台的广告配置
@@ -611,6 +613,17 @@ public class NovelAppLocalFileOperationServiceImpl implements NovelAppLocalFileO
                         bannerAd.put("type", 100033797);
                     }
                     ((java.util.Map<String, Object>)adConfigMap.get(platformToKey(platform))).put("banner", bannerAd);
+                }
+                //feedAd
+                if (adConfig.getFeedAd() != null) {
+                    java.util.Map<String, Object> feedAd = new java.util.LinkedHashMap<>();
+                    boolean enable = Boolean.TRUE.equals(adConfig.getFeedAd().getEnabled());
+                    feedAd.put("enable", enable);
+                    if (enable) {
+                        feedAd.put("id", adConfig.getFeedAd().getFeedAdId());
+                        feedAd.put("type", 100011054);
+                    }
+                    ((java.util.Map<String, Object>)adConfigMap.get(platformToKey(platform))).put("feed", feedAd);
                 }
             }
             // 生成最终内容

@@ -97,6 +97,7 @@ public class CreateNovelAppRequest {
         private RewardAdConfig rewardAd;
         private InterstitialAdConfig interstitialAd;
         private BannerAdConfig bannerAd;
+        private FeedAdConfig feedAd;
     }
 
     @Data
@@ -117,6 +118,12 @@ public class CreateNovelAppRequest {
     public static class BannerAdConfig {
         private Boolean enabled;
         private String bannerAdId;
+    }
+
+    @Data
+    public static class FeedAdConfig {
+        private Boolean enabled;
+        private String feedAdId;
     }
 
     @Data

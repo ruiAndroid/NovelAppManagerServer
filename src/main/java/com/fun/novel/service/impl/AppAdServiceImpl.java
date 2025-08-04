@@ -111,6 +111,12 @@ public class AppAdServiceImpl implements AppAdService {
                     bannerAdConfigDetail.setIsBannerAdEnabled(config.getIsBannerAdEnabled());
                     dto.setBanner(bannerAdConfigDetail);
                     break;
+                case "feed":
+                    AppAdWithConfigDTO.FeedAdConfigDetail feedAdConfigDetail = new AppAdWithConfigDTO.FeedAdConfigDetail();
+                    feedAdConfigDetail.setFeedAdId(config.getFeedAdId());
+                    feedAdConfigDetail.setIsFeedAdEnabled(config.getIsFeedAdEnabled());
+                    dto.setFeed(feedAdConfigDetail);
+                    break;
             }
         }
 
