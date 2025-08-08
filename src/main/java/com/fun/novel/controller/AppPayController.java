@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -36,6 +37,7 @@ public class AppPayController {
 
     @PostMapping("/create")
     @Operation(summary = "创建支付配置", description = "创建新的小程序支付配置，payType必须为：normalPay, orderPay, renewPay, douzuanPay之一")
+    @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
     public Result<AppPayWithConfigDTO> createAppPay(
             @Parameter(description = "支付配置信息", required = true)
             @Valid @RequestBody CreateAppPayRequest request) {
@@ -71,6 +73,7 @@ public class AppPayController {
 
     @PostMapping("/updateAppPay")
     @Operation(summary = "更新支付配置", description = "更新小程序支付配置，payType必须为：normalPay, orderPay, renewPay, douzuanPay之一")
+    @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
     public Result<AppPayWithConfigDTO> updateAppPay(
             @Parameter(description = "支付配置信息", required = true)
             @Valid @RequestBody UpdateAppPayRequest request) {
@@ -95,6 +98,7 @@ public class AppPayController {
 
     @GetMapping("/deleteAppPayByAppIdAndType")
     @Operation(summary = "删除支付配置", description = "根据appId和支付类型删除支付配置")
+    @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
     public Result<String> deleteAppPayByAppIdAndType(
             @Parameter(description = "小程序ID", required = true)
             @RequestParam String appId,

@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -24,6 +25,7 @@ public class NovelAppBuildController {
 
     @PostMapping("/build")
     @Operation(summary = "构建UniApp项目", description = "异步执行构建命令，返回任务ID用于WebSocket订阅")
+    @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
     public Result<String> buildNovelApp(
             @Parameter(description = "构建命令", required = true)
             @RequestParam String cmd) {
@@ -40,6 +42,7 @@ public class NovelAppBuildController {
 
     @GetMapping("/stop")
     @Operation(summary = "停止构建", description = "停止指定任务的构建进程")
+    @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
     public Result<String> stopBuild(
             @Parameter(description = "任务ID", required = true)
             @RequestParam(name = "taskId", required = true) String taskId) {

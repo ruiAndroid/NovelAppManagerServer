@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.io.File;
 import java.net.URLDecoder;
@@ -158,6 +159,7 @@ public class NovelAppPublishController {
 
     @PostMapping("/publish")
     @Operation(summary = "发布小程序", description = "发布小程序到指定平台")
+    @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
     public Result<NovelAppPublishDTO> publishNovelApp(@RequestBody Map<String, String> params) {
         try {
             String platformCode = params.get("platformCode");
@@ -223,6 +225,7 @@ public class NovelAppPublishController {
     }
 
     @PostMapping("/stop/{taskId}")
+    @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
     public Result<String> stopPublish(@PathVariable String taskId) {
         try {
             novelAppPublishUtil.stopPublish(taskId);
@@ -234,6 +237,7 @@ public class NovelAppPublishController {
     }
 
     @GetMapping("/qrcode/{taskId}")
+    @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
     @Operation(summary = "获取发布任务的二维码", description = "获取指定发布任务生成的二维码图片")
     public ResponseEntity<byte[]> getQrcodeImage(@PathVariable String taskId) {
         try {

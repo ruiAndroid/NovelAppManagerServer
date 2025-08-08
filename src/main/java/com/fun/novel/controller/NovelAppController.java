@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -40,6 +41,7 @@ public class NovelAppController {
 
     @PostMapping("/create")
     @Operation(summary = "创建小说应用", description = "创建一个新的小说应用记录")
+    @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
     public Result<NovelApp> addNovelApp(@Valid @RequestBody NovelApp novelApp) {
         NovelApp createdApp = novelAppService.addNovelApp(novelApp);
         return Result.success("应用创建成功", createdApp);
@@ -69,6 +71,7 @@ public class NovelAppController {
 
     @PostMapping("/update")
     @Operation(summary = "修改小说应用", description = "根据传入的小说应用信息修改记录")
+    @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
     public Result<NovelApp> updateNovelApp(@Valid @RequestBody NovelApp novelApp) {
         java.util.List<Runnable> rollbackActions = new java.util.ArrayList<>();
         try {
@@ -140,6 +143,7 @@ public class NovelAppController {
 
     @GetMapping("/delete")
     @Operation(summary = "删除小说应用", description = "根据应用ID删除小说应用")
+    @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
     public Result<String> deleteNovelApp(
             @Parameter(description = "应用ID", required = true)
             @RequestParam String appId) {

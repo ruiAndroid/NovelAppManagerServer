@@ -9,6 +9,7 @@ import com.fun.novel.utils.CreateNovelTaskLogger;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -40,6 +41,7 @@ public class NovelAppCreateController {
 
     @Operation(summary = "创建小说小程序")
     @PostMapping("/createNovelApp")
+    @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
     public Result<Map<String, String>> createNovelApp(@RequestBody CreateNovelAppRequest params) {
         String taskId = createNovelTaskManager.createTask();
         if (taskId == null) {

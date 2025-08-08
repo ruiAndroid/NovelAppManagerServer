@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -34,6 +35,7 @@ public class AppCommonConfigController {
 
     @PostMapping("/createAppCommonConfig")
     @Operation(summary = "创建应用通用配置", description = "创建新的应用通用配置")
+    @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
     public Result<AppCommonConfig> createAppCommonConfig(
             @Parameter(description = "应用通用配置信息", required = true)
             @Valid @RequestBody AppCommonConfigDTO dto) {
@@ -58,6 +60,7 @@ public class AppCommonConfigController {
     }
 
     @GetMapping("/deleteAppCommonConfig")
+    @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
     @Operation(summary = "删除应用通用配置", description = "根据appId删除应用通用配置")
     public Result<String> deleteAppCommonConfig(
             @Parameter(description = "小程序ID", required = true)
@@ -76,6 +79,7 @@ public class AppCommonConfigController {
 
     @PostMapping("/updateAppCommonConfig")
     @Operation(summary = "更新应用通用配置", description = "更新应用通用配置信息")
+    @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
     public Result<AppCommonConfig> updateAppCommonConfig(
             @Parameter(description = "应用通用配置信息", required = true)
             @Valid @RequestBody AppCommonConfigDTO dto) {                    
