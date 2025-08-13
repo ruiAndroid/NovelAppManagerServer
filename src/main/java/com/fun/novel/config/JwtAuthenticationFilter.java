@@ -54,19 +54,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 username = jwtUtil.getUsernameFromToken(jwtToken);
             } catch (IllegalArgumentException e) {
-                logger.error("Unable to get JWT Token", e);
+                logger.warn("Unable to get JWT Token: {}", e.getMessage());
                 sendErrorResponse(response, "请求中没有JWT Token");
                 return;
             } catch (ExpiredJwtException e) {
-                logger.error("JWT Token已过期", e);
+                logger.warn("JWT Token已过期");
                 sendErrorResponse(response, "JWT Token已过期");
                 return;
             } catch (SignatureException e) {
-                logger.error("JWT签名不匹配", e);
+                logger.warn("JWT签名不匹配: {}", e.getMessage());
                 sendErrorResponse(response, "JWT签名无效");
                 return;
             } catch (Exception e) {
-                logger.error("JWT Token处理异常", e);
+                logger.warn("JWT Token处理异常: {}", e.getMessage());
                 sendErrorResponse(response, "JWT Token无效");
                 return;
             }
@@ -87,7 +87,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     return;
                 }
             } catch (Exception e) {
-                logger.error("用户认证失败", e);
+                logger.warn("用户认证失败: {}", e.getMessage());
                 sendErrorResponse(response, "用户认证失败");
                 return;
             }
