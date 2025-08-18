@@ -21,11 +21,11 @@ public class NovelAppCreationServiceImpl implements NovelAppCreationService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void processAllOperations(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions) {
+    public void createNovelAppOperations(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions) {
         // 1.数据库操作
         novelAppDatabaseOperationService.processDatabaseOperations(taskId, params);
         // 2.本地代码文件操作
-        novelAppLocalFileOperationService.processLocalCodeFiles(taskId, params, rollbackActions);
+        novelAppLocalFileOperationService.createNovelAppLocalCodeFiles(taskId, params, rollbackActions);
         // 3.资源文件处理
         novelAppResourceFileService.processAllResourceFiles(taskId, params, rollbackActions);
     }

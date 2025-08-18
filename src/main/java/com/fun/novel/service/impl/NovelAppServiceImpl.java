@@ -43,6 +43,13 @@ public class NovelAppServiceImpl extends ServiceImpl<NovelAppMapper, NovelApp> i
         return apps.stream()
                 .collect(Collectors.groupingBy(NovelApp::getPlatform));
     }
+    
+    @Override
+    public List<NovelApp> getAppsByAppName(String appName) {
+        LambdaQueryWrapper<NovelApp> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(NovelApp::getAppName, appName);
+        return list(wrapper);
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)

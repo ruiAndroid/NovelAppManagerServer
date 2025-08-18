@@ -37,8 +37,6 @@ public class NovelAppController {
     @Autowired
     private AppCommonConfigService appCommonConfigService;
 
-    
-
     @PostMapping("/create")
     @Operation(summary = "创建小说应用", description = "创建一个新的小说应用记录")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
@@ -52,6 +50,20 @@ public class NovelAppController {
     public Result<Map<String, List<NovelApp>>> getNovelAppsByPlatform() {
         Map<String, List<NovelApp>> groupedApps = novelAppService.getNovelAppsByPlatform();
         return Result.success("获取成功", groupedApps);
+    }
+    
+    @GetMapping("/getByAppName")
+    @Operation(summary = "根据应用名查询应用信息", description = "根据应用名查询所有平台的应用信息")
+    @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
+    public Result<List<NovelApp>> getNovelAppsByAppName(
+            @Parameter(description = "应用名称", required = true)
+            @RequestParam String appName) {
+        try {
+            List<NovelApp> novelApps = novelAppService.getAppsByAppName(appName);
+            return Result.success("获取成功", novelApps);
+        } catch (Exception e) {
+            return Result.error("获取应用失败: " + e.getMessage());
+        }
     }
 
     @GetMapping("/getByAppId")

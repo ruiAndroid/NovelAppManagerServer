@@ -71,7 +71,7 @@ public class NovelAppCreateController {
                 taskLogger.log(currentTaskId, "参数校验已通过，开始执行创建小说小程序任务 taskId:" + currentTaskId, CreateNovelLogType.INFO);
 
                 //数据库+本地代码文件处理 (事务性)
-                novelAppCreationService.processAllOperations(currentTaskId, params, rollbackActions);
+                novelAppCreationService.createNovelAppOperations(currentTaskId, params, rollbackActions);
 
             } catch (Exception e) {
 

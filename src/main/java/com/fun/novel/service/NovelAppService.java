@@ -1,9 +1,8 @@
 package com.fun.novel.service;
 
 import com.fun.novel.entity.NovelApp;
-
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 
 public interface NovelAppService {
     /**
@@ -42,4 +41,11 @@ public interface NovelAppService {
      * @return 应用信息
      */
     NovelApp getByAppId(String appId);
+    
+    /**
+     * 根据应用名称获取所有平台的应用信息
+     * @param appName 应用名称
+     * @return 应用信息列表
+     */
+    List<NovelApp> getAppsByAppName(String appName);
 }
