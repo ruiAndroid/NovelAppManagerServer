@@ -48,6 +48,7 @@ public class SecurityConfig {
         "/api/novel-common/getAppCommonConfig",//通用配置相关
         "/api/novel-publish/list",//自动化相关
         "/ws/**" //WebSocket端点
+
     };
 
     public SecurityConfig(@Lazy UserDetailsService userDetailsService, JwtUtil jwtUtil) {

@@ -17,4 +17,11 @@ public interface UserService extends IService<User> {
      * @return 注册后的用户实体
      */
     User register(User user);
+    
+    /**
+     * 根据用户名获取用户ID
+     * @param username 用户名
+     * @return 用户ID
+     */
+    Long getUserIdByUsername(String username);
 }

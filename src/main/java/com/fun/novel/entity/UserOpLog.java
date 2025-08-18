@@ -1,11 +1,12 @@
 package com.fun.novel.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Data
 @TableName("user_op_log")
@@ -24,6 +25,13 @@ public class UserOpLog {
     @TableField("user_id")
     @Schema(description = "用户id")
     private Long userId;
+
+    /**
+     * 用户id
+     */
+    @TableField("user_name")
+    @Schema(description = "用户名")
+    private String userName;
 
     /**
      * 用户的操作类型
@@ -80,7 +88,7 @@ public class UserOpLog {
     /**
      * 请求返回值
      */
-    @TableField("requestResult")
+    @TableField("response_result")
     @Schema(description = "请求返回值")
     private String responseResult;
 
@@ -100,3 +108,4 @@ public class UserOpLog {
     @JsonIgnore
     private LocalDateTime updateTime;
 }
+
