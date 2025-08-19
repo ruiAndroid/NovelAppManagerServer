@@ -22,4 +22,10 @@ public @interface OperationLog {
      * 操作描述
      */
     String description() default "";
+    
+    /**
+     * 是否记录请求参数
+     * 默认情况下，查询和导出操作不记录参数，其他操作记录参数
+     */
+    boolean recordParams() default true;
 }

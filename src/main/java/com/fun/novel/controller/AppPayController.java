@@ -1,9 +1,11 @@
 package com.fun.novel.controller;
 
+import com.fun.novel.annotation.OperationLog;
 import com.fun.novel.common.Result;
 import com.fun.novel.dto.*;
 import com.fun.novel.entity.AppCommonConfig;
 import com.fun.novel.entity.NovelApp;
+import com.fun.novel.enums.OpType;
 import com.fun.novel.service.AppCommonConfigService;
 import com.fun.novel.service.AppPayService;
 import com.fun.novel.service.NovelAppLocalFileOperationService;
@@ -38,6 +40,7 @@ public class AppPayController {
     @PostMapping("/create")
     @Operation(summary = "创建支付配置", description = "创建新的小程序支付配置，payType必须为：normalPay, orderPay, renewPay, douzuanPay之一")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
+    @OperationLog(opType = OpType.INSERT_CODE, description = "创建支付配置")
     public Result<AppPayWithConfigDTO> createAppPay(
             @Parameter(description = "支付配置信息", required = true)
             @Valid @RequestBody CreateAppPayRequest request) {
@@ -61,6 +64,7 @@ public class AppPayController {
 
     @GetMapping("/getAppPayByAppId")
     @Operation(summary = "获取支付配置", description = "根据appid获取所有支付类型的配置信息")
+    @OperationLog(opType = OpType.QUERY_CODE, description = "获取支付配置")
     public Result<AppPayWithConfigDTO> getAppPayByAppId(
             @Parameter(description = "小程序ID", required = true)
             @RequestParam String appId) {
@@ -74,6 +78,7 @@ public class AppPayController {
     @PostMapping("/updateAppPay")
     @Operation(summary = "更新支付配置", description = "更新小程序支付配置，payType必须为：normalPay, orderPay, renewPay, douzuanPay之一")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
+    @OperationLog(opType = OpType.UPDATE_CODE, description = "更新支付配置")
     public Result<AppPayWithConfigDTO> updateAppPay(
             @Parameter(description = "支付配置信息", required = true)
             @Valid @RequestBody UpdateAppPayRequest request) {
@@ -99,6 +104,7 @@ public class AppPayController {
     @GetMapping("/deleteAppPayByAppIdAndType")
     @Operation(summary = "删除支付配置", description = "根据appId和支付类型删除支付配置")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
+    @OperationLog(opType = OpType.DELETE_CODE, description = "删除支付配置")
     public Result<String> deleteAppPayByAppIdAndType(
             @Parameter(description = "小程序ID", required = true)
             @RequestParam String appId,

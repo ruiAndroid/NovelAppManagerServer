@@ -1,6 +1,8 @@
 package com.fun.novel.controller;
 
+import com.fun.novel.annotation.OperationLog;
 import com.fun.novel.common.Result;
+import com.fun.novel.enums.OpType;
 import com.fun.novel.utils.NovelAppBuildUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -24,8 +26,9 @@ public class NovelAppBuildController {
     private NovelAppBuildUtil novelAppBuildUtil;
 
     @PostMapping("/build")
-    @Operation(summary = "构建UniApp项目", description = "异步执行构建命令，返回任务ID用于WebSocket订阅")
+    @Operation(summary = "构建小程序", description = "异步执行构建命令，返回任务ID用于WebSocket订阅")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
+    @OperationLog(opType = OpType.OTHER_CODE, description = "构建小程序")
     public Result<String> buildNovelApp(
             @Parameter(description = "构建命令", required = true)
             @RequestParam String cmd) {
@@ -41,8 +44,9 @@ public class NovelAppBuildController {
     }
 
     @GetMapping("/stop")
-    @Operation(summary = "停止构建", description = "停止指定任务的构建进程")
+    @Operation(summary = "停止构建小程序", description = "停止指定任务的构建进程")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
+    @OperationLog(opType = OpType.OTHER_CODE, description = "停止构建小程序")
     public Result<String> stopBuild(
             @Parameter(description = "任务ID", required = true)
             @RequestParam(name = "taskId", required = true) String taskId) {

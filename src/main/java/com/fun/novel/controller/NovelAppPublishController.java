@@ -2,10 +2,12 @@ package com.fun.novel.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fun.novel.annotation.OperationLog;
 import com.fun.novel.common.Result;
 import com.fun.novel.dto.NovelAppBuildInfoDTO;
 import com.fun.novel.dto.NovelAppPublishDTO;
 import com.fun.novel.entity.NovelApp;
+import com.fun.novel.enums.OpType;
 import com.fun.novel.service.NovelAppService;
 import com.fun.novel.utils.NovelAppBuildUtil;
 import com.fun.novel.utils.NovelAppPublishUtil;
@@ -62,6 +64,7 @@ public class NovelAppPublishController {
 
     @GetMapping("/list")
     @Operation(summary = "获取已构建的小程序列表", description = "获取dist/build目录下所有已构建的小程序信息")
+    @OperationLog(opType = OpType.QUERY_CODE, description = "获取已构建的小程序列表")
     public Result<List<NovelAppBuildInfoDTO>> listBuildedApps() {
         try {
             String buildedPath = novelAppBuildUtil.getBuildedPath();
@@ -160,6 +163,7 @@ public class NovelAppPublishController {
     @PostMapping("/publish")
     @Operation(summary = "发布小程序", description = "发布小程序到指定平台")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
+    @OperationLog(opType = OpType.OTHER_CODE, description = "发布小程序")
     public Result<NovelAppPublishDTO> publishNovelApp(@RequestBody Map<String, String> params) {
         try {
             String platformCode = params.get("platformCode");

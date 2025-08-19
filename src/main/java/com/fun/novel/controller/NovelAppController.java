@@ -1,8 +1,10 @@
 package com.fun.novel.controller;
 
+import com.fun.novel.annotation.OperationLog;
 import com.fun.novel.common.Result;
 import com.fun.novel.entity.NovelApp;
 import com.fun.novel.dto.CreateNovelAppRequest;
+import com.fun.novel.enums.OpType;
 import com.fun.novel.service.NovelAppService;
 import com.fun.novel.service.NovelAppLocalFileOperationService;
 import com.fun.novel.service.NovelAppResourceFileService;
@@ -40,6 +42,7 @@ public class NovelAppController {
     @PostMapping("/create")
     @Operation(summary = "创建小说应用", description = "创建一个新的小说应用记录")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
+    @OperationLog(opType = OpType.INSERT_CODE, description = "创建小说应用")
     public Result<NovelApp> addNovelApp(@Valid @RequestBody NovelApp novelApp) {
         NovelApp createdApp = novelAppService.addNovelApp(novelApp);
         return Result.success("应用创建成功", createdApp);
@@ -51,10 +54,12 @@ public class NovelAppController {
         Map<String, List<NovelApp>> groupedApps = novelAppService.getNovelAppsByPlatform();
         return Result.success("获取成功", groupedApps);
     }
-    
+
     @GetMapping("/getByAppName")
     @Operation(summary = "根据应用名查询应用信息", description = "根据应用名查询所有平台的应用信息")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
+    @OperationLog(opType = OpType.QUERY_CODE, description = "根据应用名查询应用信息")
+
     public Result<List<NovelApp>> getNovelAppsByAppName(
             @Parameter(description = "应用名称", required = true)
             @RequestParam String appName) {
@@ -68,6 +73,7 @@ public class NovelAppController {
 
     @GetMapping("/getByAppId")
     @Operation(summary = "根据应用ID获取小说应用", description = "根据应用ID获取小说应用的详细信息")
+    @OperationLog(opType = OpType.QUERY_CODE, description = "根据应用ID获取小说应用")
     public Result<NovelApp> getNovelAppByAppId(
             @Parameter(description = "应用ID", required = true)
             @RequestParam String appId) {
@@ -84,6 +90,7 @@ public class NovelAppController {
     @PostMapping("/update")
     @Operation(summary = "修改小说应用", description = "根据传入的小说应用信息修改记录")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
+    @OperationLog(opType = OpType.UPDATE_CODE, description = "修改小说应用")
     public Result<NovelApp> updateNovelApp(@Valid @RequestBody NovelApp novelApp) {
         java.util.List<Runnable> rollbackActions = new java.util.ArrayList<>();
         try {
@@ -156,6 +163,7 @@ public class NovelAppController {
     @GetMapping("/delete")
     @Operation(summary = "删除小说应用", description = "根据应用ID删除小说应用")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
+    @OperationLog(opType = OpType.DELETE_CODE, description = "删除小说应用")
     public Result<String> deleteNovelApp(
             @Parameter(description = "应用ID", required = true)
             @RequestParam String appId) {

@@ -120,7 +120,9 @@ public class OperationLogAspect {
             }
             
             // 设置请求参数
-            if (controllerLog.opType() != OpType.QUERY_CODE && controllerLog.opType() != OpType.EXPORT_CODE) {
+            // 如果注解中明确指定要记录参数，或者操作类型不是查询或导出操作，则记录参数
+            if (controllerLog.recordParams() || 
+                (controllerLog.opType() != OpType.QUERY_CODE && controllerLog.opType() != OpType.EXPORT_CODE)) {
                 userOpLog.setRequestParams(argsArrayToString(joinPoint.getArgs()));
             }
             
