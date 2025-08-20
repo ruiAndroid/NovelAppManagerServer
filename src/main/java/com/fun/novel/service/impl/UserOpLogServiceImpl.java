@@ -35,4 +35,11 @@ public class UserOpLogServiceImpl extends ServiceImpl<UserOpLogMapper, UserOpLog
                 .orderByDesc(UserOpLog::getUpdateTime)
                 .page(page);
     }
+    
+    @Override
+    public IPage<UserOpLog> queryAllOpWithPage(Page<UserOpLog> page) {
+        return this.lambdaQuery()
+                .orderByDesc(UserOpLog::getUpdateTime)
+                .page(page);
+    }
 }

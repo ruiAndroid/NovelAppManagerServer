@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/novel-build")
-@Tag(name = "UniApp构建", description = "UniApp项目构建相关接口")
+@Tag(name = "构建小程序接口", description = "小程序构建相关接口")
 @CrossOrigin(origins = {
     "http://localhost:5173",
     "http://127.0.0.1:5173",

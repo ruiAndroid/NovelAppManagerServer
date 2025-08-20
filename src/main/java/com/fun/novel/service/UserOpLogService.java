@@ -31,4 +31,11 @@ public interface UserOpLogService {
      * @return 分页结果
      */
     IPage<UserOpLog> queryUserAllOpWithPage(Long userId, Page<UserOpLog> page);
+    
+    /**
+     * 分页查询所有操作日志记录（默认按时间倒序）
+     * @param page 分页参数
+     * @return 分页结果
+     */
+    IPage<UserOpLog> queryAllOpWithPage(Page<UserOpLog> page);
 }

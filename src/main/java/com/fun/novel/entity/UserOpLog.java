@@ -14,8 +14,7 @@ public class UserOpLog {
     /**
      * 主键
      */
-    @TableId(type = IdType.AUTO)
-    @TableField("id")
+    @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "log 主键Id")
     private Long id;
 

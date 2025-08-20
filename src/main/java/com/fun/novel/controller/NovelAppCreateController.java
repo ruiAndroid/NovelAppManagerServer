@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/api/novel-create")
-@Tag(name = "小程序发布", description = "小程序创建相关接口")
+@Tag(name = "创建小程序", description = "小程序创建相关接口")
 @CrossOrigin(origins = {
     "http://localhost:5173",
     "http://127.0.0.1:5173",

@@ -18,8 +18,7 @@ import java.time.LocalDateTime;
 @TableName("novel_app")
 @Schema(description = "小说应用信息")
 public class NovelApp {
-    @TableId(type = IdType.AUTO)
-    @TableField("id")
+    @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键ID")
     private Integer id;
 

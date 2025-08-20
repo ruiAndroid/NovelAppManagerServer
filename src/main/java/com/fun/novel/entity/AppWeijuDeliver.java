@@ -13,8 +13,7 @@ import java.time.LocalDateTime;
 @TableName("app_weiju_deliver")
 @Schema(description = "小说微距deliver信息")
 public class AppWeijuDeliver {
-    @TableId(type = IdType.AUTO)
-    @TableField("ad_id")
+    @TableId(value = "ad_id", type = IdType.AUTO)
     @Schema(description = "主键ID")
     private Integer adId;
 

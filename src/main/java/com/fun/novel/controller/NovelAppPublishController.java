@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/novel-publish")
-@Tag(name = "小程序发布", description = "小程序发布相关接口")
+@Tag(name = "发布小程序", description = "小程序发布相关接口")
 @CrossOrigin(origins = {
     "http://localhost:5173",
     "http://127.0.0.1:5173",
