@@ -47,7 +47,8 @@ public class SecurityConfig {
         "/api/novel-pay/getAppPayByAppId",//支付相关
         "/api/novel-common/getAppCommonConfig",//通用配置相关
         "/api/novel-publish/list",//自动化相关
-        "/ws/**" //WebSocket端点
+        "/ws/**", //WebSocket端点
+        "/api/op-log/**" //WebSocket端点
 
     };
 
