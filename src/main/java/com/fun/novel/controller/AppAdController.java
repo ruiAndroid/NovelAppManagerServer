@@ -1,11 +1,13 @@
 package com.fun.novel.controller;
 
+import com.fun.novel.annotation.OperationLog;
 import com.fun.novel.common.Result;
 import com.fun.novel.dto.CreateNovelAppRequest;
 import com.fun.novel.entity.AppAd;
 import com.fun.novel.entity.AdConfig;
 import com.fun.novel.entity.AppCommonConfig;
 import com.fun.novel.entity.NovelApp;
+import com.fun.novel.enums.OpType;
 import com.fun.novel.service.*;
 import com.fun.novel.dto.AppAdWithConfigDTO;
 import com.fun.novel.dto.UpdateAdConfigRequest;
@@ -43,6 +45,7 @@ public class AppAdController {
     @PostMapping("/appAd/create")
     @Operation(summary = "创建AppAd", description = "创建新的AppAd记录")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
+    @OperationLog(opType = OpType.INSERT_CODE, description = "创建AppAd")
     public Result<AppAd> createAppAd(
             @Parameter(description = "AppAd对象", required = true)
             @Valid @RequestBody AppAd appAd) {
@@ -56,6 +59,8 @@ public class AppAdController {
 
     @GetMapping("/appAd/getAppAdByAppId")
     @Operation(summary = "获取AppAd", description = "根据appId获取AppAd记录")
+    @OperationLog(opType = OpType.QUERY_CODE, description = "根据appId获取AppAd记录")
+
     public Result<AppAdWithConfigDTO> getAppAdByAppId(
             @Parameter(description = "AppAd ID", required = true)
             @RequestParam String appId) {
@@ -69,6 +74,7 @@ public class AppAdController {
     @GetMapping("/appAd/deleteAppAdByAppId")
     @Operation(summary = "删除AppAd", description = "根据appId删除AppAd")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
+    @OperationLog(opType = OpType.DELETE_CODE, description = "根据appId删除AppAd")
     public Result<String> deleteAppAdByAppId(
             @Parameter(description = "AppAd ID", required = true)
             @RequestParam String appId) {
@@ -86,6 +92,7 @@ public class AppAdController {
     @PostMapping("/adConfig/create")
     @Operation(summary = "创建AdConfig", description = "创建新的AdConfig记录")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
+    @OperationLog(opType = OpType.INSERT_CODE, description = "创建AdConfig")
     public Result<AdConfig> createAdConfig(
             @Parameter(description = "AdConfig对象", required = true)
             @Valid @RequestBody AdConfig adConfig) {
@@ -114,6 +121,7 @@ public class AppAdController {
     @PostMapping("/adConfig/update")
     @Operation(summary = "更新AdConfig", description = "更新广告配置信息")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
+    @OperationLog(opType = OpType.UPDATE_CODE, description = "更新AdConfig")
     public Result<AdConfig> updateAdConfig(
             @Parameter(description = "更新广告配置请求", required = true)
             @Valid @RequestBody UpdateAdConfigRequest request) {
@@ -142,6 +150,7 @@ public class AppAdController {
     @GetMapping("/adConfig/deleteByAppAdIdAndType")
     @Operation(summary = "删除AdConfig", description = "根据appAdId和广告类型删除广告配置")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
+    @OperationLog(opType = OpType.DELETE_CODE, description = "删除AdConfig")
     public Result<String> deleteAdConfigByAppAdIdAndType(
             @Parameter(description = "应用广告ID", required = true)
             @RequestParam Integer appAdId,

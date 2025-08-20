@@ -79,6 +79,7 @@ public class SecurityConfig {
             .antMatchers(URL_WHITELIST).permitAll() // 接口请求白名单
 //            .antMatchers("/api/novel-apps/**").hasAnyRole("USER_TYPE_2_3", "ADMIN") // type=2或3可以访问的接口
             .anyRequest().authenticated() // 其他请求需要认证
+
              //配置自定义的过滤器
             .and()
             .addFilterBefore(new JwtAuthenticationFilter(userDetailsService, jwtUtil), UsernamePasswordAuthenticationFilter.class);
