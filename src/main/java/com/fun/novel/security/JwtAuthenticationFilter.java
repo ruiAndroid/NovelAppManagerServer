@@ -1,13 +1,14 @@
-package com.fun.novel.config;
+package com.fun.novel.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fun.novel.common.Result;
 import com.fun.novel.utils.JwtUtil;
 import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.SignatureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,8 +23,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -58,18 +57,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 sendErrorResponse(response, "请求中没有JWT Token");
                 return;
             } catch (ExpiredJwtException e) {
-                logger.warn("JWT Token已过期");
+                logger.warn("JWT Token已过期: {}", e.getMessage());
                 sendErrorResponse(response, "JWT Token已过期");
                 return;
             } catch (SignatureException e) {
                 logger.warn("JWT签名不匹配: {}", e.getMessage());
                 sendErrorResponse(response, "JWT签名无效");
                 return;
+            } catch (MalformedJwtException e) {
+                logger.warn("JWT格式错误: {}", e.getMessage());
+                sendErrorResponse(response, "JWT格式无效");
+                return;
+            } catch (UnsupportedJwtException e) {
+                logger.warn("不支持的JWT Token: {}", e.getMessage());
+                sendErrorResponse(response, "不支持的JWT Token");
+                return;
             } catch (Exception e) {
-                logger.warn("JWT Token处理异常: {}", e.getMessage());
+                logger.warn("JWT Token处理异常: {}", e.getMessage(), e);
                 sendErrorResponse(response, "JWT Token无效");
                 return;
             }
+        } else {
+            logger.debug("JWT Token does not begin with Bearer String");
         }
 
         // 验证token
@@ -83,11 +92,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 } else {
+                    logger.warn("JWT Token验证失败");
                     sendErrorResponse(response, "JWT Token无效");
                     return;
                 }
             } catch (Exception e) {
-                logger.warn("用户认证失败: {}", e.getMessage());
+                logger.warn("用户认证失败: {}", e.getMessage(), e);
                 sendErrorResponse(response, "用户认证失败");
                 return;
             }

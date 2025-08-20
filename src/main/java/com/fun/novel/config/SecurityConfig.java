@@ -1,9 +1,10 @@
 package com.fun.novel.config;
 
+import com.fun.novel.security.JwtAuthenticationFilter;
+import com.fun.novel.security.LoginSuccessHandler;
 import com.fun.novel.utils.JwtUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
@@ -32,6 +33,8 @@ public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
 
+    private final LoginSuccessHandler loginSuccessHandler;
+
     //白名单接口，不需要鉴权可以直接调用的
     public static final String[] URL_WHITELIST = {
         "/swagger-ui.html",//接口文档
@@ -52,20 +55,31 @@ public class SecurityConfig {
 
     };
 
-    public SecurityConfig(@Lazy UserDetailsService userDetailsService, JwtUtil jwtUtil) {
+    public SecurityConfig(@Lazy UserDetailsService userDetailsService, JwtUtil jwtUtil, @Lazy LoginSuccessHandler loginSuccessHandler) {
         this.userDetailsService = userDetailsService;
         this.jwtUtil = jwtUtil;
+        this.loginSuccessHandler = loginSuccessHandler;
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf().disable()
-            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            // 登录配置
+            .formLogin()
+            .successHandler(loginSuccessHandler)
+
+            // 禁用session
+            .and()
+            .sessionManagement()
+            .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+
+             // 配置拦截规则
             .and()
             .authorizeRequests()
             .antMatchers(URL_WHITELIST).permitAll() // 接口请求白名单
 //            .antMatchers("/api/novel-apps/**").hasAnyRole("USER_TYPE_2_3", "ADMIN") // type=2或3可以访问的接口
             .anyRequest().authenticated() // 其他请求需要认证
+             //配置自定义的过滤器
             .and()
             .addFilterBefore(new JwtAuthenticationFilter(userDetailsService, jwtUtil), UsernamePasswordAuthenticationFilter.class);
 
@@ -80,6 +94,7 @@ public class SecurityConfig {
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setHideUserNotFoundExceptions(false);
         authProvider.setUserDetailsService(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;

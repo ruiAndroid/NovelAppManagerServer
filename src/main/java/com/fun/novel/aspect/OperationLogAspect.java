@@ -17,6 +17,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -39,14 +40,17 @@ public class OperationLogAspect {
     
     private static final Logger log = LoggerFactory.getLogger(OperationLogAspect.class);
     
-    @Autowired
-    private UserOpLogService userOpLogService;
+    private final UserOpLogService userOpLogService;
     
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
     
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final JwtUtil jwtUtil;
+    
+    public OperationLogAspect(UserOpLogService userOpLogService, @Lazy UserService userService, JwtUtil jwtUtil) {
+        this.userOpLogService = userOpLogService;
+        this.userService = userService;
+        this.jwtUtil = jwtUtil;
+    }
     
     /**
      * 配置织入点
