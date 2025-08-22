@@ -1,13 +1,15 @@
 package com.fun.novel.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fun.novel.common.Result;
 import com.fun.novel.security.JwtAuthenticationFilter;
-import com.fun.novel.security.LoginSuccessHandler;
 import com.fun.novel.utils.JwtUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -19,8 +21,13 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
 @Configuration
 @EnableWebSecurity
@@ -33,45 +40,27 @@ public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
 
-    private final LoginSuccessHandler loginSuccessHandler;
-
-    //白名单接口，不需要鉴权可以直接调用的
-    public static final String[] URL_WHITELIST = {
-        "/swagger-ui.html",//接口文档
-        "/swagger-ui/**",
-        "/v3/api-docs/**",
-        "/webjars/**",
-        "/api/novel-auth/login",  //登录
-        "/api/novel-auth/register",//注册
-        "/api/novel-apps/appLists",   //应用列表
-        "/api/novel-weiju/banner/getBannerByBannerId",     //微距相关
-        "/api/novel-weiju/deliver/getDeliverByDeliverId",
-        "/api/novel-ad/appAd/getAppAdByAppId",//广告相关
-        "/api/novel-pay/getAppPayByAppId",//支付相关
-        "/api/novel-common/getAppCommonConfig",//通用配置相关
-        "/api/novel-publish/list",//自动化相关
-        "/ws/**", //WebSocket端点
-        "/api/op-log/**" //WebSocket端点
-
-    };
-
-    public SecurityConfig(@Lazy UserDetailsService userDetailsService, JwtUtil jwtUtil, @Lazy LoginSuccessHandler loginSuccessHandler) {
+    public SecurityConfig(@Lazy UserDetailsService userDetailsService, JwtUtil jwtUtil) {
         this.userDetailsService = userDetailsService;
         this.jwtUtil = jwtUtil;
-        this.loginSuccessHandler = loginSuccessHandler;
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf().disable()
-            // 登录配置
-            .formLogin()
-            .successHandler(loginSuccessHandler)
+            // 禁用表单登录
+            .formLogin().disable()
+            // 禁用HTTP基本认证
+            .httpBasic().disable()
 
             // 禁用session
-            .and()
             .sessionManagement()
             .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+
+            // 配置认证入口点，处理未认证的请求
+            .and()
+            .exceptionHandling()
+            .authenticationEntryPoint(authenticationEntryPoint())
 
              // 配置拦截规则
             .and()
@@ -85,6 +74,18 @@ public class SecurityConfig {
             .addFilterBefore(new JwtAuthenticationFilter(userDetailsService, jwtUtil), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public AuthenticationEntryPoint authenticationEntryPoint() {
+        return (request, response, authException) -> {
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            response.setContentType("application/json;charset=UTF-8");
+            
+            Result<Object> result = Result.error(401, "请先登录");
+            ObjectMapper objectMapper = new ObjectMapper();
+            response.getWriter().write(objectMapper.writeValueAsString(result));
+        };
     }
 
     @Bean
@@ -105,4 +106,24 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
     }
+    
+    //白名单接口，不需要鉴权可以直接调用的
+    public static final String[] URL_WHITELIST = {
+        "/swagger-ui.html",//接口文档
+        "/swagger-ui/**",
+        "/v3/api-docs/**",
+        "/webjars/**",
+        "/api/novel-auth/login",  //登录
+        "/api/novel-auth/register",//注册
+        "/api/novel-apps/appLists",   //应用列表
+        "/api/novel-weiju/banner/getBannerByBannerId",     //微距相关
+        "/api/novel-weiju/deliver/getDeliverByDeliverId",
+        "/api/novel-ad/appAd/getAppAdByAppId",//广告相关
+        "/api/novel-pay/getAppPayByAppId",//支付相关
+        "/api/novel-common/getAppCommonConfig",//通用配置相关
+        "/api/novel-publish/list",//自动化相关
+        "/ws/**", //WebSocket端点
+        "/api/op-log/**" //WebSocket端点
+
+    };
 }

@@ -1,5 +1,6 @@
 package com.fun.novel.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fun.novel.entity.User;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -24,4 +25,12 @@ public interface UserService extends IService<User> {
      * @return 用户ID
      */
     Long getUserIdByUsername(String username);
+    
+    /**
+     * 分页查询用户信息
+     * @param page 页码
+     * @param size 每页条数
+     * @return 用户分页信息
+     */
+    Page<User> getUserPage(Integer page, Integer size);
 }

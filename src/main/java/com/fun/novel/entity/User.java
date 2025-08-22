@@ -24,6 +24,13 @@ public class User {
     private Integer type;
 
     /**
+     * 用户状态
+     */
+    @TableField("status")
+    @Schema(description = "用户状态 0审核通过，1待审核，2审核失败")
+    private Integer status;
+
+    /**
      * 用户名
      */
     @TableField("user_name")

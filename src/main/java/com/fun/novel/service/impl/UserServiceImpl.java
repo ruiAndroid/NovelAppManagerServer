@@ -1,6 +1,7 @@
 package com.fun.novel.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fun.novel.entity.User;
 import com.fun.novel.mapper.UserMapper;
@@ -35,10 +36,28 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         // 密码加密
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setType(user.getType());
         user.setCreateTime(LocalDateTime.now());
         user.setUpdateTime(LocalDateTime.now());
 
+        // 确保状态字段被正确设置
+        if (user.getStatus() == null) {
+            // 如果状态未设置，根据用户类型设置默认状态
+            if (user.getType() != null) {
+                if (user.getType() == 0) {
+                    // 研发人员默认审核通过
+                    user.setStatus(0);
+                } else if (user.getType() == 1 || user.getType() == 2) {
+                    // 产品或测试人员默认待审核
+                    user.setStatus(1);
+                } else {
+                    // 其他类型默认待审核
+                    user.setStatus(1);
+                }
+            } else {
+                // 默认待审核
+                user.setStatus(1);
+            }
+        }
 
         // 使用MyBatis Plus的save方法确保ID自动生成
         boolean saved = save(user);
@@ -52,5 +71,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public Long getUserIdByUsername(String username) {
         User user = findByUsername(username);
         return user != null ? user.getId() : null;
+    }
+    
+    @Override
+    public Page<User> getUserPage(Integer page, Integer size) {
+        // 创建分页对象
+        Page<User> userPage = new Page<>(page, size);
+        
+        // 创建查询条件，按更新时间降序排列
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.orderByDesc("update_time");
+        
+        // 执行分页查询
+        return page(userPage, queryWrapper);
     }
 }

@@ -14,6 +14,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -77,31 +78,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 sendErrorResponse(response, "JWT Token无效");
                 return;
             }
-        } else {
-            logger.debug("JWT Token does not begin with Bearer String");
-        }
 
-        // 验证token
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            try {
-                UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+            // 验证token
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                try {
+                    UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
-                if (jwtUtil.validateToken(jwtToken, userDetails.getUsername())) {
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            userDetails, null, userDetails.getAuthorities());
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
-                } else {
-                    logger.warn("JWT Token验证失败");
-                    sendErrorResponse(response, "JWT Token无效");
+                    if (jwtUtil.validateToken(jwtToken, userDetails.getUsername())) {
+                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                userDetails, null, userDetails.getAuthorities());
+                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                    } else {
+                        logger.warn("JWT Token验证失败");
+                        sendErrorResponse(response, "JWT Token无效");
+                        return;
+                    }
+                } catch (Exception e) {
+                    logger.warn("用户认证失败: {}", e.getMessage(), e);
+                    sendErrorResponse(response, "用户认证失败");
                     return;
                 }
-            } catch (Exception e) {
-                logger.warn("用户认证失败: {}", e.getMessage(), e);
-                sendErrorResponse(response, "用户认证失败");
-                return;
             }
-        }
+        } 
+        // 如果没有Authorization头或者不是Bearer Token格式，则直接放行
+        // 让Spring Security的其他配置来决定是否需要认证
         chain.doFilter(request, response);
     }
 
