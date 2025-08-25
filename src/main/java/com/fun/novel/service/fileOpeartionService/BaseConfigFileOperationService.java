@@ -71,33 +71,38 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
         String destDir = prebuildDir + File.separator + buildCode;
         try {
             Path destPath = java.nio.file.Paths.get(destDir);
-            if (java.nio.file.Files.exists(destPath)) {
-                deleteDirectoryRecursively(destPath);
+            // 只有当目录不存在时才创建，避免删除已有目录
+            if (!java.nio.file.Files.exists(destPath)) {
+                java.nio.file.Files.createDirectories(destPath);
+                // 立即添加回滚动作，确保后续任何失败都能回滚buildCode目录
+                rollbackActions.add(() -> {
+                    try {
+                        taskLogger.log(taskId, "回滚动作：删除" + destDir, CreateNovelLogType.ERROR);
+                        deleteDirectoryRecursively(destPath);
+                    } catch (Exception ignore) {}
+                });
             }
-            java.nio.file.Files.createDirectories(destPath);
-            // 立即添加回滚动作，确保后续任何失败都能回滚buildCode目录
-            rollbackActions.add(() -> {
-                try {
-                    taskLogger.log(taskId, "回滚动作：删除" + destDir, CreateNovelLogType.ERROR);
-                    deleteDirectoryRecursively(destPath);
-                } catch (Exception ignore) {}
-            });
+            
             // 只复制manifest.json和对应平台的pages-xx.json
             Path srcPath = java.nio.file.Paths.get(srcDir);
             // manifest.json
             Path manifestSrc = srcPath.resolve("manifest.json");
             Path manifestDest = destPath.resolve("manifest.json");
-            java.nio.file.Files.copy(manifestSrc, manifestDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            // manifest.json回滚动作：写入前先备份，写入后立即添加回滚
-            String manifestBackup = manifestDest.toString() + ".bak";
-            java.nio.file.Files.copy(manifestDest, java.nio.file.Paths.get(manifestBackup), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            rollbackActions.add(() -> {
-                try {
-                    taskLogger.log(taskId, "回滚动作：还原manifest.json",CreateNovelLogType.ERROR);
-                    java.nio.file.Files.copy(java.nio.file.Paths.get(manifestBackup), manifestDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                    java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(manifestBackup));
-                } catch (Exception ignore) {}
-            });
+            // 只有当目标文件不存在时才复制
+            if (!java.nio.file.Files.exists(manifestDest)) {
+                java.nio.file.Files.copy(manifestSrc, manifestDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                // manifest.json回滚动作：写入前先备份，写入后立即添加回滚
+                String manifestBackup = manifestDest.toString() + ".bak";
+                java.nio.file.Files.copy(manifestDest, java.nio.file.Paths.get(manifestBackup), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                rollbackActions.add(() -> {
+                    try {
+                        taskLogger.log(taskId, "回滚动作：还原manifest.json",CreateNovelLogType.ERROR);
+                        java.nio.file.Files.copy(java.nio.file.Paths.get(manifestBackup), manifestDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                        java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(manifestBackup));
+                    } catch (Exception ignore) {}
+                });
+            }
+            
             // pages-xx.json
             final String pagesFileName;
             switch (platform) {
@@ -115,17 +120,21 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
             }
             Path pagesSrc = srcPath.resolve(pagesFileName);
             Path pagesDest = destPath.resolve(pagesFileName);
-            java.nio.file.Files.copy(pagesSrc, pagesDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            // pages-xx.json回滚动作：写入前先备份，写入后立即添加回滚
-            String pagesBackup = pagesDest.toString() + ".bak";
-            java.nio.file.Files.copy(pagesDest, java.nio.file.Paths.get(pagesBackup), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            rollbackActions.add(() -> {
-                try {
-                    taskLogger.log(taskId, "回滚动作：还原"+pagesFileName,CreateNovelLogType.ERROR);
-                    java.nio.file.Files.copy(java.nio.file.Paths.get(pagesBackup), pagesDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                    java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(pagesBackup));
-                } catch (Exception ignore) {}
-            });
+            // 只有当目标文件不存在时才复制
+            if (!java.nio.file.Files.exists(pagesDest)) {
+                java.nio.file.Files.copy(pagesSrc, pagesDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                // pages-xx.json回滚动作：写入前先备份，写入后立即添加回滚
+                String pagesBackup = pagesDest.toString() + ".bak";
+                java.nio.file.Files.copy(pagesDest, java.nio.file.Paths.get(pagesBackup), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                rollbackActions.add(() -> {
+                    try {
+                        taskLogger.log(taskId, "回滚动作：还原"+pagesFileName,CreateNovelLogType.ERROR);
+                        java.nio.file.Files.copy(java.nio.file.Paths.get(pagesBackup), pagesDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                        java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(pagesBackup));
+                    } catch (Exception ignore) {}
+                });
+            }
+            
             // 2-1-2 编辑manifest.json内容
             if (withLogAndDelay) {
                 taskLogger.log(taskId, "[2-1-2] 开始编辑manifest.json", CreateNovelLogType.PROCESSING);
@@ -174,9 +183,10 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
                 String formattedManifestContent = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(manifestNode);
                 taskLogger.log(taskId,formattedManifestContent, CreateNovelLogType.INFO);
                 // 操作成功后删除manifest.bak
-                try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(manifestBackup)); } catch (Exception ignore) {}
+                try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(manifestDest.toString() + ".bak")); } catch (Exception ignore) {}
             } catch (Exception e) {
                 // 还原备份
+                String manifestBackup = manifestDest.toString() + ".bak";
                 taskLogger.log(taskId, "回滚动作：还原manifest.json",CreateNovelLogType.ERROR);
                 java.nio.file.Files.copy(java.nio.file.Paths.get(manifestBackup), manifestDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                 java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(manifestBackup));
@@ -229,9 +239,10 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
                 String formattedPagesContent = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode);
                 taskLogger.log(taskId, formattedPagesContent, CreateNovelLogType.INFO);
                 // 操作成功后删除pages.bak
-                try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(pagesBackup)); } catch (Exception ignore) {}
+                try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(pagesDest.toString() + ".bak")); } catch (Exception ignore) {}
             } catch (Exception e) {
                 // 还原备份
+                String pagesBackup = pagesDest.toString() + ".bak";
                 taskLogger.log(taskId, "回滚动作：还原"+pagesFileName,CreateNovelLogType.ERROR);
                 java.nio.file.Files.copy(java.nio.file.Paths.get(pagesBackup), pagesDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                 java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(pagesBackup));
@@ -243,7 +254,10 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
             try {
                 taskLogger.log(taskId, "回滚动作：删除" + destDir, CreateNovelLogType.ERROR);
                 Path destPath = java.nio.file.Paths.get(destDir);
-                deleteDirectoryRecursively(destPath);
+                // 只有当目录是我们创建的才删除
+                if (!java.nio.file.Files.exists(destPath)) {
+                    deleteDirectoryRecursively(destPath);
+                }
             } catch (Exception ignore) {}
             throw new RuntimeException("目录prebuild/build处理失败: " + e.getMessage(), e);
         }
@@ -787,5 +801,38 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
                 throw new RuntimeException("无法生成deliver配置文件内容", ex);
             }
         }
+    }
+
+    /**
+     * 删除指定appId的baseConfig配置
+     *
+     */
+    public void deleteBaseConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions) {
+        CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
+        CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
+        String buildCode = commonConfig.getBuildCode();
+        String platform = baseConfig.getPlatform();
+
+
+        deletePrebuildBuildDir(buildCode, platform, baseConfig, rollbackActions);
+//        deleteThemeFile(buildCode, baseConfig, rollbackActions, false);
+//        deleteDouyinPrefetchFile(buildCode, platform, rollbackActions, false);
+//        deleteBaseConfigFile(buildCode, platform, baseConfig, commonConfig, rollbackActions, false);
+//        deleteDeliverConfigFile(buildCode, platform, params.getDeliverConfig(),rollbackActions, false);
+
+    }
+
+    /**
+     * 删除预编译目录
+     * @param buildCode
+     * @param platform
+     * @param baseConfig
+     * @param rollbackActions
+     */
+    private void deletePrebuildBuildDir(String buildCode, String platform, CreateNovelAppRequest.BaseConfig baseConfig, List<Runnable> rollbackActions) {
+        String prebuildDir = buildWorkPath + File.separator + "prebuild" + File.separator + "build";
+        String destDir = prebuildDir + File.separator + buildCode;
+
+
     }
 }

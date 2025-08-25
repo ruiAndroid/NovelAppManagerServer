@@ -58,6 +58,13 @@ public class NovelAppLocalFileOperationServiceImpl extends AbstractConfigFileOpe
 
     }
 
+    @Override
+    public void deleteAppLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions) {
+        baseConfigFileOperationService.deleteBaseConfigLocalCodeFiles(params, rollbackActions);
+
+
+    }
+
 
     private void doCreateLocalCodeFiles(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions) {
 

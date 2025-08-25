@@ -14,8 +14,9 @@ public interface NovelAppLocalFileOperationService {
      */
     void createNovelAppLocalCodeFiles(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions);
 
-    void updateBaseConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions);
 
+
+    void updateBaseConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions);
 
     void updateAdConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions);
 
@@ -23,5 +24,5 @@ public interface NovelAppLocalFileOperationService {
 
     void updatePayConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions);
 
-
+    void deleteAppLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions);
 }

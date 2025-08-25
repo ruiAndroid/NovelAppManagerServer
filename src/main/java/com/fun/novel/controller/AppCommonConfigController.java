@@ -19,6 +19,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.List;
 
 @Tag(name = "应用通用配置接口")
 @RestController
@@ -58,9 +59,22 @@ public class AppCommonConfigController {
             @RequestParam String appId) {
         AppCommonConfig config = appCommonConfigService.getAppCommonConfig(appId);
         if (config == null) {
-            return Result.error("未找到对应的应用配置");
+            return Result.success("未找到对应的应用配置",config);
         }
         return Result.success("获取成功", config);
+    }
+    
+    @GetMapping("/getAppCommonConfigByAppName")
+    @Operation(summary = "根据应用名称获取通用配置", description = "根据应用名称获取所有平台的通用配置信息")
+    @OperationLog(opType = OpType.QUERY_CODE, description = "根据应用名称获取通用配置")
+    public Result<List<AppCommonConfig>> getAppCommonConfigByAppName(
+            @Parameter(description = "应用名称", required = true)
+            @RequestParam String appName) {
+        List<AppCommonConfig> configs = appCommonConfigService.getAppCommonConfigByAppName(appName);
+        if (configs == null || configs.isEmpty()) {
+            return Result.success("未找到对应的应用配置",configs);
+        }
+        return Result.success("获取成功", configs);
     }
 
     @GetMapping("/deleteAppCommonConfig")

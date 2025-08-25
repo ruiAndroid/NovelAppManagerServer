@@ -2,7 +2,6 @@ package com.fun.novel.service.fileOpeartionService;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fun.novel.dto.CreateNovelAppRequest;
-import com.fun.novel.service.NovelAppLocalFileOperationService;
 import com.fun.novel.dto.CreateNovelLogType;
 import org.springframework.stereotype.Service;
 
@@ -18,8 +17,6 @@ import java.util.List;
  */
 @Service
 public class AdConfigFileOperationService extends AbstractConfigFileOperationService {
-
-
 
 
     public void createAdConfigLocalCodeFiles(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions) {
@@ -133,26 +130,6 @@ public class AdConfigFileOperationService extends AbstractConfigFileOperationSer
                 fileContent = updateExistingAdConfig(existingContent, platform, platformAdConfigMap);
             } else {
                 // 创建全新的配置文件内容
-                // 构造内容
-                StringBuilder sb = new StringBuilder();
-                sb.append("export default {\n");
-                // 平台列表
-                String[] platforms = {"tt", "ks", "wx", "bd"};
-                for (String pf : platforms) {
-                    sb.append("    '").append(pf).append("': {\n");
-                    // 默认结构
-                    sb.append("        rewardAd: {\n            enable: false\n        },\n");
-                    sb.append("        native: {\n            enable: false\n        },\n");
-                    sb.append("        interstitial: {\n            enable: false\n        }\n");
-                    sb.append("        feed: {\n            enable: false\n        }\n");
-                    sb.append("    },\n");
-                }
-                // 移除最后一个逗号
-                int lastComma = sb.lastIndexOf(",\n}");
-                if (lastComma != -1) {
-                    sb.delete(lastComma, lastComma + 2);
-                }
-                sb.append("}\n");
                 // 解析为对象再写入广告配置
                 ObjectMapper objectMapper = new ObjectMapper();
                 // 先构造一个Map结构
@@ -164,7 +141,7 @@ public class AdConfigFileOperationService extends AbstractConfigFileOperationSer
                     pfMap.put("banner", new java.util.LinkedHashMap<String, Object>() {{ put("enable", false); }});
                     pfMap.put("interstitial", new java.util.LinkedHashMap<String, Object>() {{ put("enable", false); }});
                     pfMap.put("feed", new java.util.LinkedHashMap<String, Object>() {{ put("enable", false); }});
-                    adConfigMap.put(pf, pfMap);
+                    adConfigMap.put(pf, pfMap); // 使用不带引号的键
                 }
                 // 写入对应平台的广告配置
                 if (adConfig != null) {
@@ -224,7 +201,7 @@ public class AdConfigFileOperationService extends AbstractConfigFileOperationSer
                 StringBuilder finalSb = new StringBuilder();
                 finalSb.append("export default ");
                 String jsonString = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(adConfigMap);
-                // 统一使用不带引号的键名并修复缩进
+                // 统一使用带单引号的外层键名并修复缩进
                 jsonString = formatJsonString(jsonString);
                 finalSb.append(jsonString);
                 finalSb.append(";\n");
@@ -247,13 +224,17 @@ public class AdConfigFileOperationService extends AbstractConfigFileOperationSer
     }
 
     /**
-     * 格式化JSON字符串，统一使用不带引号的键名并修复缩进
+     * 格式化JSON字符串，外层键使用单引号，内层键不使用引号并修复缩进
      * @param jsonString JSON字符串
      * @return 格式化后的字符串
      */
-    private String formatJsonString(String jsonString) {
-        // 将带引号的键名替换为不带引号的键名
+    private static String formatJsonString(String jsonString) {
+        // 将带引号的键名替换为不带引号的键名（用于内层键）
         jsonString = jsonString.replaceAll("\"([a-zA-Z_][a-zA-Z0-9_]*)\"\\s*:", "$1:");
+        
+        // 为外层键添加单引号 - 处理所有平台键
+        jsonString = jsonString.replaceAll("\"(tt|ks|wx|bd)\"\\s*:", "'$1':");
+        jsonString = jsonString.replaceAll("(\\{|,\\s+)\\b(tt|ks|wx|bd)\\b\\s*:", "$1'$2':");
         
         // 创建格式化的结果
         StringBuilder result = new StringBuilder();
@@ -333,7 +314,7 @@ public class AdConfigFileOperationService extends AbstractConfigFileOperationSer
             StringBuilder finalSb = new StringBuilder();
             finalSb.append("export default ");
             String jsonString = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(existingConfigMap);
-            // 统一使用不带引号的键名并修复缩进
+            // 统一使用带单引号的外层键名并修复缩进
             jsonString = formatJsonString(jsonString);
             finalSb.append(jsonString);
             finalSb.append(";\n");
@@ -382,26 +363,48 @@ public class AdConfigFileOperationService extends AbstractConfigFileOperationSer
             // 构造新的平台配置JSON字符串
             ObjectMapper objectMapper = new ObjectMapper();
             String newPlatformConfigJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(platformAdConfigMap);
-            // 统一使用不带引号的键名并修复缩进
+            // 统一使用不带引号的内层键名并修复缩进
             newPlatformConfigJson = formatJsonString(newPlatformConfigJson);
             
-            // 使用正则表达式替换指定平台的配置
-            // 更宽松的正则表达式，能匹配更多格式
-            String regex = "'" + platformKey + "'\\s*:\\s*\\{(?:[^{}]|\\{(?:[^{}]|\\{[^{}]*\\})*\\})*\\}";
-            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(regex, java.util.regex.Pattern.DOTALL);
-            java.util.regex.Matcher matcher = pattern.matcher(existingContent);
-            
-            // 构造替换后的平台配置内容
+            // 构造替换后的平台配置内容，外层键使用单引号
             StringBuilder newPlatformConfigBuilder = new StringBuilder();
             newPlatformConfigBuilder.append("'").append(platformKey).append("': ");
             newPlatformConfigBuilder.append(newPlatformConfigJson);
             
-            String replacement = newPlatformConfigBuilder.toString();
+            // 查找现有平台配置块（支持带引号和不带引号两种格式）
+            String platformPattern = "['\"]?" + platformKey + "['\"]?\\s*:\\s*\\{";
+            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(platformPattern);
+            java.util.regex.Matcher matcher = pattern.matcher(existingContent);
             
             if (matcher.find()) {
-                // 如果找到匹配项，则替换
-                String updatedContent = matcher.replaceFirst(java.util.regex.Matcher.quoteReplacement(replacement));
-                return updatedContent;
+                // 如果找到匹配项，查找配置块的开始和结束位置
+                int startMatchPos = matcher.start();
+                int openBracePos = existingContent.indexOf("{", matcher.end() - 1);
+                
+                if (openBracePos != -1) {
+                    // 查找匹配的结束大括号
+                    int closeBracePos = findMatchingBrace(existingContent, openBracePos);
+                    if (closeBracePos != -1) {
+                        // 替换平台配置块
+                        StringBuilder result = new StringBuilder();
+                        result.append(existingContent.substring(0, startMatchPos));
+                        result.append(newPlatformConfigBuilder.toString());
+                        result.append(existingContent.substring(closeBracePos + 1));
+                        
+                        // 确保结尾格式正确
+                        String resultStr = result.toString();
+                        if (!resultStr.endsWith(";\n")) {
+                            if (resultStr.endsWith(";")) {
+                                resultStr = resultStr.substring(0, resultStr.length() - 1) + "\n;";
+                            } else if (resultStr.endsWith("\n")) {
+                                resultStr = resultStr.substring(0, resultStr.length() - 1) + ";\n";
+                            } else {
+                                resultStr += ";\n";
+                            }
+                        }
+                        return resultStr;
+                    }
+                }
             } else {
                 // 如果没有找到匹配项，则添加新的平台配置
                 // 查找配置对象的结束位置
@@ -412,7 +415,8 @@ public class AdConfigFileOperationService extends AbstractConfigFileOperationSer
                     if (sb.charAt(endIndex - 1) != '{' && sb.charAt(endIndex - 1) != ',') {
                         sb.insert(endIndex, ",");
                     }
-                    sb.insert(endIndex, "\n    " + replacement + "\n");
+                    // 添加新的平台配置，外层键使用单引号
+                    sb.insert(endIndex, "\n    " + newPlatformConfigBuilder.toString() + "\n");
                     return sb.toString();
                 }
             }
@@ -438,11 +442,11 @@ public class AdConfigFileOperationService extends AbstractConfigFileOperationSer
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             String newPlatformConfigJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(platformAdConfigMap);
-            // 统一使用不带引号的键名并修复缩进
+            // 统一使用不带引号的内层键名并修复缩进
             newPlatformConfigJson = formatJsonString(newPlatformConfigJson);
             
-            // 查找平台配置的位置
-            String platformKeyPattern = "'" + platformKey + "'";
+            // 查找平台配置的位置（支持带引号和不带引号两种格式）
+            String platformKeyPattern = "['\"]?" + platformKey + "['\"]?";
             int platformStartIndex = existingContent.indexOf(platformKeyPattern);
             
             if (platformStartIndex != -1) {
@@ -455,7 +459,7 @@ public class AdConfigFileOperationService extends AbstractConfigFileOperationSer
                         // 找到匹配的结束大括号
                         int endBraceIndex = findMatchingBrace(existingContent, startBraceIndex);
                         if (endBraceIndex != -1) {
-                            // 构造新的平台配置
+                            // 构造新的平台配置，外层键使用单引号
                             StringBuilder newPlatformConfigBuilder = new StringBuilder();
                             newPlatformConfigBuilder.append("'").append(platformKey).append("': ");
                             newPlatformConfigBuilder.append(newPlatformConfigJson);
@@ -476,7 +480,7 @@ public class AdConfigFileOperationService extends AbstractConfigFileOperationSer
                     if (sb.charAt(endIndex - 1) != '{' && sb.charAt(endIndex - 1) != ',') {
                         sb.insert(endIndex, ",");
                     }
-                    // 构造新的平台配置
+                    // 构造新的平台配置，外层键使用单引号
                     StringBuilder newPlatformConfigBuilder = new StringBuilder();
                     newPlatformConfigBuilder.append("\n    '").append(platformKey).append("': ");
                     newPlatformConfigBuilder.append(newPlatformConfigJson);

@@ -59,7 +59,6 @@ public class NovelAppController {
     @Operation(summary = "根据应用名查询应用信息", description = "根据应用名查询所有平台的应用信息")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
     @OperationLog(opType = OpType.QUERY_CODE, description = "根据应用名查询应用信息")
-
     public Result<List<NovelApp>> getNovelAppsByAppName(
             @Parameter(description = "应用名称", required = true)
             @RequestParam String appName) {
@@ -167,12 +166,22 @@ public class NovelAppController {
     public Result<String> deleteNovelApp(
             @Parameter(description = "应用ID", required = true)
             @RequestParam String appId) {
+        java.util.List<Runnable> rollbackActions = new java.util.ArrayList<>();
+
         try {
+            NovelApp novelApp = novelAppService.getByAppId(appId);
             boolean success = novelAppService.deleteByAppId(appId);
+            // 2. 文件操作
+            CreateNovelAppRequest params = convertToCreateNovelAppRequest(novelApp);
+//            novelAppLocalFileOperationService.deleteAppLocalCodeFiles(params,rollbackActions);
             return success ? Result.success("应用删除成功") 
                          : Result.error("应用删除失败");
         } catch (IllegalArgumentException e) {
-            return Result.error(e.getMessage());
+            // 回滚所有文件操作
+            for (int i = rollbackActions.size() - 1; i >= 0; i--) {
+                try { rollbackActions.get(i).run(); } catch (Exception ignore) {}
+            }
+            return Result.error("应用删除失败: " + e.getMessage());
         }
     }
 }

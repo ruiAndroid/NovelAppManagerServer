@@ -130,8 +130,13 @@ public class OperationLogAspect {
                 userOpLog.setRequestParams(argsArrayToString(joinPoint.getArgs()));
             }
             
-            // 设置返回结果
-            userOpLog.setResponseResult(JSON.toJSONString(jsonResult));
+            // 设置返回结果并处理长度限制
+            String responseResult = JSON.toJSONString(jsonResult);
+            // 限制response_result字段长度，防止超过数据库字段限制
+            if (responseResult != null && responseResult.length() > 2000) {
+                responseResult = responseResult.substring(0, 2000);
+            }
+            userOpLog.setResponseResult(responseResult);
             
             // 保存数据库
             userOpLogService.saveOpLog(userOpLog);

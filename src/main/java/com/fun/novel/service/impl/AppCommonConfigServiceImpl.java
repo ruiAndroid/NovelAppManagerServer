@@ -11,6 +11,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -78,4 +79,10 @@ public class AppCommonConfigServiceImpl implements AppCommonConfigService {
         appCommonConfigMapper.updateById(existingConfig);
         return existingConfig;
     }
-} 
+    
+    @Override
+    public List<AppCommonConfig> getAppCommonConfigByAppName(String appName) {
+        // 通过novel_app表关联查询app_common_config表
+        return appCommonConfigMapper.selectByAppName(appName);
+    }
+}
