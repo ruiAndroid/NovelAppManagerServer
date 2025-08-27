@@ -433,36 +433,36 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
             // 构造当前平台的配置内容
             StringBuilder currentPlatformConfig = new StringBuilder();
             if ("douyin".equals(platform)) {
-                currentPlatformConfig.append("      \"app_name\": \"").append(baseConfig.getAppName()).append("\",\n");
-                currentPlatformConfig.append("      \"app_code\": \"").append(baseConfig.getAppCode()).append("\",\n");
-                currentPlatformConfig.append("      \"code\": \"").append("toutiao").append("\",\n");
-                currentPlatformConfig.append("      \"product\": \"").append(baseConfig.getProduct()).append("\",\n");
-                currentPlatformConfig.append("      \"customer\": \"").append(baseConfig.getCustomer()).append("\",\n");
-                currentPlatformConfig.append("      \"appid\": \"").append(baseConfig.getAppid()).append("\",\n");
-                currentPlatformConfig.append("      \"token_id\": ").append(baseConfig.getTokenId()).append(",\n");
-                currentPlatformConfig.append("      \"version\": \"").append(baseConfig.getVersion()).append("\",\n");
-                currentPlatformConfig.append("      \"cl\": \"").append(baseConfig.getCl()).append("\"\n");
+                currentPlatformConfig.append("      app_name: \"").append(baseConfig.getAppName()).append("\",\n");
+                currentPlatformConfig.append("      app_code: \"").append(baseConfig.getAppCode()).append("\",\n");
+                currentPlatformConfig.append("      code: \"").append("toutiao").append("\",\n");
+                currentPlatformConfig.append("      product: \"").append(baseConfig.getProduct()).append("\",\n");
+                currentPlatformConfig.append("      customer: \"").append(baseConfig.getCustomer()).append("\",\n");
+                currentPlatformConfig.append("      appid: \"").append(baseConfig.getAppid()).append("\",\n");
+                currentPlatformConfig.append("      token_id: ").append(baseConfig.getTokenId()).append(",\n");
+                currentPlatformConfig.append("      version: \"").append(baseConfig.getVersion()).append("\",\n");
+                currentPlatformConfig.append("      cl: \"").append(baseConfig.getCl()).append("\"\n");
             } else if ("kuaishou".equals(platform)) {
-                currentPlatformConfig.append("      \"app_name\": \"").append(baseConfig.getAppName()).append("\",\n");
-                currentPlatformConfig.append("      \"app_code\": \"").append(baseConfig.getAppCode()).append("\",\n");
-                currentPlatformConfig.append("      \"code\": \"").append(baseConfig.getPlatform()).append("\",\n");
-                currentPlatformConfig.append("      \"client_id\": \"").append(commonConfig.getKuaishouClientId()).append("\",\n");
-                currentPlatformConfig.append("      \"client_secret\": \"").append(commonConfig.getKuaishouClientSecret()).append("\",\n");
-                currentPlatformConfig.append("      \"product\": \"").append(baseConfig.getProduct()).append("\",\n");
-                currentPlatformConfig.append("      \"customer\": \"").append(baseConfig.getCustomer()).append("\",\n");
-                currentPlatformConfig.append("      \"appid\": \"").append(baseConfig.getAppid()).append("\",\n");
-                currentPlatformConfig.append("      \"token_id\": ").append(baseConfig.getTokenId()).append(",\n");
-                currentPlatformConfig.append("      \"version\": \"").append(baseConfig.getVersion()).append("\",\n");
-                currentPlatformConfig.append("      \"cl\": \"").append(baseConfig.getCl()).append("\"\n");
+                currentPlatformConfig.append("      app_name: \"").append(baseConfig.getAppName()).append("\",\n");
+                currentPlatformConfig.append("      app_code: \"").append(baseConfig.getAppCode()).append("\",\n");
+                currentPlatformConfig.append("      code: \"").append(baseConfig.getPlatform()).append("\",\n");
+                currentPlatformConfig.append("      client_id: \"").append(commonConfig.getKuaishouClientId()).append("\",\n");
+                currentPlatformConfig.append("      client_secret: \"").append(commonConfig.getKuaishouClientSecret()).append("\",\n");
+                currentPlatformConfig.append("      product: \"").append(baseConfig.getProduct()).append("\",\n");
+                currentPlatformConfig.append("      customer: \"").append(baseConfig.getCustomer()).append("\",\n");
+                currentPlatformConfig.append("      appid: \"").append(baseConfig.getAppid()).append("\",\n");
+                currentPlatformConfig.append("      token_id: ").append(baseConfig.getTokenId()).append(",\n");
+                currentPlatformConfig.append("      version: \"").append(baseConfig.getVersion()).append("\",\n");
+                currentPlatformConfig.append("      cl: \"").append(baseConfig.getCl()).append("\"\n");
             } else if ("weixin".equals(platform)) {
-                currentPlatformConfig.append("      \"app_name\": \"").append(baseConfig.getAppName()).append("\",\n");
-                currentPlatformConfig.append("      \"app_code\": \"").append(baseConfig.getAppCode()).append("\",\n");
-                currentPlatformConfig.append("      \"product\": \"").append(baseConfig.getProduct()).append("\",\n");
-                currentPlatformConfig.append("      \"customer\": \"").append(baseConfig.getCustomer()).append("\",\n");
-                currentPlatformConfig.append("      \"appid\": \"").append(baseConfig.getAppid()).append("\",\n");
-                currentPlatformConfig.append("      \"token_id\": ").append(baseConfig.getTokenId()).append(",\n");
-                currentPlatformConfig.append("      \"version\": \"").append(baseConfig.getVersion()).append("\",\n");
-                currentPlatformConfig.append("      \"cl\": \"").append(baseConfig.getCl()).append("\"\n");
+                currentPlatformConfig.append("      app_name: \"").append(baseConfig.getAppName()).append("\",\n");
+                currentPlatformConfig.append("      app_code: \"").append(baseConfig.getAppCode()).append("\",\n");
+                currentPlatformConfig.append("      product: \"").append(baseConfig.getProduct()).append("\",\n");
+                currentPlatformConfig.append("      customer: \"").append(baseConfig.getCustomer()).append("\",\n");
+                currentPlatformConfig.append("      appid: \"").append(baseConfig.getAppid()).append("\",\n");
+                currentPlatformConfig.append("      token_id: ").append(baseConfig.getTokenId()).append(",\n");
+                currentPlatformConfig.append("      version: \"").append(baseConfig.getVersion()).append("\",\n");
+                currentPlatformConfig.append("      cl: \"").append(baseConfig.getCl()).append("\"\n");
             }
             
             String fileContent;
@@ -716,7 +716,10 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
                 com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
                 StringBuilder finalSb = new StringBuilder();
                 finalSb.append("export default ");
-                finalSb.append(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(deliverConfigMap));
+                String jsonString = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(deliverConfigMap);
+                // 统一使用带单引号的外层键名并修复缩进
+                jsonString = formatJsonString(jsonString);
+                finalSb.append(jsonString);
                 finalSb.append(";\n");
                 fileContent = finalSb.toString();
             }
@@ -764,7 +767,10 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
             // 重新生成配置文件内容
             StringBuilder finalSb = new StringBuilder();
             finalSb.append("export default ");
-            finalSb.append(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(existingConfigMap));
+            String jsonString = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(existingConfigMap);
+            // 统一使用带单引号的外层键名并修复缩进
+            jsonString = formatJsonString(jsonString);
+            finalSb.append(jsonString);
             finalSb.append(";\n");
             
             return finalSb.toString();
@@ -794,7 +800,10 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
             try {
                 StringBuilder finalSb = new StringBuilder();
                 finalSb.append("export default ");
-                finalSb.append(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(deliverConfigMap));
+                String jsonString = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(deliverConfigMap);
+                // 统一使用带单引号的外层键名并修复缩进
+                jsonString = formatJsonString(jsonString);
+                finalSb.append(jsonString);
                 finalSb.append(";\n");
                 return finalSb.toString();
             } catch (Exception ex) {
@@ -802,7 +811,63 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
             }
         }
     }
-
+    
+    /**
+     * 格式化JSON字符串，外层键使用单引号，内层键不使用引号并修复缩进
+     * @param jsonString JSON字符串
+     * @return 格式化后的字符串
+     */
+    private static String formatJsonString(String jsonString) {
+        // 将带引号的键名替换为不带引号的键名（用于内层键）
+        jsonString = jsonString.replaceAll("\"([a-zA-Z_][a-zA-Z0-9_]*)\"\\s*:", "$1:");
+        
+        // 为外层键添加单引号 - 处理所有平台键
+        jsonString = jsonString.replaceAll("\"(tt|ks|wx|bd)\"\\s*:", "'$1':");
+        jsonString = jsonString.replaceAll("(\\{|,\\s+)\\b(tt|ks|wx|bd)\\b\\s*:", "$1'$2':");
+        // 特殊处理第一个键（对象开始后的第一个键）
+        jsonString = jsonString.replaceAll("\\{\\s*(tt|ks|wx|bd)\\s*:", "{'$1':");
+        
+        // 创建格式化的结果
+        StringBuilder result = new StringBuilder();
+        int indentLevel = 0;
+        String[] lines = jsonString.split("\n");
+        
+        for (String line : lines) {
+            line = line.trim();
+            if (line.isEmpty()) continue;
+            
+            // 判断是否是结束括号
+            if (line.startsWith("}") || line.startsWith("]")) {
+                indentLevel--;
+            }
+            
+            // 添加缩进
+            for (int i = 0; i < indentLevel; i++) {
+                result.append("    ");
+            }
+            
+            result.append(line).append("\n");
+            
+            // 判断是否是开始括号
+            if (line.endsWith("{") || line.endsWith("[")) {
+                indentLevel++;
+            }
+            
+            // 处理同时包含开始和结束括号的情况
+            if (line.contains("{") && line.contains("}")) {
+                // 同一行包含开始和结束，不改变缩进级别
+            }
+        }
+        
+        // 返回结果，去掉最后的换行符
+        String formatted = result.toString();
+        if (formatted.endsWith("\n")) {
+            formatted = formatted.substring(0, formatted.length() - 1);
+        }
+        
+        return formatted;
+    }
+    
     /**
      * 删除指定appId的baseConfig配置
      *

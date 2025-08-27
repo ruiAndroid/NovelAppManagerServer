@@ -235,6 +235,8 @@ public class AdConfigFileOperationService extends AbstractConfigFileOperationSer
         // 为外层键添加单引号 - 处理所有平台键
         jsonString = jsonString.replaceAll("\"(tt|ks|wx|bd)\"\\s*:", "'$1':");
         jsonString = jsonString.replaceAll("(\\{|,\\s+)\\b(tt|ks|wx|bd)\\b\\s*:", "$1'$2':");
+        // 特殊处理第一个键（对象开始后的第一个键）
+        jsonString = jsonString.replaceAll("\\{\\s*(tt|ks|wx|bd)\\s*:", "{'$1':");
         
         // 创建格式化的结果
         StringBuilder result = new StringBuilder();
