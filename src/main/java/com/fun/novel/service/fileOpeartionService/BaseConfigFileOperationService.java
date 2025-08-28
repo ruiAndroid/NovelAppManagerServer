@@ -34,9 +34,7 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
         String buildCode = commonConfig.getBuildCode();
         String platform = baseConfig.getPlatform();
 
-        createPrebuildBuildDir(taskId, buildCode, platform, baseConfig, rollbackActions, true);
         createThemeFile(taskId, buildCode, baseConfig, rollbackActions, true);
-        createDouyinPrefetchFile(taskId, buildCode, platform, rollbackActions, true);
         createBaseConfigFile(taskId, buildCode, platform, baseConfig, commonConfig, rollbackActions, true);
         createDeliverConfigFile(taskId, buildCode, platform, params.getDeliverConfig(),rollbackActions, true);
 
@@ -54,214 +52,7 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
         createDeliverConfigFile(null, buildCode, platform, params.getDeliverConfig(),rollbackActions, false);
     }
 
-    // 以下是处理各种基础配置文件的具体实现方法
-    
-    /**
-     * 处理prebuild/build目录
-     */
-    private void createPrebuildBuildDir(String taskId, String buildCode, String platform,
-                                       CreateNovelAppRequest.BaseConfig baseConfig, 
-                                       List<Runnable> rollbackActions, boolean withLogAndDelay) {
-        if (withLogAndDelay) {
-            taskLogger.log(taskId, "[2-1-1] 处理目录prebuild/build: ", CreateNovelLogType.PROCESSING);
-            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-        }
-        String prebuildDir = buildWorkPath + File.separator + "prebuild" + File.separator + "build";
-        String srcDir = prebuildDir + File.separator + "sample";
-        String destDir = prebuildDir + File.separator + buildCode;
-        try {
-            Path destPath = java.nio.file.Paths.get(destDir);
-            // 只有当目录不存在时才创建，避免删除已有目录
-            if (!java.nio.file.Files.exists(destPath)) {
-                java.nio.file.Files.createDirectories(destPath);
-                // 立即添加回滚动作，确保后续任何失败都能回滚buildCode目录
-                rollbackActions.add(() -> {
-                    try {
-                        taskLogger.log(taskId, "回滚动作：删除" + destDir, CreateNovelLogType.ERROR);
-                        deleteDirectoryRecursively(destPath);
-                    } catch (Exception ignore) {}
-                });
-            }
-            
-            // 只复制manifest.json和对应平台的pages-xx.json
-            Path srcPath = java.nio.file.Paths.get(srcDir);
-            // manifest.json
-            Path manifestSrc = srcPath.resolve("manifest.json");
-            Path manifestDest = destPath.resolve("manifest.json");
-            // 只有当目标文件不存在时才复制
-            if (!java.nio.file.Files.exists(manifestDest)) {
-                java.nio.file.Files.copy(manifestSrc, manifestDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                // manifest.json回滚动作：写入前先备份，写入后立即添加回滚
-                String manifestBackup = manifestDest.toString() + ".bak";
-                java.nio.file.Files.copy(manifestDest, java.nio.file.Paths.get(manifestBackup), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                rollbackActions.add(() -> {
-                    try {
-                        taskLogger.log(taskId, "回滚动作：还原manifest.json",CreateNovelLogType.ERROR);
-                        java.nio.file.Files.copy(java.nio.file.Paths.get(manifestBackup), manifestDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                        java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(manifestBackup));
-                    } catch (Exception ignore) {}
-                });
-            }
-            
-            // pages-xx.json
-            final String pagesFileName;
-            switch (platform) {
-                case "douyin":
-                    pagesFileName = "pages-tt.json";
-                    break;
-                case "kuaishou":
-                    pagesFileName = "pages-ks.json";
-                    break;
-                case "weixin":
-                    pagesFileName = "pages-wx.json";
-                    break;
-                default:
-                    throw new RuntimeException("不支持的平台类型: " + platform);
-            }
-            Path pagesSrc = srcPath.resolve(pagesFileName);
-            Path pagesDest = destPath.resolve(pagesFileName);
-            // 只有当目标文件不存在时才复制
-            if (!java.nio.file.Files.exists(pagesDest)) {
-                java.nio.file.Files.copy(pagesSrc, pagesDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                // pages-xx.json回滚动作：写入前先备份，写入后立即添加回滚
-                String pagesBackup = pagesDest.toString() + ".bak";
-                java.nio.file.Files.copy(pagesDest, java.nio.file.Paths.get(pagesBackup), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                rollbackActions.add(() -> {
-                    try {
-                        taskLogger.log(taskId, "回滚动作：还原"+pagesFileName,CreateNovelLogType.ERROR);
-                        java.nio.file.Files.copy(java.nio.file.Paths.get(pagesBackup), pagesDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                        java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(pagesBackup));
-                    } catch (Exception ignore) {}
-                });
-            }
-            
-            // 2-1-2 编辑manifest.json内容
-            if (withLogAndDelay) {
-                taskLogger.log(taskId, "[2-1-2] 开始编辑manifest.json", CreateNovelLogType.PROCESSING);
-                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-            }
-            try {
-                taskLogger.log(taskId, "[2-1-2-1] 读取manifest.json", CreateNovelLogType.INFO);
-                String manifestContent = new String(java.nio.file.Files.readAllBytes(manifestDest), java.nio.charset.StandardCharsets.UTF_8);
-                com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                com.fasterxml.jackson.databind.node.ObjectNode manifestNode = (com.fasterxml.jackson.databind.node.ObjectNode) objectMapper.readTree(manifestContent);
-                if (withLogAndDelay) {
-                    try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-                }
-                // 替换name字段
-                taskLogger.log(taskId, "[2-1-2-2] 替换name字段", CreateNovelLogType.INFO);
-                manifestNode.put("name", baseConfig.getAppName());
-                if (withLogAndDelay) {
-                    try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-                }
-                // 替换平台appid
-                taskLogger.log(taskId, "[2-1-2-3] 替换平台appid", CreateNovelLogType.INFO);
-                switch (platform) {
-                    case "douyin":
-                        if (manifestNode.has("mp-toutiao")) {
-                            ((com.fasterxml.jackson.databind.node.ObjectNode)manifestNode.get("mp-toutiao")).put("appid", baseConfig.getAppid());
-                        }
-                        break;
-                    case "kuaishou":
-                        if (manifestNode.has("mp-kuaishou")) {
-                            ((com.fasterxml.jackson.databind.node.ObjectNode)manifestNode.get("mp-kuaishou")).put("appid", baseConfig.getAppid());
-                        }
-                        break;
-                    case "weixin":
-                        if (manifestNode.has("mp-weixin")) {
-                            ((com.fasterxml.jackson.databind.node.ObjectNode)manifestNode.get("mp-weixin")).put("appid", baseConfig.getAppid());
-                        }
-                        break;
-                }
-                if (withLogAndDelay) {
-                    try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-                }
-                // 写回文件
-                taskLogger.log(taskId, "[2-1-2-4] 写回manifest.json", CreateNovelLogType.INFO);
-                objectMapper.writerWithDefaultPrettyPrinter().writeValue(manifestDest.toFile(), manifestNode);
-                taskLogger.log(taskId, "[2-1-2] manifest.json 编辑完成", CreateNovelLogType.SUCCESS);
-                String formattedManifestContent = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(manifestNode);
-                taskLogger.log(taskId,formattedManifestContent, CreateNovelLogType.INFO);
-                // 操作成功后删除manifest.bak
-                try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(manifestDest.toString() + ".bak")); } catch (Exception ignore) {}
-            } catch (Exception e) {
-                // 还原备份
-                String manifestBackup = manifestDest.toString() + ".bak";
-                taskLogger.log(taskId, "回滚动作：还原manifest.json",CreateNovelLogType.ERROR);
-                java.nio.file.Files.copy(java.nio.file.Paths.get(manifestBackup), manifestDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(manifestBackup));
-                throw new RuntimeException("manifest.json内容编辑失败: " + e.getMessage(), e);
-            }
-            //2-1-3 编辑pages-xx.json文件
-            if (withLogAndDelay) {
-                taskLogger.log(taskId, "[2-1-3] 开始编辑" + pagesFileName, CreateNovelLogType.PROCESSING);
-                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-            }
-            try {
-                taskLogger.log(taskId, "[2-1-3-1] 读取" + pagesFileName, CreateNovelLogType.INFO);
-                String pagesContent = new String(java.nio.file.Files.readAllBytes(pagesDest), java.nio.charset.StandardCharsets.UTF_8);
-                com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                com.fasterxml.jackson.databind.JsonNode rootNode = objectMapper.readTree(pagesContent);
-                if (withLogAndDelay) {
-                    try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-                }
-                if (rootNode.has("pages") && rootNode.get("pages").isArray()) {
-                    for (com.fasterxml.jackson.databind.JsonNode pageNode : rootNode.get("pages")) {
-                        if (!pageNode.has("path") || !pageNode.has("style")) continue;
-                        String path = pageNode.get("path").asText();
-                        com.fasterxml.jackson.databind.node.ObjectNode styleNode = (com.fasterxml.jackson.databind.node.ObjectNode) pageNode.get("style");
-                        // navigationBarTitleText
-                        if (path.equals("pages/homePage/homePage") || path.equals("pages/bookPage/bookPage") || path.equals("pages/filterPage/filterPage") || path.equals("pages/minePage/minePage")) {
-                            styleNode.put("navigationBarTitleText", baseConfig.getAppName());
-                        }
-                        // navigationBarBackgroundColor
-                        if (path.equals("pages/homePage/homePage") || path.equals("pages/bookPage/bookPage") || path.equals("pages/filterPage/filterPage") || path.equals("pages/detailPage/detailPage") || path.equals("pages/minePage/minePage")) {
-                            String secondTheme = baseConfig.getSecondTheme();
-                            if (secondTheme != null && secondTheme.matches("#?[A-Fa-f0-9]{8}")) {
-                                // 转换#RRGGBBAA为#RRGGBB
-                                if (secondTheme.startsWith("#")) {
-                                    secondTheme = secondTheme.substring(0, 7);
-                                } else {
-                                    secondTheme = "#" + secondTheme.substring(0, 6);
-                                }
-                            }
-                            styleNode.put("navigationBarBackgroundColor", secondTheme);
-                        }
-                    }
-                }
-                if (withLogAndDelay) {
-                    try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-                }
-                // 写回文件
-                taskLogger.log(taskId, "[2-1-3-2] 写回" + pagesFileName, CreateNovelLogType.INFO);
-                objectMapper.writerWithDefaultPrettyPrinter().writeValue(pagesDest.toFile(), rootNode);
-                taskLogger.log(taskId, "[2-1-3] " + pagesFileName + " 编辑完成", CreateNovelLogType.SUCCESS);
-                String formattedPagesContent = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode);
-                taskLogger.log(taskId, formattedPagesContent, CreateNovelLogType.INFO);
-                // 操作成功后删除pages.bak
-                try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(pagesDest.toString() + ".bak")); } catch (Exception ignore) {}
-            } catch (Exception e) {
-                // 还原备份
-                String pagesBackup = pagesDest.toString() + ".bak";
-                taskLogger.log(taskId, "回滚动作：还原"+pagesFileName,CreateNovelLogType.ERROR);
-                java.nio.file.Files.copy(java.nio.file.Paths.get(pagesBackup), pagesDest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(pagesBackup));
-                throw new RuntimeException(pagesFileName+"内容编辑失败: " + e.getMessage(), e);
-            }
-        } catch (Exception e) {
-            taskLogger.log(taskId, "[2-1]目录prebuild/build处理失败: " + e.getMessage(), CreateNovelLogType.ERROR);
-            // 回滚自身
-            try {
-                taskLogger.log(taskId, "回滚动作：删除" + destDir, CreateNovelLogType.ERROR);
-                Path destPath = java.nio.file.Paths.get(destDir);
-                // 只有当目录是我们创建的才删除
-                if (!java.nio.file.Files.exists(destPath)) {
-                    deleteDirectoryRecursively(destPath);
-                }
-            } catch (Exception ignore) {}
-            throw new RuntimeException("目录prebuild/build处理失败: " + e.getMessage(), e);
-        }
-    }
+
     
     /**
      * 处理主题文件
@@ -333,65 +124,7 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
             throw new RuntimeException("主题文件处理失败: " + e.getMessage(), e);
         }
     }
-    
-    /**
-     * 处理抖音预取文件
-     */
-    private void createDouyinPrefetchFile(String taskId, String buildCode, String platform,
-                                         List<Runnable> rollbackActions, boolean withLogAndDelay) {
-        if (withLogAndDelay) {
-            taskLogger.log(taskId, "[2-3] 开始处理抖音预取文件: " + buildWorkPath + File.separator + "prefetchbuild" + File.separator + "prelaunch-" + buildCode + ".js", CreateNovelLogType.PROCESSING);
-            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-        }
-        if (!"douyin".equals(platform)) return;
-        String prefetchDir = buildWorkPath + File.separator + "prefetchbuild";
-        String srcFile = prefetchDir + File.separator + "prelaunch-fun.js";
-        String destFile = prefetchDir + File.separator + "prelaunch-" + buildCode + ".js";
-        java.nio.file.Path srcPath = java.nio.file.Paths.get(srcFile);
-        java.nio.file.Path destPath = java.nio.file.Paths.get(destFile);
-        String backupPath = destFile + ".bak";
-        try {
-            // 复制原文件
-            java.nio.file.Files.copy(srcPath, destPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            // 立即添加回滚动作
-            rollbackActions.add(() -> {
-                try {
-                    taskLogger.log(taskId, "回滚动作：删除" + destFile, CreateNovelLogType.ERROR);
-                    java.nio.file.Files.deleteIfExists(destPath);
-                } catch (Exception ignore) {}
-            });
-            // 备份一份用于内容回滚
-            java.nio.file.Files.copy(destPath, java.nio.file.Paths.get(backupPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            rollbackActions.add(() -> {
-                try {
-                    taskLogger.log(taskId, "回滚动作：还原" + destFile, CreateNovelLogType.ERROR);
-                    java.nio.file.Files.copy(java.nio.file.Paths.get(backupPath), destPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                    java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath));
-                } catch (Exception ignore) {}
-            });
-            taskLogger.log(taskId, "[2-3-1] 复制prelaunch-fun.js完成", CreateNovelLogType.INFO);
-            if (withLogAndDelay) {
-                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-            }
-            // 读取内容并修改brand
-            String content = new String(java.nio.file.Files.readAllBytes(destPath), java.nio.charset.StandardCharsets.UTF_8);
-            // 简单正则替换 param.brand = 'xxx' 或 param.brand: 'xxx'
-            String newContent = content.replaceAll("(brand\\s*:\\s*)['\"][^'\"]+['\"]", "$1'" + buildCode + "'");
-            java.nio.file.Files.write(destPath, newContent.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            taskLogger.log(taskId, "[2-3-2] 修改param.brand为" + buildCode + "完成", CreateNovelLogType.SUCCESS);
-            taskLogger.log(taskId, newContent, CreateNovelLogType.INFO);
-            if (withLogAndDelay) {
-                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-            }
-            // 操作成功后删除prelaunch.bak
-            try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath)); } catch (Exception ignore) {}
-        } catch (Exception e) {
-            // 还原自身
-            try { java.nio.file.Files.deleteIfExists(destPath); } catch (Exception ignore) {}
-            throw new RuntimeException("抖音预取文件处理失败: " + e.getMessage(), e);
-        }
-    }
-    
+
     /**
      * 处理基础配置文件
      */
@@ -878,8 +611,6 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
         String buildCode = commonConfig.getBuildCode();
         String platform = baseConfig.getPlatform();
 
-
-        deletePrebuildBuildDir(buildCode, platform, baseConfig, rollbackActions);
 //        deleteThemeFile(buildCode, baseConfig, rollbackActions, false);
 //        deleteDouyinPrefetchFile(buildCode, platform, rollbackActions, false);
 //        deleteBaseConfigFile(buildCode, platform, baseConfig, commonConfig, rollbackActions, false);
@@ -887,17 +618,4 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
 
     }
 
-    /**
-     * 删除预编译目录
-     * @param buildCode
-     * @param platform
-     * @param baseConfig
-     * @param rollbackActions
-     */
-    private void deletePrebuildBuildDir(String buildCode, String platform, CreateNovelAppRequest.BaseConfig baseConfig, List<Runnable> rollbackActions) {
-        String prebuildDir = buildWorkPath + File.separator + "prebuild" + File.separator + "build";
-        String destDir = prebuildDir + File.separator + buildCode;
-
-
-    }
 }

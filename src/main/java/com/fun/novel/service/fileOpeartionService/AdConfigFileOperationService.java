@@ -135,14 +135,22 @@ public class AdConfigFileOperationService extends AbstractConfigFileOperationSer
                 // 先构造一个Map结构
                 java.util.LinkedHashMap<String, Object> adConfigMap = new java.util.LinkedHashMap<>();
                 String[] allPlatforms = {"tt", "ks", "wx", "bd"};
+                String platformKey = platformToKey(platform);
+                
+                // 只在对应平台生成详细配置，其他平台只保留空对象
                 for (String pf : allPlatforms) {
                     java.util.LinkedHashMap<String, Object> pfMap = new java.util.LinkedHashMap<>();
-                    pfMap.put("rewardAd", new java.util.LinkedHashMap<String, Object>() {{ put("enable", false); }});
-                    pfMap.put("banner", new java.util.LinkedHashMap<String, Object>() {{ put("enable", false); }});
-                    pfMap.put("interstitial", new java.util.LinkedHashMap<String, Object>() {{ put("enable", false); }});
-                    pfMap.put("feed", new java.util.LinkedHashMap<String, Object>() {{ put("enable", false); }});
-                    adConfigMap.put(pf, pfMap); // 使用不带引号的键
+                    if (pf.equals(platformKey)) {
+                        // 为当前平台生成详细配置
+                        pfMap.put("rewardAd", new java.util.LinkedHashMap<String, Object>() {{ put("enable", false); }});
+                        pfMap.put("banner", new java.util.LinkedHashMap<String, Object>() {{ put("enable", false); }});
+                        pfMap.put("interstitial", new java.util.LinkedHashMap<String, Object>() {{ put("enable", false); }});
+                        pfMap.put("feed", new java.util.LinkedHashMap<String, Object>() {{ put("enable", false); }});
+                    }
+                    // 其他平台保留空对象
+                    adConfigMap.put(pf, pfMap);
                 }
+                
                 // 写入对应平台的广告配置
                 if (adConfig != null) {
                     // rewardAd
@@ -197,6 +205,7 @@ public class AdConfigFileOperationService extends AbstractConfigFileOperationSer
                         ((java.util.Map<String, Object>)adConfigMap.get(platformToKey(platform))).put("feed", feedAd);
                     }
                 }
+                
                 // 生成最终内容
                 StringBuilder finalSb = new StringBuilder();
                 finalSb.append("export default ");
@@ -218,7 +227,7 @@ public class AdConfigFileOperationService extends AbstractConfigFileOperationSer
             deleteBackupFile(backupPath);
         } catch (Exception e) {
             // 还原自身
-            try { Files.deleteIfExists(configPath); } catch (Exception ignore) {}
+            try { Files.deleteIfExists(configPath); } catch (Exception ignore) {} 
             throw new RuntimeException("adConfig配置文件处理失败: " + e.getMessage(), e);
         }
     }

@@ -170,10 +170,14 @@ public class NovelAppController {
 
         try {
             NovelApp novelApp = novelAppService.getByAppId(appId);
-            boolean success = novelAppService.deleteByAppId(appId);
-            // 2. 文件操作
+            // 先转换数据，再删除数据库记录
             CreateNovelAppRequest params = convertToCreateNovelAppRequest(novelApp);
-//            novelAppLocalFileOperationService.deleteAppLocalCodeFiles(params,rollbackActions);
+            // 删除代码文件
+            novelAppLocalFileOperationService.deleteAppLocalCodeFiles(params,rollbackActions);
+            
+            // 最后删除数据库记录
+            boolean success = novelAppService.deleteByAppId(appId);
+            
             return success ? Result.success("应用删除成功") 
                          : Result.error("应用删除失败");
         } catch (IllegalArgumentException e) {

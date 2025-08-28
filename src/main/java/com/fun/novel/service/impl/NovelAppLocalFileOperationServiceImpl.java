@@ -27,6 +27,9 @@ public class NovelAppLocalFileOperationServiceImpl extends AbstractConfigFileOpe
     @Autowired
     private AppConfigFileOperationService appConfigFileOperationService;
 
+    @Autowired
+    private PreFileOperationService preFileOperationService;
+
 
     @Override
     public void createNovelAppLocalCodeFiles(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions) {
@@ -60,6 +63,8 @@ public class NovelAppLocalFileOperationServiceImpl extends AbstractConfigFileOpe
 
     @Override
     public void deleteAppLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions) {
+        preFileOperationService.deletePreFiles(params, rollbackActions);
+
         baseConfigFileOperationService.deleteBaseConfigLocalCodeFiles(params, rollbackActions);
 
 
@@ -69,6 +74,7 @@ public class NovelAppLocalFileOperationServiceImpl extends AbstractConfigFileOpe
     private void doCreateLocalCodeFiles(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions) {
 
         baseConfigFileOperationService.createBaseConfigLocalCodeFiles(taskId, params, rollbackActions);
+        preFileOperationService.createPreFiles(taskId, params, rollbackActions);
         adConfigFileOperationService.createAdConfigLocalCodeFiles(taskId, params, rollbackActions);
         payConfigFileOperationService.createPayConfigLocalCodeFiles(taskId,params, rollbackActions);
         commonConfigFileOperationService.createCommonConfigLocalCodeFiles(taskId,params, rollbackActions);
