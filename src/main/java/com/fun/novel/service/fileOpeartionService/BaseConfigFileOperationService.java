@@ -428,20 +428,27 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
                 // 创建全新的配置文件
                 java.util.LinkedHashMap<String, Object> deliverConfigMap = new java.util.LinkedHashMap<>();
                 String[] platforms = {"tt", "ks", "wx", "bd"};
+                String platformKey = platformToKey(platform);
+                
+                // 只在对应平台生成详细配置，其他平台只保留空对象
                 for (String pf : platforms) {
                     java.util.LinkedHashMap<String, Object> pfMap = new java.util.LinkedHashMap<>();
-                    pfMap.put("deliver_id", "");
-                    pfMap.put("banner_id", "");
-                    pfMap.put("deliverAdId", "");
-                    pfMap.put("bannerAdId", "");
-                    pfMap.put("enable", true);
-                    pfMap.put("useTest", false);
+                    if (pf.equals(platformKey)) {
+                        // 为当前平台生成详细配置
+                        pfMap.put("deliver_id", "");
+                        pfMap.put("banner_id", "");
+                        pfMap.put("deliverAdId", "");
+                        pfMap.put("bannerAdId", "");
+                        pfMap.put("enable", true);
+                        pfMap.put("useTest", false);
+                    }
+                    // 其他平台保留空对象
                     deliverConfigMap.put(pf, pfMap);
                 }
+                
                 // 根据platform写入对应数据
-                String key = platformToKey(platform);
-                if (deliverConfig != null && deliverConfigMap.containsKey(key)) {
-                    java.util.Map<String, Object> pfMap = (java.util.Map<String, Object>) deliverConfigMap.get(key);
+                if (deliverConfig != null && deliverConfigMap.containsKey(platformKey)) {
+                    java.util.Map<String, Object> pfMap = (java.util.Map<String, Object>) deliverConfigMap.get(platformKey);
                     pfMap.put("deliver_id", deliverConfig.getDeliverId() != null ? deliverConfig.getDeliverId() : "");
                     pfMap.put("banner_id", deliverConfig.getBannerId() != null ? deliverConfig.getBannerId() : "");
                 }
@@ -486,6 +493,17 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
             
             // 使用Jackson解析JSON配置
             com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            // 配置ObjectMapper以允许单引号
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+            // 配置ObjectMapper以允许不带引号的字段名
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+            // 配置ObjectMapper以允许注释
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_COMMENTS, true);
+            // 配置ObjectMapper以允许尾随逗号
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_TRAILING_COMMA, true);
+            // 配置ObjectMapper以允许YAML注释样式
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_YAML_COMMENTS, true);
+            
             String jsonPart = existingContent.substring(existingContent.indexOf("export default ") + "export default ".length());
             if (jsonPart.endsWith(";")) {
                 jsonPart = jsonPart.substring(0, jsonPart.length() - 1);
@@ -508,40 +526,8 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
             
             return finalSb.toString();
         } catch (Exception e) {
-            // 如果解析失败，使用后备方案（创建全新的配置文件）
-            java.util.LinkedHashMap<String, Object> deliverConfigMap = new java.util.LinkedHashMap<>();
-            String[] platforms = {"tt", "ks", "wx", "bd"};
-            for (String pf : platforms) {
-                java.util.LinkedHashMap<String, Object> pfMap = new java.util.LinkedHashMap<>();
-                pfMap.put("deliver_id", "");
-                pfMap.put("banner_id", "");
-                pfMap.put("deliverAdId", "");
-                pfMap.put("bannerAdId", "");
-                pfMap.put("enable", true);
-                pfMap.put("useTest", false);
-                deliverConfigMap.put(pf, pfMap);
-            }
-            
-            // 更新当前平台配置
-            String key = platformToKey(platform);
-            if (deliverConfigMap.containsKey(key)) {
-                deliverConfigMap.put(key, platformConfigMap);
-            }
-            
-            // 生成最终内容
-            com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            try {
-                StringBuilder finalSb = new StringBuilder();
-                finalSb.append("export default ");
-                String jsonString = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(deliverConfigMap);
-                // 统一使用带单引号的外层键名并修复缩进
-                jsonString = formatJsonString(jsonString);
-                finalSb.append(jsonString);
-                finalSb.append(";\n");
-                return finalSb.toString();
-            } catch (Exception ex) {
-                throw new RuntimeException("无法生成deliver配置文件内容", ex);
-            }
+            taskLogger.log(null, "解析现有deliverConfig文件失败: " + e.getMessage(), CreateNovelLogType.ERROR);
+            throw new RuntimeException("无法解析现有deliver配置文件内容: " + e.getMessage(), e);
         }
     }
     

@@ -198,53 +198,71 @@ public class PayConfigFileOperationService extends AbstractConfigFileOperationSe
             } else {
                 // 创建全新的配置文件内容
                 java.util.LinkedHashMap<String, Object> payConfigMap = new java.util.LinkedHashMap<>();
-                // 默认结构
-                payConfigMap.put("tt", new java.util.LinkedHashMap<String, Object>() {{
-                    put("normal_pay", buildPayTypeMap(null));
-                    put("order_pay", buildPayTypeMap(null));
-                    put("renew_pay", buildPayTypeMap(null));
-                    put("dou_zuan_pay", buildPayTypeMap(null));
-                }});
-                payConfigMap.put("ks", new java.util.LinkedHashMap<String, Object>() {{
-                    put("normal_pay", buildPayTypeMap(null));
-                    put("order_pay", buildPayTypeMap(null));
-                    put("renew_pay", buildPayTypeMap(null));
-                }});
-                payConfigMap.put("wx", new java.util.LinkedHashMap<String, Object>() {{
-                    put("normal_pay", buildPayTypeMap(null));
-                    put("order_pay", buildPayTypeMap(null));
-                    put("renew_pay", buildPayTypeMap(null));
-                    put("wx_virtual_pay", buildPayTypeMap(null));
-                }});
-                payConfigMap.put("bd", new java.util.LinkedHashMap<String, Object>() {{
-                    put("normal_pay", buildPayTypeMap(null));
-                    put("order_pay", buildPayTypeMap(null));
-                }});
+                String platformKey = platformToKey(platform);
+                
+                // 只在对应平台生成详细配置，其他平台只保留空对象
+                String[] allPlatforms = {"tt", "ks", "wx", "bd"};
+                for (String pf : allPlatforms) {
+                    java.util.LinkedHashMap<String, Object> pfMap = new java.util.LinkedHashMap<>();
+                    if (pf.equals(platformKey)) {
+                        // 为当前平台生成详细配置
+                        switch (pf) {
+                            case "tt":
+                                pfMap.put("normal_pay", buildPayTypeMap(null));
+                                pfMap.put("order_pay", buildPayTypeMap(null));
+                                pfMap.put("renew_pay", buildPayTypeMap(null));
+                                pfMap.put("dou_zuan_pay", buildPayTypeMap(null));
+                                break;
+                            case "ks":
+                                pfMap.put("normal_pay", buildPayTypeMap(null));
+                                pfMap.put("order_pay", buildPayTypeMap(null));
+                                pfMap.put("renew_pay", buildPayTypeMap(null));
+                                break;
+                            case "wx":
+                                pfMap.put("normal_pay", buildPayTypeMap(null));
+                                pfMap.put("order_pay", buildPayTypeMap(null));
+                                pfMap.put("renew_pay", buildPayTypeMap(null));
+                                pfMap.put("wx_virtual_pay", buildPayTypeMap(null));
+                                break;
+                            case "bd":
+                                pfMap.put("normal_pay", buildPayTypeMap(null));
+                                pfMap.put("order_pay", buildPayTypeMap(null));
+                                break;
+                        }
+                    }
+                    // 其他平台保留空对象
+                    payConfigMap.put(pf, pfMap);
+                }
+                
                 // 只写入当前平台
-                String key = platformToKey(platform);
-                switch (key) {
+                switch (platformKey) {
                     case "tt":
-                        ((java.util.Map<String, Object>)payConfigMap.get("tt")).put("normal_pay", buildPayTypeMap(payConfig.getNormalPay()));
-                        ((java.util.Map<String, Object>)payConfigMap.get("tt")).put("order_pay", buildPayTypeMap(payConfig.getOrderPay()));
-                        ((java.util.Map<String, Object>)payConfigMap.get("tt")).put("renew_pay", buildPayTypeMap(payConfig.getRenewPay()));
-                        ((java.util.Map<String, Object>)payConfigMap.get("tt")).put("dou_zuan_pay", buildPayTypeMap(payConfig.getDouzuanPay()));
+                        java.util.Map<String, Object> ttMap = (java.util.Map<String, Object>) payConfigMap.get("tt");
+                        ttMap.put("normal_pay", buildPayTypeMap(payConfig.getNormalPay()));
+                        ttMap.put("order_pay", buildPayTypeMap(payConfig.getOrderPay()));
+                        ttMap.put("renew_pay", buildPayTypeMap(payConfig.getRenewPay()));
+                        ttMap.put("dou_zuan_pay", buildPayTypeMap(payConfig.getDouzuanPay()));
                         break;
                     case "ks":
-                        ((java.util.Map<String, Object>)payConfigMap.get("ks")).put("normal_pay", buildPayTypeMap(payConfig.getNormalPay()));
-                        ((java.util.Map<String, Object>)payConfigMap.get("ks")).put("order_pay", buildPayTypeMap(payConfig.getOrderPay()));
-                        ((java.util.Map<String, Object>)payConfigMap.get("ks")).put("renew_pay", buildPayTypeMap(payConfig.getRenewPay()));
+                        java.util.Map<String, Object> ksMap = (java.util.Map<String, Object>) payConfigMap.get("ks");
+                        ksMap.put("normal_pay", buildPayTypeMap(payConfig.getNormalPay()));
+                        ksMap.put("order_pay", buildPayTypeMap(payConfig.getOrderPay()));
+                        ksMap.put("renew_pay", buildPayTypeMap(payConfig.getRenewPay()));
                         break;
                     case "wx":
-                        ((java.util.Map<String, Object>)payConfigMap.get("wx")).put("normal_pay", buildPayTypeMap(payConfig.getNormalPay()));
-                        ((java.util.Map<String, Object>)payConfigMap.get("wx")).put("order_pay", buildPayTypeMap(payConfig.getOrderPay()));
-                        ((java.util.Map<String, Object>)payConfigMap.get("wx")).put("renew_pay", buildPayTypeMap(payConfig.getRenewPay()));
-                        ((java.util.Map<String, Object>)payConfigMap.get("wx")).put("wx_virtual_pay", buildPayTypeMap(payConfig.getWxVirtualPay()));
+                        java.util.Map<String, Object> wxMap = (java.util.Map<String, Object>) payConfigMap.get("wx");
+                        wxMap.put("normal_pay", buildPayTypeMap(payConfig.getNormalPay()));
+                        wxMap.put("order_pay", buildPayTypeMap(payConfig.getOrderPay()));
+                        wxMap.put("renew_pay", buildPayTypeMap(payConfig.getRenewPay()));
+                        wxMap.put("wx_virtual_pay", buildPayTypeMap(payConfig.getWxVirtualPay()));
                         break;
                     case "bd":
-                        ((java.util.Map<String, Object>)payConfigMap.get("bd")).put("normal_pay", buildPayTypeMap(payConfig.getNormalPay()));
-                        ((java.util.Map<String, Object>)payConfigMap.get("bd")).put("order_pay", buildPayTypeMap(payConfig.getOrderPay()));
+                        java.util.Map<String, Object> bdMap = (java.util.Map<String, Object>) payConfigMap.get("bd");
+                        bdMap.put("normal_pay", buildPayTypeMap(payConfig.getNormalPay()));
+                        bdMap.put("order_pay", buildPayTypeMap(payConfig.getOrderPay()));
                         break;
                 }
+                
                 // 生成最终内容
                 com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
                 StringBuilder finalSb = new StringBuilder();

@@ -135,43 +135,59 @@ public class CommonConfigFileOperationService extends AbstractConfigFileOperatio
                 // 创建全新的配置文件内容
                 java.util.LinkedHashMap<String, Object> commonConfigMap = new java.util.LinkedHashMap<>();
                 String[] platforms = {"tt", "ks", "wx", "bd"};
+                String platformKey = platformToKey(platform);
+                
+                // 只在对应平台生成详细配置，其他平台只保留空对象
                 for (String pf : platforms) {
                     java.util.LinkedHashMap<String, Object> pfMap = new java.util.LinkedHashMap<>();
-                    java.util.LinkedHashMap<String, Object> homeCard = new java.util.LinkedHashMap<>();
-                    homeCard.put("style", 1);
-                    java.util.LinkedHashMap<String, Object> payCard = new java.util.LinkedHashMap<>();
-                    payCard.put("style", 1);
-                    java.util.LinkedHashMap<String, Object> loginType = new java.util.LinkedHashMap<>();
-                    loginType.put("mine", "anonymousLogin");
-                    loginType.put("reader", "anonymousLogin");
-                    pfMap.put("homeCard", homeCard);
-                    pfMap.put("payCard", payCard);
-                    pfMap.put("loginType", loginType);
-                    pfMap.put("contact", "");
-                    // iaaMode 默认
-                    java.util.LinkedHashMap<String, Object> iaaModeObj = new java.util.LinkedHashMap<>();
-                    iaaModeObj.put("enable", false);
-                    iaaModeObj.put("dialogStyle", 2);
-                    pfMap.put("iaaMode", iaaModeObj);
-                    pfMap.put("hidePayEntry", false);
+                    if (pf.equals(platformKey)) {
+                        // 为当前平台生成详细配置
+                        java.util.LinkedHashMap<String, Object> homeCard = new java.util.LinkedHashMap<>();
+                        homeCard.put("style", 1);
+                        java.util.LinkedHashMap<String, Object> payCard = new java.util.LinkedHashMap<>();
+                        payCard.put("style", 1);
+                        java.util.LinkedHashMap<String, Object> loginType = new java.util.LinkedHashMap<>();
+                        loginType.put("mine", "anonymousLogin");
+                        loginType.put("reader", "anonymousLogin");
+                        pfMap.put("homeCard", homeCard);
+                        pfMap.put("payCard", payCard);
+                        pfMap.put("loginType", loginType);
+                        pfMap.put("contact", "");
+                        // iaaMode 默认
+                        java.util.LinkedHashMap<String, Object> iaaModeObj = new java.util.LinkedHashMap<>();
+                        iaaModeObj.put("enable", false);
+                        iaaModeObj.put("dialogStyle", 2);
+                        pfMap.put("iaaMode", iaaModeObj);
+                        pfMap.put("hidePayEntry", false);
 
-                    if ("tt".equals(pf)) pfMap.put("imId", "");
+                        // 平台特殊字段
+                        if ("tt".equals(pf)) {
+                            pfMap.put("imId", "");
+                        }
+                    }
+                    // 其他平台保留空对象
                     commonConfigMap.put(pf, pfMap);
                 }
+                
                 // 只对当前platform赋值
-                String key = platformToKey(platform);
-                if (commonConfig != null && commonConfigMap.containsKey(key)) {
-                    java.util.Map<String, Object> pfMap = (java.util.Map<String, Object>) commonConfigMap.get(key);
+                if (commonConfig != null && commonConfigMap.containsKey(platformKey)) {
+                    java.util.Map<String, Object> pfMap = (java.util.Map<String, Object>) commonConfigMap.get(platformKey);
                     // homeCard.style
                     java.util.Map<String, Object> homeCard = (java.util.Map<String, Object>) pfMap.get("homeCard");
-                    homeCard.put("style", commonConfig.getHomeCardStyle() != null ? commonConfig.getHomeCardStyle() : 1);
+                    if (homeCard != null) {
+                        homeCard.put("style", commonConfig.getHomeCardStyle() != null ? commonConfig.getHomeCardStyle() : 1);
+                    }
                     // payCard.style
                     java.util.Map<String, Object> payCard = (java.util.Map<String, Object>) pfMap.get("payCard");
-                    payCard.put("style", commonConfig.getPayCardStyle() != null ? commonConfig.getPayCardStyle() : 1);
+                    if (payCard != null) {
+                        payCard.put("style", commonConfig.getPayCardStyle() != null ? commonConfig.getPayCardStyle() : 1);
+                    }
                     // loginType
                     java.util.Map<String, Object> loginType = (java.util.Map<String, Object>) pfMap.get("loginType");
-                    loginType.put("mine", commonConfig.getMineLoginType() != null ? commonConfig.getMineLoginType() : "anonymousLogin");
-                    loginType.put("reader", commonConfig.getReaderLoginType() != null ? commonConfig.getReaderLoginType() : "anonymousLogin");
+                    if (loginType != null) {
+                        loginType.put("mine", commonConfig.getMineLoginType() != null ? commonConfig.getMineLoginType() : "anonymousLogin");
+                        loginType.put("reader", commonConfig.getReaderLoginType() != null ? commonConfig.getReaderLoginType() : "anonymousLogin");
+                    }
                     // contact
                     pfMap.put("contact", commonConfig.getContact() != null ? commonConfig.getContact() : "");
                     // iaaMode
@@ -181,7 +197,7 @@ public class CommonConfigFileOperationService extends AbstractConfigFileOperatio
                     pfMap.put("iaaMode", iaaModeObj);
                     pfMap.put("hidePayEntry", commonConfig.getHidePayEntry() != null ? commonConfig.getHidePayEntry() : false);
                     // imId 仅tt
-                    if ("tt".equals(key)) pfMap.put("imId", commonConfig.getDouyinImId() != null ? commonConfig.getDouyinImId() : "");
+                    if ("tt".equals(platformKey)) pfMap.put("imId", commonConfig.getDouyinImId() != null ? commonConfig.getDouyinImId() : "");
                 }
                 // 生成最终内容
                 com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
@@ -224,6 +240,17 @@ public class CommonConfigFileOperationService extends AbstractConfigFileOperatio
             
             // 使用Jackson解析JSON配置
             com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            // 配置ObjectMapper以允许单引号
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+            // 配置ObjectMapper以允许不带引号的字段名
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+            // 配置ObjectMapper以允许注释
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_COMMENTS, true);
+            // 配置ObjectMapper以允许尾随逗号
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_TRAILING_COMMA, true);
+            // 配置ObjectMapper以允许YAML注释样式
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_YAML_COMMENTS, true);
+            
             String jsonPart = existingContent.substring(existingContent.indexOf("export default ") + "export default ".length());
             if (jsonPart.endsWith(";")) {
                 jsonPart = jsonPart.substring(0, jsonPart.length() - 1);
@@ -246,53 +273,8 @@ public class CommonConfigFileOperationService extends AbstractConfigFileOperatio
             
             return finalSb.toString();
         } catch (Exception e) {
-            // 如果解析失败，使用后备方案（创建全新的配置文件）
-            java.util.LinkedHashMap<String, Object> commonConfigMap = new java.util.LinkedHashMap<>();
-            String[] platforms = {"tt", "ks", "wx", "bd"};
-            for (String pf : platforms) {
-                java.util.LinkedHashMap<String, Object> pfMap = new java.util.LinkedHashMap<>();
-                java.util.LinkedHashMap<String, Object> homeCard = new java.util.LinkedHashMap<>();
-                homeCard.put("style", 1);
-                java.util.LinkedHashMap<String, Object> payCard = new java.util.LinkedHashMap<>();
-                payCard.put("style", 1);
-                java.util.LinkedHashMap<String, Object> loginType = new java.util.LinkedHashMap<>();
-                loginType.put("mine", "anonymousLogin");
-                loginType.put("reader", "anonymousLogin");
-                pfMap.put("homeCard", homeCard);
-                pfMap.put("payCard", payCard);
-                pfMap.put("loginType", loginType);
-                pfMap.put("contact", "");
-                // iaaMode 默认
-                java.util.LinkedHashMap<String, Object> iaaModeObj = new java.util.LinkedHashMap<>();
-                iaaModeObj.put("enable", false);
-                iaaModeObj.put("dialogStyle", 2);
-                pfMap.put("iaaMode", iaaModeObj);
-                pfMap.put("hidePayEntry", false);
-
-                if ("tt".equals(pf)) pfMap.put("imId", "");
-                commonConfigMap.put(pf, pfMap);
-            }
-            
-            // 更新当前平台配置
-            String key = platformToKey(platform);
-            if (commonConfigMap.containsKey(key)) {
-                commonConfigMap.put(key, platformCommonConfigMap);
-            }
-            
-            // 生成最终内容
-            com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            try {
-                StringBuilder finalSb = new StringBuilder();
-                finalSb.append("export default ");
-                String jsonString = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(commonConfigMap);
-                // 统一使用带单引号的外层键名并修复缩进
-                jsonString = formatJsonString(jsonString);
-                finalSb.append(jsonString);
-                finalSb.append(";\n");
-                return finalSb.toString();
-            } catch (Exception ex) {
-                throw new RuntimeException("无法生成common配置文件内容", ex);
-            }
+            taskLogger.log(null, "解析现有commonConfig文件失败: " + e.getMessage(), CreateNovelLogType.ERROR);
+            throw new RuntimeException("无法解析现有common配置文件内容: " + e.getMessage(), e);
         }
     }
     
