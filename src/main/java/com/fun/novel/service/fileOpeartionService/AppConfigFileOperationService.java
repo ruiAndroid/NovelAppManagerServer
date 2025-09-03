@@ -1,10 +1,12 @@
 package com.fun.novel.service.fileOpeartionService;
 
 import com.fun.novel.dto.CreateNovelAppRequest;
-import com.fun.novel.service.NovelAppLocalFileOperationService;
 import com.fun.novel.dto.CreateNovelLogType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,6 +20,7 @@ import java.util.List;
 @Service
 public class AppConfigFileOperationService extends AbstractConfigFileOperationService{
 
+    private static final Logger log = LoggerFactory.getLogger(AppConfigFileOperationService.class);
 
     public void updateAppConfigAndPackageFile(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions) {
         CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
@@ -29,6 +32,11 @@ public class AppConfigFileOperationService extends AbstractConfigFileOperationSe
 
         updateAppConfigFile(taskId, buildCode, rollbackActions,true);
         updatePackageJsonFile(taskId, buildCode, platform, rollbackActions,true);
+    }
+
+    public void deleteAppConfigAndPackageFile(CreateNovelAppRequest params, List<Runnable> rollbackActions,boolean isLast){
+        deleteAppConfigFile(params, rollbackActions,isLast);
+        deletePackageConfigFile(params, rollbackActions,isLast);
     }
 
     /**
@@ -276,6 +284,229 @@ public class AppConfigFileOperationService extends AbstractConfigFileOperationSe
             // 还原自身
             try { Files.deleteIfExists(jsonPath); } catch (Exception ignore) {}
             throw new RuntimeException("package.json处理失败: " + e.getMessage(), e);
+        }
+    }
+
+
+
+
+    public void deleteAppConfigFile(CreateNovelAppRequest params, List<Runnable> rollbackActions, boolean isLast) {
+
+        if(!isLast){
+
+            log.warn("删除AppConfig文件，当前还存在其他平台小程序，不需要删除" );
+            return;
+        }
+        CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
+        CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
+        CreateNovelAppRequest.PaymentConfig paymentConfig = params.getPaymentConfig();
+
+        String buildCode = commonConfig.getBuildCode();
+        String platform = baseConfig.getPlatform();
+        String appConfigDir = buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config";
+        String appConfigFile = appConfigDir + File.separator + "AppConfig.js";
+        java.nio.file.Path appConfigPath = java.nio.file.Paths.get(appConfigFile);
+
+        try {
+            // 检查文件是否存在
+            if (!java.nio.file.Files.exists(appConfigPath)) {
+                log.warn("AppConfig文件不存在: {}", appConfigFile);
+                return;
+            }
+
+            // 读取原内容
+            java.util.List<String> lines = java.nio.file.Files.readAllLines(appConfigPath, java.nio.charset.StandardCharsets.UTF_8);
+
+            // 备份原文件
+            String backupPath = appConfigFile + ".bak";
+            java.nio.file.Files.copy(appConfigPath, java.nio.file.Paths.get(backupPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+            // 添加回滚动作
+            rollbackActions.add(() -> {
+                try {
+                    taskLogger.log(null, "回滚动作：还原AppConfig文件", CreateNovelLogType.ERROR);
+                    java.nio.file.Files.copy(java.nio.file.Paths.get(backupPath), appConfigPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath));
+                } catch (Exception ignore) {}
+            });
+
+            // 构造要删除的导入行模式
+            String importConfigLine = "import " + buildCode + "Config from './baseConfigs/" + buildCode + "';";
+            String importPayConfigLine = "import " + buildCode + "PayConfig from './payConfigs/" + buildCode + "';";
+            String importAdConfigLine = "import " + buildCode + "AdConfig from './adConfigs/" + buildCode + "';";
+            String importDeliverConfigLine = "import " + buildCode + "DeliverConfig from './deliverConfigs/" + buildCode + "';";
+            String importCommonConfigLine = "import " + buildCode + "CommonConfig from './commonConfigs/" + buildCode + "';";
+
+            // 构造getBrand方法中要删除的内容模式
+            String brandCaseStart = "// #ifdef MP-" + buildCode.toUpperCase();
+            String brandCaseReturn = "return '" + buildCode + "'";
+            String brandCaseEnd = "// #endif";
+
+            // 构造loadPayConfig方法中要删除的内容模式
+            String payConfigCase = "case '" + buildCode + "':";
+            String payConfigReturn = "return " + buildCode + "PayConfig;";
+
+            // 构造loadBrandConfig方法中要删除的内容模式
+            String brandConfigCase = "case '" + buildCode + "':";
+            String brandConfigReturn = "return " + buildCode + "Config;";
+
+            // 构造loadAdConfig方法中要删除的内容模式
+            String adConfigCase = "case '" + buildCode + "':";
+            String adConfigReturn = "return " + buildCode + "AdConfig;";
+
+            // 构造loadDeliverConfig方法中要删除的内容模式
+            String deliverConfigCase = "case '" + buildCode + "':";
+            String deliverConfigReturn = "return " + buildCode + "DeliverConfig;";
+
+            // 构造loadCommonConfig方法中要删除的内容模式
+            String commonConfigCase = "case '" + buildCode + "':";
+            String commonConfigReturn = "return " + buildCode + "CommonConfig;";
+
+            // 过滤掉包含构建代码的行
+            java.util.List<String> newLines = new java.util.ArrayList<>();
+            boolean inBrandCaseBlock = false; // 用于跟踪是否在getBrand的case块中
+
+            for (String line : lines) {
+                String trimmedLine = line.trim();
+
+                // 检查是否是需要删除的导入行
+                if (trimmedLine.equals(importConfigLine) ||
+                        trimmedLine.equals(importPayConfigLine) ||
+                        trimmedLine.equals(importAdConfigLine) ||
+                        trimmedLine.equals(importDeliverConfigLine) ||
+                        trimmedLine.equals(importCommonConfigLine)) {
+                    continue; // 跳过这些行
+                }
+
+                // 检查getBrand方法中的条件编译块
+                if (trimmedLine.equals(brandCaseStart)) {
+                    inBrandCaseBlock = true;
+                    continue; // 跳过开始标记行
+                }
+                if (inBrandCaseBlock && trimmedLine.equals(brandCaseReturn)) {
+                    continue; // 跳过return语句行
+                }
+                if (inBrandCaseBlock && trimmedLine.equals(brandCaseEnd)) {
+                    inBrandCaseBlock = false;
+                    continue; // 跳过结束标记行
+                }
+
+                // 检查各load方法中的case语句
+                if (trimmedLine.equals(payConfigCase) ||
+                        trimmedLine.equals(payConfigReturn) ||
+                        trimmedLine.equals(brandConfigCase) ||
+                        trimmedLine.equals(brandConfigReturn) ||
+                        trimmedLine.equals(adConfigCase) ||
+                        trimmedLine.equals(adConfigReturn) ||
+                        trimmedLine.equals(deliverConfigCase) ||
+                        trimmedLine.equals(deliverConfigReturn) ||
+                        trimmedLine.equals(commonConfigCase) ||
+                        trimmedLine.equals(commonConfigReturn)) {
+                    continue; // 跳过这些行
+                }
+
+                // 保留其他所有行
+                newLines.add(line);
+            }
+
+            // 写入新内容
+            java.nio.file.Files.write(appConfigPath, newLines, java.nio.charset.StandardCharsets.UTF_8);
+
+            // 操作成功后删除备份文件
+            java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath));
+
+            log.info("成功删除AppConfig文件中的构建代码配置: {}", buildCode);
+        } catch (Exception e) {
+            log.error("删除AppConfig文件配置失败: {}", e.getMessage(), e);
+            throw new RuntimeException("删除AppConfig文件配置失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 删除package.json文件中的构建代码配置
+     */
+    public void deletePackageConfigFile(CreateNovelAppRequest params, List<Runnable> rollbackActions, boolean isLast) {
+        CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
+        CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
+        CreateNovelAppRequest.PaymentConfig paymentConfig = params.getPaymentConfig();
+
+        String buildCode = commonConfig.getBuildCode();
+        String platform = baseConfig.getPlatform();
+        String packageFile = buildWorkPath + File.separator + "package.json";
+        java.nio.file.Path packagePath = java.nio.file.Paths.get(packageFile);
+        
+        try {
+            // 检查文件是否存在
+            if (!java.nio.file.Files.exists(packagePath)) {
+                log.warn("package.json文件不存在: {}", packageFile);
+                return;
+            }
+
+            // 读取原内容
+            String content = new String(java.nio.file.Files.readAllBytes(packagePath), java.nio.charset.StandardCharsets.UTF_8);
+            
+            // 备份原文件
+            String backupPath = packageFile + ".bak";
+            java.nio.file.Files.copy(packagePath, java.nio.file.Paths.get(backupPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+            // 添加回滚动作
+            rollbackActions.add(() -> {
+                try {
+                    taskLogger.log(null, "回滚动作：还原package.json文件", CreateNovelLogType.ERROR);
+                    java.nio.file.Files.copy(java.nio.file.Paths.get(backupPath), packagePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath));
+                } catch (Exception ignore) {}
+            });
+            
+            // 使用Jackson解析JSON配置
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            // 配置ObjectMapper以允许单引号
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+            // 配置ObjectMapper以允许不带引号的字段名
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+            // 配置ObjectMapper以允许注释
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_COMMENTS, true);
+            // 配置ObjectMapper以允许尾随逗号
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_TRAILING_COMMA, true);
+            // 配置ObjectMapper以允许YAML注释样式
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_YAML_COMMENTS, true);
+            
+            // 解析现有配置
+            com.fasterxml.jackson.databind.node.ObjectNode root = (com.fasterxml.jackson.databind.node.ObjectNode) objectMapper.readTree(content);
+            
+            // 构造要删除的键名
+            String platformKey = platformToKey(platform);
+            String scriptKey = platformKey + "-" + buildCode;
+            String devKey = "dev:" + scriptKey;
+            String buildKey = "build:" + scriptKey;
+            
+            // 删除scripts块下的内容
+            if (root.has("scripts") && root.get("scripts").isObject()) {
+                com.fasterxml.jackson.databind.node.ObjectNode scripts = (com.fasterxml.jackson.databind.node.ObjectNode) root.get("scripts");
+                scripts.remove(devKey);
+                scripts.remove(buildKey);
+            }
+            
+            // 删除uni-app块下的scripts块内容
+            if (root.has("uni-app") && root.get("uni-app").isObject()) {
+                com.fasterxml.jackson.databind.node.ObjectNode uniApp = (com.fasterxml.jackson.databind.node.ObjectNode) root.get("uni-app");
+                if (uniApp.has("scripts") && uniApp.get("scripts").isObject()) {
+                    com.fasterxml.jackson.databind.node.ObjectNode uniAppScripts = (com.fasterxml.jackson.databind.node.ObjectNode) uniApp.get("scripts");
+                    uniAppScripts.remove(scriptKey);
+                }
+            }
+            
+            // 写回文件
+            String finalContent = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(root);
+            java.nio.file.Files.write(packagePath, finalContent.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+            // 操作成功后删除备份文件
+            java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath));
+
+            log.info("成功删除package.json文件中的构建代码配置: {}", buildCode);
+        } catch (Exception e) {
+            log.error("删除package.json文件配置失败: {}", e.getMessage(), e);
+            throw new RuntimeException("删除package.json文件配置失败: " + e.getMessage(), e);
         }
     }
 }

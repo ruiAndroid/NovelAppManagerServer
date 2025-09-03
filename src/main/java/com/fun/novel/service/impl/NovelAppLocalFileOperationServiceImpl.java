@@ -37,6 +37,7 @@ public class NovelAppLocalFileOperationServiceImpl extends AbstractConfigFileOpe
 
     }
 
+
     @Override
     public void updateBaseConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions) {
         baseConfigFileOperationService.updateBaseConfigLocalCodeFiles(params, rollbackActions);
@@ -62,10 +63,16 @@ public class NovelAppLocalFileOperationServiceImpl extends AbstractConfigFileOpe
     }
 
     @Override
-    public void deleteAppLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions) {
-        preFileOperationService.deletePreFiles(params, rollbackActions);
+    public void deleteAppLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions,boolean isLast) {
+        preFileOperationService.deletePreBuildFiles(params, rollbackActions);
+        preFileOperationService.deletePreFetchBuildFile(params, rollbackActions);
 
-        baseConfigFileOperationService.deleteBaseConfigLocalCodeFiles(params, rollbackActions);
+        baseConfigFileOperationService.deleteBaseConfigLocalCodeFiles(params, rollbackActions,isLast);
+        appConfigFileOperationService.deleteAppConfigAndPackageFile(params, rollbackActions,isLast);
+
+        adConfigFileOperationService.deleteAdConfigLocalCodeFiles(params, rollbackActions,isLast);
+        commonConfigFileOperationService.deleteCommonConfigLocalCodeFiles(params, rollbackActions,isLast);
+        payConfigFileOperationService.deletePayConfigLocalCodeFiles(params, rollbackActions,isLast);
 
 
     }

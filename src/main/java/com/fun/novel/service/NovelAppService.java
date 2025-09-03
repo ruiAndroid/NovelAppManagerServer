@@ -1,6 +1,7 @@
 package com.fun.novel.service;
 
 import com.fun.novel.entity.NovelApp;
+
 import java.util.List;
 import java.util.Map;
 
@@ -48,4 +49,5 @@ public interface NovelAppService {
      * @return 应用信息列表
      */
     List<NovelApp> getAppsByAppName(String appName);
+
 }

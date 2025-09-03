@@ -1,12 +1,10 @@
 package com.fun.novel.service.fileOpeartionService;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fun.novel.dto.CreateNovelAppRequest;
-import com.fun.novel.service.NovelAppLocalFileOperationService;
 import com.fun.novel.dto.CreateNovelLogType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-// Removed @Service annotation to avoid multiple beans of NovelAppLocalFileOperationService type
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -26,9 +24,9 @@ import java.util.List;
 public class BaseConfigFileOperationService extends AbstractConfigFileOperationService{
 
 
+    private static final Logger log = LoggerFactory.getLogger(BaseConfigFileOperationService.class);
 
-
-    public void createBaseConfigLocalCodeFiles(String taskId,CreateNovelAppRequest params, List<Runnable> rollbackActions) {
+    public void createBaseConfigLocalCodeFiles(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions) {
         CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
         CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
         String buildCode = commonConfig.getBuildCode();
@@ -591,17 +589,330 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
      * 删除指定appId的baseConfig配置
      *
      */
-    public void deleteBaseConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions) {
+    public void deleteBaseConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions,boolean isLast) {
         CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
         CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
         String buildCode = commonConfig.getBuildCode();
         String platform = baseConfig.getPlatform();
 
-//        deleteThemeFile(buildCode, baseConfig, rollbackActions, false);
-//        deleteDouyinPrefetchFile(buildCode, platform, rollbackActions, false);
-//        deleteBaseConfigFile(buildCode, platform, baseConfig, commonConfig, rollbackActions, false);
-//        deleteDeliverConfigFile(buildCode, platform, params.getDeliverConfig(),rollbackActions, false);
+        deleteThemeFile(buildCode, baseConfig, rollbackActions, isLast);
+        deleteDeliverFile(buildCode, baseConfig, rollbackActions, isLast);
+        deleteBaseConfigFile(buildCode, platform, baseConfig, rollbackActions, isLast);
 
     }
 
+    private void deleteBaseConfigFile(String buildCode, String platform, CreateNovelAppRequest.BaseConfig baseConfig, List<Runnable> rollbackActions, boolean isLast) {
+        String configDir = buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "baseConfigs";
+        String configFile = configDir + File.separator + buildCode + ".js";
+        Path configPath = Paths.get(configFile);
+        String backupPath = configFile + ".bak";
+        
+        try {
+            // 检查文件是否存在
+            if (!Files.exists(configPath)) {
+                log.warn("baseConfig文件不存在: {}", configFile);
+                return;
+            }
+
+            if (isLast) {
+                // 如果是最后一个平台，则直接删除整个文件
+                Files.copy(configPath, Paths.get(backupPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                
+                // 添加回滚动作
+                rollbackActions.add(() -> {
+                    try {
+                        taskLogger.log(null, "回滚动作：还原baseConfig文件", CreateNovelLogType.ERROR);
+                        Files.copy(Paths.get(backupPath), configPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                        Files.deleteIfExists(Paths.get(backupPath));
+                    } catch (Exception ignore) {}
+                });
+                
+                // 删除文件
+                Files.deleteIfExists(configPath);
+                
+                // 操作成功后删除备份文件
+                Files.deleteIfExists(Paths.get(backupPath));
+                
+                log.info("成功删除baseConfig文件: {}", configFile);
+            } else {
+                // 如果不是最后一个平台，则只删除对应平台的配置块
+                deletePlatformBaseConfig(configPath, platform, rollbackActions);
+            }
+        } catch (Exception e) {
+            log.error("删除baseConfig文件失败: {}", e.getMessage(), e);
+            throw new RuntimeException("删除baseConfig文件失败: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 删除指定平台的base配置块
+     * @param configPath 配置文件路径
+     * @param platform 平台
+     * @param rollbackActions 回滚动作列表
+     */
+    private void deletePlatformBaseConfig(Path configPath, String platform, List<Runnable> rollbackActions) {
+        try {
+            // 读取原内容
+            String content = new String(Files.readAllBytes(configPath), StandardCharsets.UTF_8);
+            
+            // 备份原文件
+            String backupPath = configPath.toString() + ".bak";
+            Files.copy(configPath, Paths.get(backupPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            
+            // 添加回滚动作
+            rollbackActions.add(() -> {
+                try {
+                    taskLogger.log(null, "回滚动作：还原baseConfig文件", CreateNovelLogType.ERROR);
+                    Files.copy(Paths.get(backupPath), configPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    Files.deleteIfExists(Paths.get(backupPath));
+                } catch (Exception ignore) {}
+            });
+            
+            // 将平台名称映射到配置文件中的键名
+            String platformKey = platformToKey(platform);
+            String quotedPlatformKey = "'" + platformKey + "'";
+            
+            // 构造平台配置块的查找模式
+            // 匹配格式如: 'tt': {
+            String platformBlockPattern = "\\s*" + quotedPlatformKey + "\\s*:\\s*\\{";
+            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(platformBlockPattern);
+            java.util.regex.Matcher matcher = pattern.matcher(content);
+            
+            if (matcher.find()) {
+                // 找到了平台配置块
+                int platformBlockStartIndex = matcher.start();
+                int openBracePos = matcher.end() - 1; // 开括号位置
+                
+                // 查找匹配的结束大括号
+                int platformBlockEndIndex = findMatchingBrace(content, openBracePos);
+                if (platformBlockEndIndex != -1) {
+                    // 找到平台配置块的结束位置（包含结束大括号）
+                    platformBlockEndIndex += 1;
+                    
+                    // 处理逗号问题，确保删除配置块后语法仍然正确
+                    String beforeBlock = content.substring(0, platformBlockStartIndex);
+                    String afterBlock = content.substring(platformBlockEndIndex);
+                    
+                    // 移除beforeBlock末尾的逗号（如果存在）
+                    beforeBlock = beforeBlock.replaceAll(",\\s*$", "");
+                    
+                    // 移除afterBlock开头的逗号（如果存在）
+                    afterBlock = afterBlock.replaceFirst("^\\s*,", "");
+                    
+                    // 重新组合内容
+                    String newContent = beforeBlock + afterBlock;
+                    
+                    // 写入新内容
+                    Files.write(configPath, newContent.getBytes(StandardCharsets.UTF_8));
+                    
+                    // 操作成功后删除备份文件
+                    Files.deleteIfExists(Paths.get(backupPath));
+                    
+                    log.info("成功删除baseConfig文件中平台 {} 的配置: {}", platformKey, configPath.toString());
+                    return;
+                }
+            }
+            
+            // 没有找到平台配置块，直接删除备份文件
+            Files.deleteIfExists(Paths.get(backupPath));
+            log.warn("未找到baseConfig文件中平台 {} 的配置块: {}", platformKey, configPath.toString());
+        } catch (Exception e) {
+            log.error("删除baseConfig文件中平台配置失败: {}", e.getMessage(), e);
+            throw new RuntimeException("删除baseConfig文件中平台配置失败: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 查找匹配的大括号
+     * @param content 内容
+     * @param startIndex 开始索引
+     * @return 匹配的大括号索引，如果未找到返回-1
+     */
+    private int findMatchingBrace(String content, int startIndex) {
+        int braceCount = 1;
+        for (int i = startIndex + 1; i < content.length(); i++) {
+            char c = content.charAt(i);
+            if (c == '{') {
+                braceCount++;
+            } else if (c == '}') {
+                braceCount--;
+                if (braceCount == 0) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+    
+    private void deleteDeliverFile(String buildCode, CreateNovelAppRequest.BaseConfig baseConfig, List<Runnable> rollbackActions, boolean isLast) {
+        String platform = baseConfig.getPlatform();
+        
+        String configDir = buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "deliverConfigs";
+        String configFile = configDir + File.separator + buildCode + ".js";
+        Path configPath = Paths.get(configFile);
+        String backupPath = configFile + ".bak";
+        
+        try {
+            // 检查文件是否存在
+            if (!Files.exists(configPath)) {
+                log.warn("deliverConfig文件不存在: {}", configFile);
+                return;
+            }
+
+            if (isLast) {
+                // 如果是最后一个平台，则直接删除整个文件
+                Files.copy(configPath, Paths.get(backupPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                
+                // 添加回滚动作
+                rollbackActions.add(() -> {
+                    try {
+                        taskLogger.log(null, "回滚动作：还原deliverConfig文件", CreateNovelLogType.ERROR);
+                        Files.copy(Paths.get(backupPath), configPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                        Files.deleteIfExists(Paths.get(backupPath));
+                    } catch (Exception ignore) {}
+                });
+                
+                // 删除文件
+                Files.deleteIfExists(configPath);
+                
+                // 操作成功后删除备份文件
+                Files.deleteIfExists(Paths.get(backupPath));
+                
+                log.info("成功删除deliverConfig文件: {}", configFile);
+            } else {
+                // 如果不是最后一个平台，则只删除对应平台的配置块
+                deletePlatformDeliverConfig(configPath, platform, rollbackActions);
+            }
+        } catch (Exception e) {
+            log.error("删除deliverConfig文件失败: {}", e.getMessage(), e);
+            throw new RuntimeException("删除deliverConfig文件失败: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 删除指定平台的deliver配置块
+     * @param configPath 配置文件路径
+     * @param platform 平台
+     * @param rollbackActions 回滚动作列表
+     */
+    private void deletePlatformDeliverConfig(Path configPath, String platform, List<Runnable> rollbackActions) {
+        try {
+            // 读取原内容
+            String content = new String(Files.readAllBytes(configPath), StandardCharsets.UTF_8);
+            
+            // 备份原文件
+            String backupPath = configPath.toString() + ".bak";
+            Files.copy(configPath, Paths.get(backupPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            
+            // 添加回滚动作
+            rollbackActions.add(() -> {
+                try {
+                    taskLogger.log(null, "回滚动作：还原deliverConfig文件", CreateNovelLogType.ERROR);
+                    Files.copy(Paths.get(backupPath), configPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    Files.deleteIfExists(Paths.get(backupPath));
+                } catch (Exception ignore) {}
+            });
+            
+            // 将平台名称映射到配置文件中的键名
+            String platformKey = platformToKey(platform);
+            
+            // 使用Jackson解析JSON配置
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            // 配置ObjectMapper以允许单引号
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+            // 配置ObjectMapper以允许不带引号的字段名
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+            
+            String jsonPart = content.substring(content.indexOf("export default ") + "export default ".length());
+            if (jsonPart.endsWith(";")) {
+                jsonPart = jsonPart.substring(0, jsonPart.length() - 1);
+            }
+            
+            // 解析现有配置
+            java.util.Map<String, Object> existingConfigMap = objectMapper.readValue(jsonPart, java.util.Map.class);
+            
+            // 清空指定平台的配置而不是删除整个平台配置块
+            existingConfigMap.put(platformKey, new java.util.LinkedHashMap<String, Object>());
+            
+            // 重新生成配置文件内容
+            StringBuilder finalSb = new StringBuilder();
+            finalSb.append("export default ");
+            String jsonString = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(existingConfigMap);
+            // 统一使用带单引号的外层键名并修复缩进
+            jsonString = formatJsonString(jsonString);
+            finalSb.append(jsonString);
+            finalSb.append(";\n");
+            
+            // 写入新内容
+            Files.write(configPath, finalSb.toString().getBytes(StandardCharsets.UTF_8));
+            
+            // 操作成功后删除备份文件
+            Files.deleteIfExists(Paths.get(backupPath));
+            
+            log.info("成功清空deliverConfig文件中平台 {} 的配置: {}", platformKey, configPath.toString());
+        } catch (Exception e) {
+            log.error("清空deliverConfig文件中平台配置失败: {}", e.getMessage(), e);
+            throw new RuntimeException("清空deliverConfig文件中平台配置失败: " + e.getMessage(), e);
+        }
+    }
+    
+    //删除主题文件
+    private void deleteThemeFile(String buildCode, CreateNovelAppRequest.BaseConfig baseConfig, List<Runnable> rollbackActions, boolean isLast) {
+        if(!isLast){
+            log.warn("删除主题文件，当前还存在其他平台小程序，不需要删除" );
+            return;
+        }
+        String themeConfigDir = buildWorkPath + File.separator + "src" + File.separator + "common" + File.separator + "styles";
+        String themeConfigFile = themeConfigDir + File.separator + "theme.less";
+        java.nio.file.Path themeConfigPath = java.nio.file.Paths.get(themeConfigFile);
+        
+        try {
+            // 检查文件是否存在
+            if (!java.nio.file.Files.exists(themeConfigPath)) {
+                log.warn("主题文件不存在: {}", themeConfigFile);
+                return;
+            }
+            
+            // 读取原内容
+            java.util.List<String> lines = java.nio.file.Files.readAllLines(themeConfigPath, java.nio.charset.StandardCharsets.UTF_8);
+            
+            // 备份原文件
+            String backupPath = themeConfigFile + ".bak";
+            java.nio.file.Files.copy(themeConfigPath, java.nio.file.Paths.get(backupPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            
+            // 添加回滚动作
+            rollbackActions.add(() -> {
+                try {
+                    taskLogger.log(null, "回滚动作：还原主题文件", CreateNovelLogType.ERROR);
+                    java.nio.file.Files.copy(java.nio.file.Paths.get(backupPath), themeConfigPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath));
+                } catch (Exception ignore) {}
+            });
+            
+            // 构造要删除的行
+            String primaryColorLine = "@primary-color-" + buildCode + ":";
+            String secondColorLine = "@second-color-" + buildCode + ":";
+            
+            // 过滤掉包含构建代码的行
+            java.util.List<String> newLines = new java.util.ArrayList<>();
+            for (String line : lines) {
+                String trimmedLine = line.trim();
+                // 如果行不包含当前构建代码，则保留
+                if (!trimmedLine.startsWith(primaryColorLine) && !trimmedLine.startsWith(secondColorLine)) {
+                    newLines.add(line);
+                }
+            }
+            
+            // 写入新内容
+            java.nio.file.Files.write(themeConfigPath, newLines, java.nio.charset.StandardCharsets.UTF_8);
+            
+            // 操作成功后删除备份文件
+            java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath));
+            
+            log.info("成功删除主题文件中的构建代码配置: {}", buildCode);
+        } catch (Exception e) {
+            log.error("删除主题文件配置失败: {}", e.getMessage(), e);
+            throw new RuntimeException("删除主题文件配置失败: " + e.getMessage(), e);
+        }
+    }
 }

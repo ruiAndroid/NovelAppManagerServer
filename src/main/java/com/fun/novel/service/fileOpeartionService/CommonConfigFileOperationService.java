@@ -5,6 +5,8 @@ import java.util.Map;
 import com.fun.novel.dto.CreateNovelAppRequest;
 import com.fun.novel.service.NovelAppLocalFileOperationService;
 import com.fun.novel.dto.CreateNovelLogType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -20,7 +22,8 @@ import java.util.List;
  */
 @Service
 public class CommonConfigFileOperationService extends AbstractConfigFileOperationService{
-
+    
+    private static final Logger log = LoggerFactory.getLogger(CommonConfigFileOperationService.class);
 
     public void createCommonConfigLocalCodeFiles(String taskId,CreateNovelAppRequest params, List<Runnable> rollbackActions){
         CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
@@ -342,6 +345,123 @@ public class CommonConfigFileOperationService extends AbstractConfigFileOperatio
     private void appendIndent(StringBuilder sb, int level) {
         for (int i = 0; i < level; i++) {
             sb.append("    ");
+        }
+    }
+
+    public void deleteCommonConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions, boolean isLast) {
+        CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
+        CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
+        CreateNovelAppRequest.PaymentConfig paymentConfig = params.getPaymentConfig();
+
+        String buildCode = commonConfig.getBuildCode();
+        String platform = baseConfig.getPlatform();
+
+        String configDir = buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "commonConfigs";
+        String configFile = configDir + File.separator + buildCode + ".js";
+        Path configPath = Paths.get(configFile);
+        String backupPath = configFile + ".bak";
+        
+        try {
+            // 检查文件是否存在
+            if (!Files.exists(configPath)) {
+                log.warn("commonConfig文件不存在: {}", configFile);
+                return;
+            }
+
+            if (isLast) {
+                // 如果是最后一个平台，则直接删除整个文件
+                Files.copy(configPath, Paths.get(backupPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                
+                // 添加回滚动作
+                rollbackActions.add(() -> {
+                    try {
+                        taskLogger.log(null, "回滚动作：还原commonConfig文件", CreateNovelLogType.ERROR);
+                        Files.copy(Paths.get(backupPath), configPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                        Files.deleteIfExists(Paths.get(backupPath));
+                    } catch (Exception ignore) {}
+                });
+                
+                // 删除文件
+                Files.deleteIfExists(configPath);
+                
+                // 操作成功后删除备份文件
+                Files.deleteIfExists(Paths.get(backupPath));
+                
+                log.info("成功删除commonConfig文件: {}", configFile);
+            } else {
+                // 如果不是最后一个平台，则只删除对应平台的配置块
+                deletePlatformCommonConfig(configPath, platform, rollbackActions);
+            }
+        } catch (Exception e) {
+            log.error("删除commonConfig文件失败: {}", e.getMessage(), e);
+            throw new RuntimeException("删除commonConfig文件失败: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 删除指定平台的通用配置块
+     * @param configPath 配置文件路径
+     * @param platform 平台
+     * @param rollbackActions 回滚动作列表
+     */
+    private void deletePlatformCommonConfig(Path configPath, String platform, List<Runnable> rollbackActions) {
+        try {
+            // 读取原内容
+            String content = new String(Files.readAllBytes(configPath), StandardCharsets.UTF_8);
+            
+            // 备份原文件
+            String backupPath = configPath.toString() + ".bak";
+            Files.copy(configPath, Paths.get(backupPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            
+            // 添加回滚动作
+            rollbackActions.add(() -> {
+                try {
+                    taskLogger.log(null, "回滚动作：还原commonConfig文件", CreateNovelLogType.ERROR);
+                    Files.copy(Paths.get(backupPath), configPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    Files.deleteIfExists(Paths.get(backupPath));
+                } catch (Exception ignore) {}
+            });
+            
+            // 将平台名称映射到配置文件中的键名
+            String platformKey = platformToKey(platform);
+            
+            // 使用Jackson解析JSON配置
+            ObjectMapper objectMapper = new ObjectMapper();
+            // 配置ObjectMapper以允许单引号
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+            // 配置ObjectMapper以允许不带引号的字段名
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+            
+            String jsonPart = content.substring(content.indexOf("export default ") + "export default ".length());
+            if (jsonPart.endsWith(";")) {
+                jsonPart = jsonPart.substring(0, jsonPart.length() - 1);
+            }
+            
+            // 解析现有配置
+            java.util.Map<String, Object> existingConfigMap = objectMapper.readValue(jsonPart, java.util.Map.class);
+            
+            // 清空指定平台的配置而不是删除整个平台配置块
+            existingConfigMap.put(platformKey, new java.util.LinkedHashMap<String, Object>());
+            
+            // 重新生成配置文件内容
+            StringBuilder finalSb = new StringBuilder();
+            finalSb.append("export default ");
+            String jsonString = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(existingConfigMap);
+            // 统一使用带单引号的外层键名并修复缩进
+            jsonString = formatJsonString(jsonString);
+            finalSb.append(jsonString);
+            finalSb.append(";\n");
+            
+            // 写入新内容
+            Files.write(configPath, finalSb.toString().getBytes(StandardCharsets.UTF_8));
+            
+            // 操作成功后删除备份文件
+            Files.deleteIfExists(Paths.get(backupPath));
+            
+            log.info("成功清空commonConfig文件中平台 {} 的配置: {}", platformKey, configPath.toString());
+        } catch (Exception e) {
+            log.error("清空commonConfig文件中平台配置失败: {}", e.getMessage(), e);
+            throw new RuntimeException("清空commonConfig文件中平台配置失败: " + e.getMessage(), e);
         }
     }
 }

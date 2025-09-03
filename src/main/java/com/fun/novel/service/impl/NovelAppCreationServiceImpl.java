@@ -27,6 +27,6 @@ public class NovelAppCreationServiceImpl implements NovelAppCreationService {
         // 2.本地代码文件操作
         novelAppLocalFileOperationService.createNovelAppLocalCodeFiles(taskId, params, rollbackActions);
         // 3.资源文件处理
-        novelAppResourceFileService.processAllResourceFiles(taskId, params, rollbackActions);
+        novelAppResourceFileService.createResourceFiles(taskId, params, rollbackActions);
     }
 } 

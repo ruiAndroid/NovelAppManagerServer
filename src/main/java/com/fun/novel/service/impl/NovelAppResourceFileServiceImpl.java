@@ -2,7 +2,11 @@ package com.fun.novel.service.impl;
 
 import com.fun.novel.dto.CreateNovelAppRequest;
 import com.fun.novel.service.NovelAppResourceFileService;
+import com.fun.novel.service.fileOpeartionService.BaseConfigFileOperationService;
 import com.fun.novel.utils.CreateNovelTaskLogger;
+import com.fun.novel.dto.CreateNovelLogType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,17 +25,73 @@ public class NovelAppResourceFileServiceImpl implements NovelAppResourceFileServ
 
     private static final int RESOURCE_STEP_DELAY_MS = 1500;
 
+    private static final Logger log = LoggerFactory.getLogger(NovelAppResourceFileServiceImpl.class);
+
     @Override
-    public void processAllResourceFiles(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions) {
-        doProcessAllResourceFiles(taskId, params, rollbackActions, true);
+    public void createResourceFiles(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions) {
+        doCreateImgFiles(taskId, params, rollbackActions, true);
     }
 
     @Override
-    public void processAllResourceFilesSimple(CreateNovelAppRequest params, List<Runnable> rollbackActions) {
-        doProcessAllResourceFiles(null, params, rollbackActions, false);
+    public void createResourceFilesSimple(CreateNovelAppRequest params, List<Runnable> rollbackActions) {
+        doCreateImgFiles(null, params, rollbackActions, false);
     }
 
-    private void doProcessAllResourceFiles(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions, boolean withLogAndDelay) {
+    @Override
+    public void deleteResourceFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions,boolean isLast) {
+        doDeleteImgFiles(params, rollbackActions,isLast);
+
+
+    }
+
+    //删除img资源文件
+    private void doDeleteImgFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions,boolean isLast) {
+        if(!isLast){
+            log.warn("删除图片资源文件，当前还存在其他平台小程序，不需要删除" );
+            return;
+        }
+        
+        try {
+            String imgDir = buildWorkPath + File.separator + "src" + File.separator + "static";
+            CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
+            String buildCode = commonConfig.getBuildCode();
+            String imgBuildDir = imgDir + File.separator + "img-" + buildCode;
+            java.nio.file.Path imgBuildPath = java.nio.file.Paths.get(imgBuildDir);
+            
+            // 检查目录是否存在
+            if (!java.nio.file.Files.exists(imgBuildPath)) {
+                log.warn("图片资源文件夹不存在: {}", imgBuildDir);
+                return;
+            }
+            
+            // 备份原目录
+            String backupPath = imgBuildDir + ".bak";
+            copyDirectoryRecursivelyNoOverwrite(imgBuildPath, java.nio.file.Paths.get(backupPath));
+            
+            // 添加回滚动作
+            rollbackActions.add(() -> {
+                try {
+                    taskLogger.log(null, "回滚动作：还原图片资源文件夹", com.fun.novel.dto.CreateNovelLogType.ERROR);
+                    deleteDirectoryRecursively(imgBuildPath);
+                    copyDirectoryRecursivelyNoOverwrite(java.nio.file.Paths.get(backupPath), imgBuildPath);
+                    deleteDirectoryRecursively(java.nio.file.Paths.get(backupPath));
+                } catch (Exception ignore) {}
+            });
+            
+            // 删除目录
+            deleteDirectoryRecursively(imgBuildPath);
+            
+            // 操作成功后删除备份目录
+            deleteDirectoryRecursively(java.nio.file.Paths.get(backupPath));
+            
+            log.info("成功删除图片资源文件夹: {}", imgBuildDir);
+        } catch (Exception e) {
+            log.error("删除图片资源文件夹失败: {}", e.getMessage(), e);
+            throw new RuntimeException("删除图片资源文件夹失败: " + e.getMessage(), e);
+        }
+    }
+
+    private void doCreateImgFiles(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions, boolean withLogAndDelay) {
         String imgDir = buildWorkPath + File.separator + "src" + File.separator + "static";
         CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
         String buildCode = commonConfig.getBuildCode();
@@ -195,4 +255,6 @@ public class NovelAppResourceFileServiceImpl implements NovelAppResourceFileServ
             throw new RuntimeException(fileDesc + " 主题色替换失败: " + e.getMessage(), e);
         }
     }
+
+
 } 

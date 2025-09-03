@@ -101,7 +101,7 @@ public class NovelAppController {
             //更新appConfig,更新deliverConfig,更新主题色,更新pages-xx.json文件
             novelAppLocalFileOperationService.updateBaseConfigLocalCodeFiles(params, rollbackActions);
             //根据主题色处理资源文件
-            novelAppResourceFileService.processAllResourceFilesSimple(params, rollbackActions);
+            novelAppResourceFileService.createResourceFilesSimple(params, rollbackActions);
             return Result.success("应用修改成功", updatedApp);
         } catch (Exception e) {
             // 回滚所有文件操作
@@ -172,9 +172,13 @@ public class NovelAppController {
             NovelApp novelApp = novelAppService.getByAppId(appId);
             // 先转换数据，再删除数据库记录
             CreateNovelAppRequest params = convertToCreateNovelAppRequest(novelApp);
+            List<NovelApp> appsByAppName = novelAppService.getAppsByAppName(novelApp.getAppName());
+
+            boolean isLast = appsByAppName.size() == 1;
             // 删除代码文件
-            novelAppLocalFileOperationService.deleteAppLocalCodeFiles(params,rollbackActions);
-            
+            novelAppLocalFileOperationService.deleteAppLocalCodeFiles(params,rollbackActions,isLast);
+            //删除资源文件
+            novelAppResourceFileService.deleteResourceFiles(params,rollbackActions,isLast);
             // 最后删除数据库记录
             boolean success = novelAppService.deleteByAppId(appId);
             

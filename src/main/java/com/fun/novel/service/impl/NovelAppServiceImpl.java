@@ -117,4 +117,5 @@ public class NovelAppServiceImpl extends ServiceImpl<NovelAppMapper, NovelApp> i
             throw new RuntimeException("删除应用及其相关数据失败: " + e.getMessage());
         }
     }
+
 }

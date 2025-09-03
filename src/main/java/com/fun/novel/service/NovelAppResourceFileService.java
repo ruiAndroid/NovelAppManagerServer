@@ -10,11 +10,13 @@ public interface NovelAppResourceFileService {
      * @param params 创建参数
      * @param rollbackActions 文件操作的回滚动作列表
      */
-    void processAllResourceFiles(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions);
+    void createResourceFiles(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions);
     /**
      * 资源文件相关的所有原子操作，所有操作成功才提交，否则全部回滚
      * @param params 创建参数
      * @param rollbackActions 文件操作的回滚动作列表
      */
-    void processAllResourceFilesSimple(CreateNovelAppRequest params, List<Runnable> rollbackActions);
+    void createResourceFilesSimple(CreateNovelAppRequest params, List<Runnable> rollbackActions);
+
+    void deleteResourceFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions,boolean isLast);
 } 

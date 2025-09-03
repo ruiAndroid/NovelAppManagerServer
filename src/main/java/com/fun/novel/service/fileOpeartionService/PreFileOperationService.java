@@ -301,45 +301,58 @@ public class PreFileOperationService extends AbstractConfigFileOperationService{
         }
     }
 
-
-
     /**
-     * 删除预编译目录
-     * @param buildCode
-     * @param platform
-     * @param baseConfig
-     * @param rollbackActions
+     * 递归复制目录
+     * @param source 源目录路径
+     * @param target 目标目录路径
+     * @throws java.io.IOException IO异常
      */
-    private void deletePrebuildBuildDir(String buildCode, String platform, CreateNovelAppRequest.BaseConfig baseConfig, List<Runnable> rollbackActions) {
-        String prebuildDir = buildWorkPath + File.separator + "prebuild" + File.separator + "build";
-        String destDir = prebuildDir + File.separator + buildCode;
+    private void copyDirectoryRecursively(java.nio.file.Path source, java.nio.file.Path target) throws java.io.IOException {
+        java.nio.file.Files.walkFileTree(source, new java.nio.file.SimpleFileVisitor<java.nio.file.Path>() {
+            @Override
+            public java.nio.file.FileVisitResult preVisitDirectory(java.nio.file.Path dir, java.nio.file.attribute.BasicFileAttributes attrs) {
+                try {
+                    java.nio.file.Files.createDirectories(target.resolve(source.relativize(dir)));
+                    return java.nio.file.FileVisitResult.CONTINUE;
+                } catch (java.io.IOException e) {
+                    return java.nio.file.FileVisitResult.TERMINATE;
+                }
+            }
 
-
+            @Override
+            public java.nio.file.FileVisitResult visitFile(java.nio.file.Path file, java.nio.file.attribute.BasicFileAttributes attrs) {
+                try {
+                    java.nio.file.Files.copy(file, target.resolve(source.relativize(file)), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    return java.nio.file.FileVisitResult.CONTINUE;
+                } catch (java.io.IOException e) {
+                    return java.nio.file.FileVisitResult.TERMINATE;
+                }
+            }
+        });
     }
 
-
-    public void deletePreFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions) {
+    public void deletePreFetchBuildFile(CreateNovelAppRequest params, List<Runnable> rollbackActions) {
         CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
         CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
         String buildCode = commonConfig.getBuildCode();
         String platform = baseConfig.getPlatform();
         //如果是抖音，删除prefetch/目录下的prelaunch-xx.js文件
         if (!"douyin".equals(platform)) return;
-        
+
         String prefetchDir = buildWorkPath + File.separator + "prefetchbuild";
         String destFile = prefetchDir + File.separator + "prelaunch-" + buildCode + ".js";
         Path destPath = Paths.get(destFile);
         String backupPath = destFile + ".bak";
-        
+
         try {
             // 只有当文件存在时才删除，并添加回滚动作
             if (Files.exists(destPath)) {
                 // 备份文件用于回滚
                 Files.copy(destPath, Paths.get(backupPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                
+
                 // 删除文件
                 Files.deleteIfExists(destPath);
-                
+
                 // 添加回滚动作
                 rollbackActions.add(() -> {
                     try {
@@ -348,7 +361,7 @@ public class PreFileOperationService extends AbstractConfigFileOperationService{
                         Files.deleteIfExists(Paths.get(backupPath));
                     } catch (Exception ignore) {}
                 });
-                
+
                 // 操作成功后删除备份文件
                 Files.deleteIfExists(Paths.get(backupPath));
             }
@@ -356,6 +369,126 @@ public class PreFileOperationService extends AbstractConfigFileOperationService{
             // 如果出现异常，确保清理备份文件
             try { Files.deleteIfExists(Paths.get(backupPath)); } catch (Exception ignore) {}
             throw new RuntimeException("删除抖音预取文件失败: " + e.getMessage(), e);
+        }
+
+
+    }
+
+
+
+
+    public void deletePreBuildFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions) {
+        CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
+        CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
+        String buildCode = commonConfig.getBuildCode();
+        String platform = baseConfig.getPlatform();
+        String preBuildDir = buildWorkPath + File.separator + "prebuild"+ File.separator +"build";
+        String buildCodeDir = preBuildDir + File.separator + buildCode;
+        
+        try {
+            Path buildCodePath = Paths.get(buildCodeDir);
+            // 检查目录是否存在
+            if (!Files.exists(buildCodePath)) {
+                return; // 目录不存在，直接返回
+            }
+            
+            // 根据平台确定要删除的文件名
+            final String pagesFileName;
+            switch (platform) {
+                case "douyin":
+                    pagesFileName = "pages-tt.json";
+                    break;
+                case "kuaishou":
+                    pagesFileName = "pages-ks.json";
+                    break;
+                case "weixin":
+                    pagesFileName = "pages-wx.json";
+                    break;
+                default:
+                    throw new RuntimeException("不支持的平台类型: " + platform);
+            }
+            
+            // 删除对应的平台配置文件
+            Path pagesFilePath = buildCodePath.resolve(pagesFileName);
+            if (Files.exists(pagesFilePath)) {
+                // 备份文件用于回滚
+                String pagesFileBackup = pagesFilePath.toString() + ".bak";
+                Files.copy(pagesFilePath, Paths.get(pagesFileBackup), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                
+                // 添加回滚动作
+                rollbackActions.add(() -> {
+                    try {
+                        taskLogger.log(null, "回滚动作：还原" + pagesFileName, CreateNovelLogType.ERROR);
+                        Files.copy(Paths.get(pagesFileBackup), pagesFilePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                        Files.deleteIfExists(Paths.get(pagesFileBackup));
+                    } catch (Exception ignore) {}
+                });
+                
+                // 删除文件
+                Files.deleteIfExists(pagesFilePath);
+                
+                // 操作成功后删除备份文件
+                Files.deleteIfExists(Paths.get(pagesFileBackup));
+            }
+            
+            // 检查是否还有其他平台的配置文件
+            boolean hasOtherPlatformFiles = false;
+            String[] platformFiles = {"pages-tt.json", "pages-ks.json", "pages-wx.json"};
+            for (String platformFile : platformFiles) {
+                if (Files.exists(buildCodePath.resolve(platformFile))) {
+                    hasOtherPlatformFiles = true;
+                    break;
+                }
+            }
+            
+            // 如果没有其他平台的配置文件，则删除manifest.json和整个buildCode目录
+            if (!hasOtherPlatformFiles) {
+                // 删除manifest.json
+                Path manifestPath = buildCodePath.resolve("manifest.json");
+                if (Files.exists(manifestPath)) {
+                    // 备份文件用于回滚
+                    String manifestBackup = manifestPath.toString() + ".bak";
+                    Files.copy(manifestPath, Paths.get(manifestBackup), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    
+                    // 添加回滚动作
+                    rollbackActions.add(() -> {
+                        try {
+                            taskLogger.log(null, "回滚动作：还原manifest.json", CreateNovelLogType.ERROR);
+                            Files.copy(Paths.get(manifestBackup), manifestPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                            Files.deleteIfExists(Paths.get(manifestBackup));
+                        } catch (Exception ignore) {}
+                    });
+                    
+                    // 删除文件
+                    Files.deleteIfExists(manifestPath);
+                    
+                    // 操作成功后删除备份文件
+                    Files.deleteIfExists(Paths.get(manifestBackup));
+                }
+                
+                // 删除整个buildCode目录
+                // 备份目录用于回滚
+                String dirBackup = buildCodeDir + ".bak";
+                copyDirectoryRecursively(buildCodePath, Paths.get(dirBackup));
+                
+                // 添加回滚动作
+                rollbackActions.add(() -> {
+                    try {
+                        taskLogger.log(null, "回滚动作：还原目录" + buildCodeDir, CreateNovelLogType.ERROR);
+                        deleteDirectoryRecursively(buildCodePath);
+                        copyDirectoryRecursively(Paths.get(dirBackup), buildCodePath);
+                        deleteDirectoryRecursively(Paths.get(dirBackup));
+                    } catch (Exception ignore) {}
+                });
+                
+                // 删除目录
+                deleteDirectoryRecursively(buildCodePath);
+                
+                // 操作成功后删除备份目录
+                deleteDirectoryRecursively(Paths.get(dirBackup));
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("删除prebuild文件失败: " + e.getMessage(), e);
         }
     }
 }
