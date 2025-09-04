@@ -63,6 +63,19 @@ public class NovelAppLocalFileOperationServiceImpl extends AbstractConfigFileOpe
     }
 
     @Override
+    public void createPayConfig(CreateNovelAppRequest createNovelAppRequest, List<Runnable> rollbackActions, String payType) {
+        payConfigFileOperationService.createPayConfig(createNovelAppRequest, rollbackActions, payType);
+
+
+    }
+
+    @Override
+    public void deletePayConfig(CreateNovelAppRequest params, List<Runnable> rollbackActions,String payType) {
+        payConfigFileOperationService.deletePayConfig(params, rollbackActions,payType);
+
+    }
+
+    @Override
     public void deleteAppLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions,boolean isLast) {
         preFileOperationService.deletePreBuildFiles(params, rollbackActions);
         preFileOperationService.deletePreFetchBuildFile(params, rollbackActions);

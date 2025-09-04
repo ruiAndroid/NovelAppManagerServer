@@ -18,6 +18,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.ArrayList;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/novel-pay")
@@ -44,13 +46,13 @@ public class AppPayController {
     public Result<AppPayWithConfigDTO> createAppPay(
             @Parameter(description = "支付配置信息", required = true)
             @Valid @RequestBody CreateAppPayRequest request) {
-        java.util.List<Runnable> rollbackActions = new java.util.ArrayList<>();
+        List<Runnable> rollbackActions = new ArrayList<>();
         try {
             AppPayWithConfigDTO createdAppPay = appPayService.createAppPay(request);
             NovelApp novelApp = novelAppService.getByAppId(createdAppPay.getAppId());
-            AppPayWithConfigDTO appPayByAppId = appPayService.getAppPayByAppId(createdAppPay.getAppId());
-            CreateNovelAppRequest createNovelAppRequest = convertToCreateNovelAppRequest(appPayByAppId, novelApp);
-            localFileOperationService.updatePayConfigLocalCodeFiles(createNovelAppRequest,rollbackActions);
+            AppPayWithConfigDTO appPayWithConfigDTO = appPayService.getAppPayByAppId(createdAppPay.getAppId());
+            CreateNovelAppRequest createNovelAppRequest = convertToCreateNovelAppRequestForCreate(appPayWithConfigDTO, novelApp, request);
+            localFileOperationService.createPayConfig(createNovelAppRequest, rollbackActions, request.getPayType());
 
             return Result.success("创建成功", createdAppPay);
         } catch (IllegalArgumentException e) {
@@ -82,15 +84,15 @@ public class AppPayController {
     public Result<AppPayWithConfigDTO> updateAppPay(
             @Parameter(description = "支付配置信息", required = true)
             @Valid @RequestBody UpdateAppPayRequest request) {
-        java.util.List<Runnable> rollbackActions = new java.util.ArrayList<>();
+        List<Runnable> rollbackActions = new ArrayList<>();
         try {
             // 1. 数据库操作
             AppPayWithConfigDTO updatedAppPay = appPayService.updateAppPay(request);
             // 2. 文件操作
             NovelApp novelApp = novelAppService.getByAppId(updatedAppPay.getAppId());
-            AppPayWithConfigDTO appPayByAppId = appPayService.getAppPayByAppId(updatedAppPay.getAppId());
-            CreateNovelAppRequest createNovelAppRequest = convertToCreateNovelAppRequest(appPayByAppId, novelApp);
-            localFileOperationService.updatePayConfigLocalCodeFiles(createNovelAppRequest,rollbackActions);
+            // 使用专门为更新单个支付配置设计的转换方法
+            CreateNovelAppRequest createNovelAppRequest = convertToCreateNovelAppRequestForUpdate(updatedAppPay, novelApp, request);
+            localFileOperationService.createPayConfig(createNovelAppRequest,rollbackActions, request.getPayType());
             return Result.success("更新成功", updatedAppPay);
         } catch (Exception e) {
             // 回滚所有文件操作
@@ -110,15 +112,16 @@ public class AppPayController {
             @RequestParam String appId,
             @Parameter(description = "支付类型", required = true)
             @RequestParam String payType) {
-        java.util.List<Runnable> rollbackActions = new java.util.ArrayList<>();
+        List<Runnable> rollbackActions = new ArrayList<>();
 
         try {
             boolean success = appPayService.deleteAppPayByAppIdAndType(appId, payType);
             if (success) {
                 NovelApp novelApp = novelAppService.getByAppId(appId);
                 AppPayWithConfigDTO appPayByAppId = appPayService.getAppPayByAppId(appId);
+                // 使用统一的转换方法，确保完整配置传递
                 CreateNovelAppRequest createNovelAppRequest = convertToCreateNovelAppRequest(appPayByAppId, novelApp);
-                localFileOperationService.updatePayConfigLocalCodeFiles(createNovelAppRequest,rollbackActions);
+                localFileOperationService.deletePayConfig(createNovelAppRequest, rollbackActions, payType);
 
 
                 return Result.success("删除成功");
@@ -133,7 +136,6 @@ public class AppPayController {
             return Result.error(e.getMessage());
         }
     }
-
 
     private CreateNovelAppRequest convertToCreateNovelAppRequest(AppPayWithConfigDTO appPayWithConfigDTO, NovelApp novelApp) {
         CreateNovelAppRequest req = new CreateNovelAppRequest();
@@ -173,6 +175,8 @@ public class AppPayController {
         }
         req.setCommonConfig(commonConfig);
 
+        // 注意：这里不自动填充所有支付配置项，只在特定场景下填充需要更新的配置项
+        // 这样可以确保在更新单个支付配置时，其他配置项不会被重置
         CreateNovelAppRequest.PaymentConfig paymentConfig = new CreateNovelAppRequest.PaymentConfig();
         if (appPayWithConfigDTO != null) {
             // normalPay
@@ -225,4 +229,285 @@ public class AppPayController {
         // 其它配置如有需要可补充
         return req;
     }
-} 
+    
+    /**
+     * 为创建单个支付配置专门创建的转换方法
+     * @param appPayWithConfigDTO 应用支付配置
+     * @param novelApp 应用信息
+     * @param request 创建请求
+     * @return CreateNovelAppRequest对象
+     */
+    private CreateNovelAppRequest convertToCreateNovelAppRequestForCreate(AppPayWithConfigDTO appPayWithConfigDTO, NovelApp novelApp, CreateAppPayRequest request) {
+        CreateNovelAppRequest req = new CreateNovelAppRequest();
+        CreateNovelAppRequest.BaseConfig baseConfig = new CreateNovelAppRequest.BaseConfig();
+        baseConfig.setAppName(novelApp.getAppName());
+        baseConfig.setAppCode(novelApp.getAppCode());
+        baseConfig.setPlatform(novelApp.getPlatform());
+        baseConfig.setVersion(novelApp.getVersion());
+        baseConfig.setProduct(novelApp.getProduct());
+        baseConfig.setCustomer(novelApp.getCustomer());
+        baseConfig.setAppid(novelApp.getAppid());
+        baseConfig.setTokenId(novelApp.getTokenId());
+        baseConfig.setCl(novelApp.getCl());
+        baseConfig.setMainTheme(novelApp.getMainTheme());
+        baseConfig.setSecondTheme(novelApp.getSecondTheme());
+        req.setBaseConfig(baseConfig);
+
+        CreateNovelAppRequest.CommonConfig commonConfig = new CreateNovelAppRequest.CommonConfig();
+        // buildCode从通用配置查库获取
+        AppCommonConfig dbCommonConfig = appCommonConfigService.getAppCommonConfig(novelApp.getAppid());
+        if (dbCommonConfig != null) {
+            commonConfig.setBuildCode(dbCommonConfig.getBuildCode());
+            commonConfig.setContact(dbCommonConfig.getContact());
+            commonConfig.setDouyinImId(dbCommonConfig.getDouyinImId());
+            commonConfig.setKuaishouAppToken(dbCommonConfig.getKuaishouAppToken());
+            commonConfig.setKuaishouClientId(dbCommonConfig.getKuaishouClientId());
+            commonConfig.setKuaishouClientSecret(dbCommonConfig.getKuaishouClientSecret());
+            commonConfig.setMineLoginType(dbCommonConfig.getMineLoginType());
+            commonConfig.setPayCardStyle(dbCommonConfig.getPayCardStyle());
+            commonConfig.setHomeCardStyle(dbCommonConfig.getHomeCardStyle());
+            commonConfig.setReaderLoginType(dbCommonConfig.getReaderLoginType());
+            commonConfig.setWeixinAppToken(dbCommonConfig.getWeixinAppToken());
+            commonConfig.setDouyinAppToken(dbCommonConfig.getDouyinAppToken());
+            commonConfig.setIaaMode(dbCommonConfig.getIaaMode());
+            commonConfig.setIaaDialogStyle(dbCommonConfig.getIaaDialogStyle());
+
+        }
+        req.setCommonConfig(commonConfig);
+
+        // 只设置需要创建的支付配置项
+        CreateNovelAppRequest.PaymentConfig paymentConfig = new CreateNovelAppRequest.PaymentConfig();
+        CreateNovelAppRequest.PayTypeConfig payTypeConfig = new CreateNovelAppRequest.PayTypeConfig();
+        payTypeConfig.setEnabled(request.getEnabled());
+        payTypeConfig.setGatewayAndroid(request.getGatewayAndroid() == null ? null : request.getGatewayAndroid().toString());
+        payTypeConfig.setGatewayIos(request.getGatewayIos() == null ? null : request.getGatewayIos().toString());
+
+        switch (request.getPayType()) {
+            case "normalPay":
+                paymentConfig.setNormalPay(payTypeConfig);
+                break;
+            case "orderPay":
+                paymentConfig.setOrderPay(payTypeConfig);
+                break;
+            case "renewPay":
+                paymentConfig.setRenewPay(payTypeConfig);
+                break;
+            case "douzuanPay":
+                paymentConfig.setDouzuanPay(payTypeConfig);
+                break;
+            case "wxVirtualPay":
+                paymentConfig.setWxVirtualPay(payTypeConfig);
+                break;
+        }
+        req.setPaymentConfig(paymentConfig);
+
+        CreateNovelAppRequest.DeliverConfig deliverConfig = new CreateNovelAppRequest.DeliverConfig();
+        deliverConfig.setDeliverId(novelApp.getDeliverId());
+        deliverConfig.setBannerId(novelApp.getBannerId());
+        req.setDeliverConfig(deliverConfig);
+        // 其它配置如有需要可补充
+        return req;
+    }
+    
+    /**
+     * 为更新单个支付配置专门创建的转换方法
+     * @param updatedPayConfig 更新的支付配置
+     * @param novelApp 应用信息
+     * @param request 更新请求
+     * @return CreateNovelAppRequest对象
+     */
+    private CreateNovelAppRequest convertToCreateNovelAppRequestForUpdate(AppPayWithConfigDTO updatedPayConfig, NovelApp novelApp, UpdateAppPayRequest request) {
+        CreateNovelAppRequest req = new CreateNovelAppRequest();
+        CreateNovelAppRequest.BaseConfig baseConfig = new CreateNovelAppRequest.BaseConfig();
+        baseConfig.setAppName(novelApp.getAppName());
+        baseConfig.setAppCode(novelApp.getAppCode());
+        baseConfig.setPlatform(novelApp.getPlatform());
+        baseConfig.setVersion(novelApp.getVersion());
+        baseConfig.setProduct(novelApp.getProduct());
+        baseConfig.setCustomer(novelApp.getCustomer());
+        baseConfig.setAppid(novelApp.getAppid());
+        baseConfig.setTokenId(novelApp.getTokenId());
+        baseConfig.setCl(novelApp.getCl());
+        baseConfig.setMainTheme(novelApp.getMainTheme());
+        baseConfig.setSecondTheme(novelApp.getSecondTheme());
+        req.setBaseConfig(baseConfig);
+
+        CreateNovelAppRequest.CommonConfig commonConfig = new CreateNovelAppRequest.CommonConfig();
+        // buildCode从通用配置查库获取
+        AppCommonConfig dbCommonConfig = appCommonConfigService.getAppCommonConfig(novelApp.getAppid());
+        if (dbCommonConfig != null) {
+            commonConfig.setBuildCode(dbCommonConfig.getBuildCode());
+            commonConfig.setContact(dbCommonConfig.getContact());
+            commonConfig.setDouyinImId(dbCommonConfig.getDouyinImId());
+            commonConfig.setKuaishouAppToken(dbCommonConfig.getKuaishouAppToken());
+            commonConfig.setKuaishouClientId(dbCommonConfig.getKuaishouClientId());
+            commonConfig.setKuaishouClientSecret(dbCommonConfig.getKuaishouClientSecret());
+            commonConfig.setMineLoginType(dbCommonConfig.getMineLoginType());
+            commonConfig.setPayCardStyle(dbCommonConfig.getPayCardStyle());
+            commonConfig.setHomeCardStyle(dbCommonConfig.getHomeCardStyle());
+            commonConfig.setReaderLoginType(dbCommonConfig.getReaderLoginType());
+            commonConfig.setWeixinAppToken(dbCommonConfig.getWeixinAppToken());
+            commonConfig.setDouyinAppToken(dbCommonConfig.getDouyinAppToken());
+            commonConfig.setIaaMode(dbCommonConfig.getIaaMode());
+            commonConfig.setIaaDialogStyle(dbCommonConfig.getIaaDialogStyle());
+
+        }
+        req.setCommonConfig(commonConfig);
+
+        // 只设置需要更新的支付配置项
+        CreateNovelAppRequest.PaymentConfig paymentConfig = new CreateNovelAppRequest.PaymentConfig();
+        CreateNovelAppRequest.PayTypeConfig payTypeConfig = new CreateNovelAppRequest.PayTypeConfig();
+        payTypeConfig.setEnabled(request.getEnabled());
+        payTypeConfig.setGatewayAndroid(request.getGatewayAndroid() == null ? null : request.getGatewayAndroid().toString());
+        payTypeConfig.setGatewayIos(request.getGatewayIos() == null ? null : request.getGatewayIos().toString());
+        
+        switch (request.getPayType()) {
+            case "normalPay":
+                paymentConfig.setNormalPay(payTypeConfig);
+                break;
+            case "orderPay":
+                paymentConfig.setOrderPay(payTypeConfig);
+                break;
+            case "renewPay":
+                paymentConfig.setRenewPay(payTypeConfig);
+                break;
+            case "douzuanPay":
+                paymentConfig.setDouzuanPay(payTypeConfig);
+                break;
+            case "wxVirtualPay":
+                paymentConfig.setWxVirtualPay(payTypeConfig);
+                break;
+        }
+        req.setPaymentConfig(paymentConfig);
+
+        CreateNovelAppRequest.DeliverConfig deliverConfig = new CreateNovelAppRequest.DeliverConfig();
+        deliverConfig.setDeliverId(novelApp.getDeliverId());
+        deliverConfig.setBannerId(novelApp.getBannerId());
+        req.setDeliverConfig(deliverConfig);
+        // 其它配置如有需要可补充
+        return req;
+    }
+    
+    /**
+     * 为删除单个支付配置专门创建的转换方法
+     * @param appPayWithConfigDTO 应用支付配置
+     * @param novelApp 应用信息
+     * @param payType 支付类型
+     * @return CreateNovelAppRequest对象
+     */
+    private CreateNovelAppRequest convertToCreateNovelAppRequestForDelete(AppPayWithConfigDTO appPayWithConfigDTO, NovelApp novelApp, String payType) {
+        CreateNovelAppRequest req = new CreateNovelAppRequest();
+        CreateNovelAppRequest.BaseConfig baseConfig = new CreateNovelAppRequest.BaseConfig();
+        baseConfig.setAppName(novelApp.getAppName());
+        baseConfig.setAppCode(novelApp.getAppCode());
+        baseConfig.setPlatform(novelApp.getPlatform());
+        baseConfig.setVersion(novelApp.getVersion());
+        baseConfig.setProduct(novelApp.getProduct());
+        baseConfig.setCustomer(novelApp.getCustomer());
+        baseConfig.setAppid(novelApp.getAppid());
+        baseConfig.setTokenId(novelApp.getTokenId());
+        baseConfig.setCl(novelApp.getCl());
+        baseConfig.setMainTheme(novelApp.getMainTheme());
+        baseConfig.setSecondTheme(novelApp.getSecondTheme());
+        req.setBaseConfig(baseConfig);
+
+        CreateNovelAppRequest.CommonConfig commonConfig = new CreateNovelAppRequest.CommonConfig();
+        // buildCode从通用配置查库获取
+        AppCommonConfig dbCommonConfig = appCommonConfigService.getAppCommonConfig(novelApp.getAppid());
+        if (dbCommonConfig != null) {
+            commonConfig.setBuildCode(dbCommonConfig.getBuildCode());
+            commonConfig.setContact(dbCommonConfig.getContact());
+            commonConfig.setDouyinImId(dbCommonConfig.getDouyinImId());
+            commonConfig.setKuaishouAppToken(dbCommonConfig.getKuaishouAppToken());
+            commonConfig.setKuaishouClientId(dbCommonConfig.getKuaishouClientId());
+            commonConfig.setKuaishouClientSecret(dbCommonConfig.getKuaishouClientSecret());
+            commonConfig.setMineLoginType(dbCommonConfig.getMineLoginType());
+            commonConfig.setPayCardStyle(dbCommonConfig.getPayCardStyle());
+            commonConfig.setHomeCardStyle(dbCommonConfig.getHomeCardStyle());
+            commonConfig.setReaderLoginType(dbCommonConfig.getReaderLoginType());
+            commonConfig.setWeixinAppToken(dbCommonConfig.getWeixinAppToken());
+            commonConfig.setDouyinAppToken(dbCommonConfig.getDouyinAppToken());
+            commonConfig.setIaaMode(dbCommonConfig.getIaaMode());
+            commonConfig.setIaaDialogStyle(dbCommonConfig.getIaaDialogStyle());
+        }
+        req.setCommonConfig(commonConfig);
+
+        // 只设置需要删除的支付配置项
+        CreateNovelAppRequest.PaymentConfig paymentConfig = new CreateNovelAppRequest.PaymentConfig();
+        if (appPayWithConfigDTO != null) {
+            // normalPay
+            if (appPayWithConfigDTO.getNormalPay() != null) {
+                CreateNovelAppRequest.PayTypeConfig normalPay = new CreateNovelAppRequest.PayTypeConfig();
+                normalPay.setEnabled(appPayWithConfigDTO.getNormalPay().getEnabled());
+                normalPay.setGatewayAndroid(appPayWithConfigDTO.getNormalPay().getGatewayAndroid() == null ? null : appPayWithConfigDTO.getNormalPay().getGatewayAndroid().toString());
+                normalPay.setGatewayIos(appPayWithConfigDTO.getNormalPay().getGatewayIos() == null ? null : appPayWithConfigDTO.getNormalPay().getGatewayIos().toString());
+                
+                // 如果是删除的支付类型，则设置为禁用
+                if ("normalPay".equals(payType)) {
+                    normalPay.setEnabled(false);
+                }
+                paymentConfig.setNormalPay(normalPay);
+            }
+            // orderPay
+            if (appPayWithConfigDTO.getOrderPay() != null) {
+                CreateNovelAppRequest.PayTypeConfig orderPay = new CreateNovelAppRequest.PayTypeConfig();
+                orderPay.setEnabled(appPayWithConfigDTO.getOrderPay().getEnabled());
+                orderPay.setGatewayAndroid(appPayWithConfigDTO.getOrderPay().getGatewayAndroid() == null ? null : appPayWithConfigDTO.getOrderPay().getGatewayAndroid().toString());
+                orderPay.setGatewayIos(appPayWithConfigDTO.getOrderPay().getGatewayIos() == null ? null : appPayWithConfigDTO.getOrderPay().getGatewayIos().toString());
+                
+                // 如果是删除的支付类型，则设置为禁用
+                if ("orderPay".equals(payType)) {
+                    orderPay.setEnabled(false);
+                }
+                paymentConfig.setOrderPay(orderPay);
+            }
+            // renewPay
+            if (appPayWithConfigDTO.getRenewPay() != null) {
+                CreateNovelAppRequest.PayTypeConfig renewPay = new CreateNovelAppRequest.PayTypeConfig();
+                renewPay.setEnabled(appPayWithConfigDTO.getRenewPay().getEnabled());
+                renewPay.setGatewayAndroid(appPayWithConfigDTO.getRenewPay().getGatewayAndroid() == null ? null : appPayWithConfigDTO.getRenewPay().getGatewayAndroid().toString());
+                renewPay.setGatewayIos(appPayWithConfigDTO.getRenewPay().getGatewayIos() == null ? null : appPayWithConfigDTO.getRenewPay().getGatewayIos().toString());
+                
+                // 如果是删除的支付类型，则设置为禁用
+                if ("renewPay".equals(payType)) {
+                    renewPay.setEnabled(false);
+                }
+                paymentConfig.setRenewPay(renewPay);
+            }
+            // douzuanPay
+            if (appPayWithConfigDTO.getDouzuanPay() != null) {
+                CreateNovelAppRequest.PayTypeConfig douzuanPay = new CreateNovelAppRequest.PayTypeConfig();
+                douzuanPay.setEnabled(appPayWithConfigDTO.getDouzuanPay().getEnabled());
+                douzuanPay.setGatewayAndroid(appPayWithConfigDTO.getDouzuanPay().getGatewayAndroid() == null ? null : appPayWithConfigDTO.getDouzuanPay().getGatewayAndroid().toString());
+                douzuanPay.setGatewayIos(appPayWithConfigDTO.getDouzuanPay().getGatewayIos() == null ? null : appPayWithConfigDTO.getDouzuanPay().getGatewayIos().toString());
+                
+                // 如果是删除的支付类型，则设置为禁用
+                if ("douzuanPay".equals(payType)) {
+                    douzuanPay.setEnabled(false);
+                }
+                paymentConfig.setDouzuanPay(douzuanPay);
+            }
+            // wxVirtualPay
+            if (appPayWithConfigDTO.getWxVirtualPay() != null) {
+                CreateNovelAppRequest.PayTypeConfig wxVirtualPay = new CreateNovelAppRequest.PayTypeConfig();
+                wxVirtualPay.setEnabled(appPayWithConfigDTO.getWxVirtualPay().getEnabled());
+                wxVirtualPay.setGatewayAndroid(appPayWithConfigDTO.getWxVirtualPay().getGatewayAndroid() == null ? null : appPayWithConfigDTO.getWxVirtualPay().getGatewayAndroid().toString());
+                wxVirtualPay.setGatewayIos(appPayWithConfigDTO.getWxVirtualPay().getGatewayIos() == null ? null : appPayWithConfigDTO.getWxVirtualPay().getGatewayIos().toString());
+                
+                // 如果是删除的支付类型，则设置为禁用
+                if ("wxVirtualPay".equals(payType)) {
+                    wxVirtualPay.setEnabled(false);
+                }
+                paymentConfig.setWxVirtualPay(wxVirtualPay);
+            }
+        }
+        req.setPaymentConfig(paymentConfig);
+
+        CreateNovelAppRequest.DeliverConfig deliverConfig = new CreateNovelAppRequest.DeliverConfig();
+        deliverConfig.setDeliverId(novelApp.getDeliverId());
+        deliverConfig.setBannerId(novelApp.getBannerId());
+        req.setDeliverConfig(deliverConfig);
+        // 其它配置如有需要可补充
+        return req;
+    }
+}

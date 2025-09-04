@@ -79,38 +79,73 @@ public class PayConfigFileOperationService extends AbstractConfigFileOperationSe
             // 读取现有文件内容
             String existingContent = new String(Files.readAllBytes(configPath), StandardCharsets.UTF_8);
 
-            // 构造当前平台的支付配置
-            java.util.LinkedHashMap<String, Object> platformPayConfigMap = new java.util.LinkedHashMap<>();
-
-            // 根据平台类型构建配置结构
-            String key = platformToKey(platform);
-            switch (key) {
+            // 将平台名称映射到配置文件中的键名
+            String platformKey = platformToKey(platform);
+            
+            // 使用Jackson解析JSON配置
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            // 配置ObjectMapper以允许单引号
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+            // 配置ObjectMapper以允许不带引号的字段名
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+            // 配置ObjectMapper以允许注释
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_COMMENTS, true);
+            // 配置ObjectMapper以允许尾随逗号
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_TRAILING_COMMA, true);
+            // 配置ObjectMapper以允许YAML注释样式
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_YAML_COMMENTS, true);
+            
+            String jsonPart = existingContent.substring(existingContent.indexOf("export default ") + "export default ".length());
+            if (jsonPart.endsWith(";")) {
+                jsonPart = jsonPart.substring(0, jsonPart.length() - 1);
+            }
+            
+            // 解析现有配置
+            java.util.Map<String, Object> existingConfigMap = objectMapper.readValue(jsonPart, java.util.Map.class);
+            
+            // 获取当前平台的配置
+            java.util.Map<String, Object> platformConfig = (java.util.Map<String, Object>) existingConfigMap.getOrDefault(platformKey, new java.util.LinkedHashMap<String, Object>());
+            
+            // 只更新请求中明确提供的支付类型配置，保持其他配置不变
+            // 注意：如果payConfig中的某个支付类型配置为null，表示不更新该配置项
+            if (payConfig.getNormalPay() != null) {
+                platformConfig.put("normal_pay", buildPayTypeMap(payConfig.getNormalPay()));
+            }
+            if (payConfig.getOrderPay() != null) {
+                platformConfig.put("order_pay", buildPayTypeMap(payConfig.getOrderPay()));
+            }
+            if (payConfig.getRenewPay() != null) {
+                platformConfig.put("renew_pay", buildPayTypeMap(payConfig.getRenewPay()));
+            }
+            
+            // 根据平台类型更新特定的支付类型配置
+            switch (platformKey) {
                 case "tt":
-                    platformPayConfigMap.put("normal_pay", buildPayTypeMap(payConfig.getNormalPay()));
-                    platformPayConfigMap.put("order_pay", buildPayTypeMap(payConfig.getOrderPay()));
-                    platformPayConfigMap.put("renew_pay", buildPayTypeMap(payConfig.getRenewPay()));
-                    platformPayConfigMap.put("dou_zuan_pay", buildPayTypeMap(payConfig.getDouzuanPay()));
-                    break;
-                case "ks":
-                    platformPayConfigMap.put("normal_pay", buildPayTypeMap(payConfig.getNormalPay()));
-                    platformPayConfigMap.put("order_pay", buildPayTypeMap(payConfig.getOrderPay()));
-                    platformPayConfigMap.put("renew_pay", buildPayTypeMap(payConfig.getRenewPay()));
+                    if (payConfig.getDouzuanPay() != null) {
+                        platformConfig.put("dou_zuan_pay", buildPayTypeMap(payConfig.getDouzuanPay()));
+                    }
                     break;
                 case "wx":
-                    platformPayConfigMap.put("normal_pay", buildPayTypeMap(payConfig.getNormalPay()));
-                    platformPayConfigMap.put("order_pay", buildPayTypeMap(payConfig.getOrderPay()));
-                    platformPayConfigMap.put("renew_pay", buildPayTypeMap(payConfig.getRenewPay()));
-                    platformPayConfigMap.put("wx_virtual_pay", buildPayTypeMap(payConfig.getWxVirtualPay()));
-                    break;
-                case "bd":
-                    platformPayConfigMap.put("normal_pay", buildPayTypeMap(payConfig.getNormalPay()));
-                    platformPayConfigMap.put("order_pay", buildPayTypeMap(payConfig.getOrderPay()));
+                    if (payConfig.getWxVirtualPay() != null) {
+                        platformConfig.put("wx_virtual_pay", buildPayTypeMap(payConfig.getWxVirtualPay()));
+                    }
                     break;
             }
-
-            // 更新现有配置，只更新指定平台的配置
-            String fileContent = updateExistingPayConfig(existingContent, platform, platformPayConfigMap);
             
+            // 更新指定平台的配置
+            existingConfigMap.put(platformKey, platformConfig);
+
+            // 重新生成配置文件内容
+            StringBuilder finalSb = new StringBuilder();
+            finalSb.append("export default ");
+            String jsonString = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(existingConfigMap);
+            // 统一使用带单引号的外层键名并修复缩进
+            jsonString = formatJsonString(jsonString);
+            finalSb.append(jsonString);
+            finalSb.append(";\n");
+            
+            String fileContent = finalSb.toString();
+
             // 写入更新后的内容
             Files.write(configPath, fileContent.getBytes(StandardCharsets.UTF_8));
 
@@ -119,7 +154,7 @@ public class PayConfigFileOperationService extends AbstractConfigFileOperationSe
         } catch (Exception e) {
             // 还原自身
             try { Files.deleteIfExists(configPath); } catch (Exception ignore) {}
-            throw new RuntimeException("payConfig配置文件更新失败: " + e.getMessage(), e);
+            throw new RuntimeException("Failed to update pay config file", e);
         }
     }
 
@@ -338,9 +373,116 @@ public class PayConfigFileOperationService extends AbstractConfigFileOperationSe
             
             return finalSb.toString();
         } catch (Exception e) {
-            taskLogger.log(null, "解析现有payConfig文件失败: " + e.getMessage(), CreateNovelLogType.ERROR);
-            throw new RuntimeException("无法解析现有pay配置文件内容: " + e.getMessage(), e);
+            // 如果解析失败，使用正则表达式方式更新配置（参考AdConfigFileOperationService的实现）
+            try {
+                return updateConfigWithRegex(existingContent, platform, platformPayConfigMap);
+            } catch (Exception ex) {
+                taskLogger.log(null, "解析现有payConfig文件失败: " + e.getMessage(), CreateNovelLogType.ERROR);
+                throw new RuntimeException("无法解析现有pay配置文件内容: " + e.getMessage(), e);
+            }
         }
+    }
+
+    /**
+     * 使用正则表达式方式更新配置（参考AdConfigFileOperationService的实现）
+     * @param existingContent 现有配置内容
+     * @param platform 平台
+     * @param platformPayConfigMap 平台支付配置
+     * @return 更新后的配置内容
+     */
+    private String updateConfigWithRegex(String existingContent, String platform, java.util.Map<String, Object> platformPayConfigMap) {
+        try {
+            // 将平台名称映射到配置文件中的键名
+            String platformKey = platformToKey(platform);
+            
+            // 构造新的平台配置JSON字符串
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            String newPlatformConfigJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(platformPayConfigMap);
+            // 统一使用不带引号的内层键名并修复缩进
+            newPlatformConfigJson = formatJsonString(newPlatformConfigJson);
+            
+            // 构造替换后的平台配置内容，外层键使用单引号
+            StringBuilder newPlatformConfigBuilder = new StringBuilder();
+            newPlatformConfigBuilder.append("'").append(platformKey).append("': ");
+            newPlatformConfigBuilder.append(newPlatformConfigJson);
+            
+            // 查找现有平台配置块（支持带引号和不带引号两种格式）
+            String platformPattern = "['\"]?" + platformKey + "['\"]?\\s*:\\s*\\{";
+            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(platformPattern);
+            java.util.regex.Matcher matcher = pattern.matcher(existingContent);
+            
+            if (matcher.find()) {
+                // 如果找到匹配项，查找配置块的开始和结束位置
+                int startMatchPos = matcher.start();
+                int openBracePos = existingContent.indexOf("{", matcher.end() - 1);
+                
+                if (openBracePos != -1) {
+                    // 查找匹配的结束大括号
+                    int closeBracePos = findMatchingBrace(existingContent, openBracePos);
+                    if (closeBracePos != -1) {
+                        // 替换平台配置块
+                        StringBuilder result = new StringBuilder();
+                        result.append(existingContent.substring(0, startMatchPos));
+                        result.append(newPlatformConfigBuilder.toString());
+                        result.append(existingContent.substring(closeBracePos + 1));
+                        
+                        // 确保结尾格式正确
+                        String resultStr = result.toString();
+                        if (!resultStr.endsWith(";\n")) {
+                            if (resultStr.endsWith(";")) {
+                                resultStr = resultStr.substring(0, resultStr.length() - 1) + "\n;";
+                            } else if (resultStr.endsWith("\n")) {
+                                resultStr = resultStr.substring(0, resultStr.length() - 1) + ";\n";
+                            } else {
+                                resultStr += ";\n";
+                            }
+                        }
+                        return resultStr;
+                    }
+                }
+            } else {
+                // 如果没有找到匹配项，则添加新的平台配置
+                // 查找配置对象的结束位置
+                int endIndex = existingContent.lastIndexOf("}");
+                if (endIndex > 0) {
+                    StringBuilder sb = new StringBuilder(existingContent);
+                    // 检查是否需要添加逗号
+                    if (sb.charAt(endIndex - 1) != '{' && sb.charAt(endIndex - 1) != ',') {
+                        sb.insert(endIndex, ",");
+                    }
+                    // 添加新的平台配置，外层键使用单引号
+                    sb.insert(endIndex, "\n    " + newPlatformConfigBuilder.toString() + "\n");
+                    return sb.toString();
+                }
+            }
+            
+            // 如果无法添加新平台，返回原始内容
+            return existingContent;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update config with regex", e);
+        }
+    }
+
+    /**
+     * 查找匹配的大括号
+     * @param content 内容
+     * @param startIndex 开始索引
+     * @return 匹配的大括号索引，如果未找到返回-1
+     */
+    private int findMatchingBrace(String content, int startIndex) {
+        int braceCount = 1;
+        for (int i = startIndex + 1; i < content.length(); i++) {
+            char c = content.charAt(i);
+            if (c == '{') {
+                braceCount++;
+            } else if (c == '}') {
+                braceCount--;
+                if (braceCount == 0) {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
     
     /**
@@ -513,6 +655,252 @@ public class PayConfigFileOperationService extends AbstractConfigFileOperationSe
         } catch (Exception e) {
             log.error("清空payConfig文件中平台配置失败: {}", e.getMessage(), e);
             throw new RuntimeException("清空payConfig文件中平台配置失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 将支付类型映射到配置文件中的键名
+     * @param payType 支付类型
+     * @return 配置文件中的键名
+     */
+    private String payTypeToKey(String payType) {
+        switch (payType) {
+            case "normalPay":
+                return "normal_pay";
+            case "orderPay":
+                return "order_pay";
+            case "renewPay":
+                return "renew_pay";
+            case "douzuanPay":
+                return "dou_zuan_pay";
+            case "wxVirtualPay":
+                return "wx_virtual_pay";
+            default:
+                return payType;
+        }
+    }
+    
+    /**
+     * 创建支付配置文件中某个平台下的某个支付类型配置项
+     * @param params 创建应用请求参数
+     * @param rollbackActions 回滚操作列表
+     * @param payType 支付类型
+     */
+    public void createPayConfig(CreateNovelAppRequest params, List<Runnable> rollbackActions, String payType) {
+        CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
+        CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
+        CreateNovelAppRequest.PaymentConfig paymentConfig = params.getPaymentConfig();
+
+        String buildCode = commonConfig.getBuildCode();
+        String platform = baseConfig.getPlatform();
+
+        String configDir = buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "payConfigs";
+        String configFile = configDir + File.separator + buildCode + ".js";
+        Path configPath = Paths.get(configFile);
+        String backupPath = configFile + ".bak";
+
+        try {
+            // 确保目录存在
+            Files.createDirectories(Paths.get(configDir));
+            // 如果文件不存在，直接返回，因为没有配置可以更新
+            if (!Files.exists(configPath)) {
+                return;
+            }
+
+            // 备份文件
+            Files.copy(configPath, Paths.get(backupPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            rollbackActions.add(() -> {
+                try {
+                    taskLogger.log(null, "回滚动作：还原payConfig.js", CreateNovelLogType.ERROR);
+                    Files.copy(Paths.get(backupPath), configPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    Files.deleteIfExists(Paths.get(backupPath));
+                } catch (Exception ignore) {}
+            });
+
+            // 读取现有文件内容
+            String existingContent = new String(Files.readAllBytes(configPath), StandardCharsets.UTF_8);
+
+            // 将平台名称映射到配置文件中的键名
+            String platformKey = platformToKey(platform);
+            // 将支付类型映射到配置文件中的键名
+            String payTypeKey = payTypeToKey(payType);
+            
+            // 使用Jackson解析JSON配置
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            // 配置ObjectMapper以允许单引号
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+            // 配置ObjectMapper以允许不带引号的字段名
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+            // 配置ObjectMapper以允许注释
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_COMMENTS, true);
+            // 配置ObjectMapper以允许尾随逗号
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_TRAILING_COMMA, true);
+            // 配置ObjectMapper以允许YAML注释样式
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_YAML_COMMENTS, true);
+            
+            String jsonPart = existingContent.substring(existingContent.indexOf("export default ") + "export default ".length());
+            if (jsonPart.endsWith(";")) {
+                jsonPart = jsonPart.substring(0, jsonPart.length() - 1);
+            }
+            
+            // 解析现有配置
+            java.util.Map<String, Object> existingConfigMap = objectMapper.readValue(jsonPart, java.util.Map.class);
+            
+            // 获取当前平台的配置
+            java.util.Map<String, Object> platformConfig = (java.util.Map<String, Object>) existingConfigMap.getOrDefault(platformKey, new java.util.LinkedHashMap<String, Object>());
+            
+            // 根据支付类型更新对应的配置项
+            switch (payType) {
+                case "normalPay":
+                    if (paymentConfig.getNormalPay() != null) {
+                        platformConfig.put("normal_pay", buildPayTypeMap(paymentConfig.getNormalPay()));
+                    }
+                    break;
+                case "orderPay":
+                    if (paymentConfig.getOrderPay() != null) {
+                        platformConfig.put("order_pay", buildPayTypeMap(paymentConfig.getOrderPay()));
+                    }
+                    break;
+                case "renewPay":
+                    if (paymentConfig.getRenewPay() != null) {
+                        platformConfig.put("renew_pay", buildPayTypeMap(paymentConfig.getRenewPay()));
+                    }
+                    break;
+                case "douzuanPay":
+                    if (paymentConfig.getDouzuanPay() != null) {
+                        platformConfig.put("dou_zuan_pay", buildPayTypeMap(paymentConfig.getDouzuanPay()));
+                    }
+                    break;
+                case "wxVirtualPay":
+                    if (paymentConfig.getWxVirtualPay() != null) {
+                        platformConfig.put("wx_virtual_pay", buildPayTypeMap(paymentConfig.getWxVirtualPay()));
+                    }
+                    break;
+            }
+            
+            // 更新指定平台的配置
+            existingConfigMap.put(platformKey, platformConfig);
+
+            // 重新生成配置文件内容
+            StringBuilder finalSb = new StringBuilder();
+            finalSb.append("export default ");
+            String jsonString = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(existingConfigMap);
+            // 统一使用带单引号的外层键名并修复缩进
+            jsonString = formatJsonString(jsonString);
+            finalSb.append(jsonString);
+            finalSb.append(";\n");
+            
+            String fileContent = finalSb.toString();
+
+            // 写入更新后的内容
+            Files.write(configPath, fileContent.getBytes(StandardCharsets.UTF_8));
+
+            // 操作成功后删除.bak
+            try { Files.deleteIfExists(Paths.get(backupPath)); } catch (Exception ignore) {}
+        } catch (Exception e) {
+            // 还原自身
+            try { Files.deleteIfExists(configPath); } catch (Exception ignore) {}
+            throw new RuntimeException("Failed to create pay config item", e);
+        }
+    }
+
+    /**
+     * 删除支付配置文件中某个平台下的某个支付类型配置项
+     */
+    public void deletePayConfig(CreateNovelAppRequest params, List<Runnable> rollbackActions,String payType) {
+        CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
+        CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
+        CreateNovelAppRequest.PaymentConfig paymentConfig = params.getPaymentConfig();
+
+        String buildCode = commonConfig.getBuildCode();
+        String platform = baseConfig.getPlatform();
+
+
+        String configDir = buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "payConfigs";
+        String configFile = configDir + File.separator + buildCode + ".js";
+        Path configPath = Paths.get(configFile);
+        String backupPath = configFile + ".bak";
+
+        try {
+            // 确保目录存在
+            Files.createDirectories(Paths.get(configDir));
+            // 如果文件不存在，直接返回，因为没有配置可以更新
+            if (!Files.exists(configPath)) {
+                return;
+            }
+
+            // 备份文件
+            Files.copy(configPath, Paths.get(backupPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            rollbackActions.add(() -> {
+                try {
+                    taskLogger.log(null, "回滚动作：还原payConfig.js", CreateNovelLogType.ERROR);
+                    Files.copy(Paths.get(backupPath), configPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    Files.deleteIfExists(Paths.get(backupPath));
+                } catch (Exception ignore) {}
+            });
+
+            // 读取现有文件内容
+            String existingContent = new String(Files.readAllBytes(configPath), StandardCharsets.UTF_8);
+
+            // 将平台名称映射到配置文件中的键名
+            String platformKey = platformToKey(platform);
+            // 将支付类型映射到配置文件中的键名
+            String payTypeKey = payTypeToKey(payType);
+            
+            // 使用Jackson解析JSON配置
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            // 配置ObjectMapper以允许单引号
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+            // 配置ObjectMapper以允许不带引号的字段名
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+            // 配置ObjectMapper以允许注释
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_COMMENTS, true);
+            // 配置ObjectMapper以允许尾随逗号
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_TRAILING_COMMA, true);
+            // 配置ObjectMapper以允许YAML注释样式
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_YAML_COMMENTS, true);
+            
+            String jsonPart = existingContent.substring(existingContent.indexOf("export default ") + "export default ".length());
+            if (jsonPart.endsWith(";")) {
+                jsonPart = jsonPart.substring(0, jsonPart.length() - 1);
+            }
+            
+            // 解析现有配置
+            java.util.Map<String, Object> existingConfigMap = objectMapper.readValue(jsonPart, java.util.Map.class);
+            
+            // 获取当前平台的配置
+            java.util.Map<String, Object> platformConfig = (java.util.Map<String, Object>) existingConfigMap.getOrDefault(platformKey, new java.util.LinkedHashMap<String, Object>());
+            
+            // 创建一个新的支付类型配置，只设置enable为false
+            java.util.Map<String, Object> disabledPayTypeConfig = new java.util.LinkedHashMap<>();
+            disabledPayTypeConfig.put("enable", false);
+            
+            // 更新指定支付类型的配置
+            platformConfig.put(payTypeKey, disabledPayTypeConfig);
+            
+            // 更新指定平台的配置
+            existingConfigMap.put(platformKey, platformConfig);
+
+            // 重新生成配置文件内容
+            StringBuilder finalSb = new StringBuilder();
+            finalSb.append("export default ");
+            String jsonString = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(existingConfigMap);
+            // 统一使用带单引号的外层键名并修复缩进
+            jsonString = formatJsonString(jsonString);
+            finalSb.append(jsonString);
+            finalSb.append(";\n");
+            
+            String fileContent = finalSb.toString();
+
+            // 写入更新后的内容
+            Files.write(configPath, fileContent.getBytes(StandardCharsets.UTF_8));
+
+            // 操作成功后删除.bak
+            try { Files.deleteIfExists(Paths.get(backupPath)); } catch (Exception ignore) {}
+        } catch (Exception e) {
+            // 还原自身
+            try { Files.deleteIfExists(configPath); } catch (Exception ignore) {}
+            throw new RuntimeException("Failed to delete pay config item", e);
         }
     }
 }

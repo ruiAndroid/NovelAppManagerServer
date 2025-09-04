@@ -91,6 +91,18 @@ public class NovelAppController {
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
     @OperationLog(opType = OpType.UPDATE_CODE, description = "修改小说应用")
     public Result<NovelApp> updateNovelApp(@Valid @RequestBody NovelApp novelApp) {
+        // 版本号校验逻辑
+        NovelApp existingApp = novelAppService.getByAppId(novelApp.getAppid());
+        if (existingApp != null) {
+            String existingVersion = existingApp.getVersion();
+            String newVersion = novelApp.getVersion();
+            
+            // 比较版本号
+            if (compareVersion(newVersion, existingVersion) < 0) {
+                return Result.error("当前版本不能小于最新版本号");
+            }
+        }
+        
         java.util.List<Runnable> rollbackActions = new java.util.ArrayList<>();
         try {
             // 1. 数据库操作
@@ -191,5 +203,35 @@ public class NovelAppController {
             }
             return Result.error("应用删除失败: " + e.getMessage());
         }
+    }
+    
+    /**
+     * 比较两个版本号
+     * @param version1 新版本号
+     * @param version2 旧版本号
+     * @return 如果version1 > version2返回1，相等返回0，小于返回-1
+     */
+    private int compareVersion(String version1, String version2) {
+        if (version1 == null || version2 == null) {
+            return 0; // 如果任一版本号为空，则认为相等
+        }
+        
+        String[] v1Parts = version1.split("\\.");
+        String[] v2Parts = version2.split("\\.");
+        
+        int length = Math.max(v1Parts.length, v2Parts.length);
+        
+        for (int i = 0; i < length; i++) {
+            int v1Part = i < v1Parts.length ? Integer.parseInt(v1Parts[i]) : 0;
+            int v2Part = i < v2Parts.length ? Integer.parseInt(v2Parts[i]) : 0;
+            
+            if (v1Part > v2Part) {
+                return 1;
+            } else if (v1Part < v2Part) {
+                return -1;
+            }
+        }
+        
+        return 0;
     }
 }

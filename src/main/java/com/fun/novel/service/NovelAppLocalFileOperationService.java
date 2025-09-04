@@ -23,7 +23,11 @@ public interface NovelAppLocalFileOperationService {
     void updateCommonConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions);
 
     void updatePayConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions);
+    void createPayConfig(CreateNovelAppRequest createNovelAppRequest, List<Runnable> rollbackActions, String payType);
+    void deletePayConfig(CreateNovelAppRequest params, List<Runnable> rollbackActions,String payType);
 
     //删除所有本地代码文件相关的原子操作，所有操作成功才提交，否则全部回滚
     void deleteAppLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions,boolean isLast);
+
+
 }

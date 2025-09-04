@@ -43,8 +43,17 @@ public class AppCommonConfigController {
     public Result<AppCommonConfig> createAppCommonConfig(
             @Parameter(description = "应用通用配置信息", required = true)
             @Valid @RequestBody AppCommonConfigDTO dto) {
+
+        java.util.List<Runnable> rollbackActions = new java.util.ArrayList<>();
+
         try {
             AppCommonConfig config = appCommonConfigService.createAppCommonConfig(dto);
+            NovelApp novelApp = novelAppService.getByAppId(config.getAppId());
+
+            CreateNovelAppRequest params = convertToCreateNovelAppRequest(novelApp);
+
+            novelAppLocalFileOperationService.updateCommonConfigLocalCodeFiles(params, rollbackActions);
+
             return Result.success("创建成功", config);
         } catch (IllegalArgumentException e) {
             return Result.error(e.getMessage());

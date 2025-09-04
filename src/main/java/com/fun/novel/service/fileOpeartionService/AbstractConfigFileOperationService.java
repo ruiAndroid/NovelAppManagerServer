@@ -65,17 +65,23 @@ public abstract class AbstractConfigFileOperationService {
      */
     protected java.util.Map<String, Object> buildPayTypeMap(CreateNovelAppRequest.PayTypeConfig payTypeConfig) {
         java.util.Map<String, Object> map = new java.util.LinkedHashMap<>();
-        if (payTypeConfig == null || !Boolean.TRUE.equals(payTypeConfig.getEnabled())) {
+        if (payTypeConfig == null) {
             map.put("enable", false);
         } else {
-            map.put("enable", true);
+            map.put("enable", Boolean.TRUE.equals(payTypeConfig.getEnabled()));
+            
+            // 即使enable为false，也处理gateway_id参数
             java.util.Map<String, Object> gatewayId = new java.util.LinkedHashMap<>();
             try {
                 gatewayId.put("android", payTypeConfig.getGatewayAndroid() == null ? 0 : Integer.parseInt(payTypeConfig.getGatewayAndroid()));
-            } catch (Exception e) { gatewayId.put("android", payTypeConfig.getGatewayAndroid()); }
+            } catch (Exception e) { 
+                gatewayId.put("android", payTypeConfig.getGatewayAndroid()); 
+            }
             try {
                 gatewayId.put("ios", payTypeConfig.getGatewayIos() == null ? 0 : Integer.parseInt(payTypeConfig.getGatewayIos()));
-            } catch (Exception e) { gatewayId.put("ios", payTypeConfig.getGatewayIos()); }
+            } catch (Exception e) { 
+                gatewayId.put("ios", payTypeConfig.getGatewayIos()); 
+            }
             map.put("gateway_id", gatewayId);
         }
         return map;
