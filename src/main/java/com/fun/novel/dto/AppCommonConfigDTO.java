@@ -60,4 +60,7 @@ public class AppCommonConfigDTO {
 
     @Schema(description = "是否屏蔽付费入口")
     private Boolean hidePayEntry;
+
+    @Schema(description = "是否屏蔽移动积分兑换入口")
+    private Boolean hideScoreExchange;
 }

@@ -42,7 +42,6 @@ public class AppWeijuController {
 
     @GetMapping("/banner/getBannerByBannerId")
     @Operation(summary = "根据bannerId获取Banner", description = "根据bannerId查询对应的Banner记录")
-    @OperationLog(opType = OpType.QUERY_CODE, description = "根据bannerId获取Banner")
     public Result<AppWeijuBanner> getBannerByBannerId(
             @Parameter(description = "Banner ID", required = true)
             @RequestParam String bannerId) {
@@ -86,7 +85,6 @@ public class AppWeijuController {
 
     @GetMapping("/deliver/getDeliverByDeliverId")
     @Operation(summary = "根据deliverId获取Deliver", description = "根据deliverId查询对应的Deliver记录")
-    @OperationLog(opType = OpType.QUERY_CODE, description = "根据deliverId查询对应的Deliver记录")
     public Result<AppWeijuDeliver> getDeliverByDeliverId(
             @Parameter(description = "Deliver ID", required = true)
             @RequestParam String deliverId) {

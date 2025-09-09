@@ -166,6 +166,8 @@ public class CreateNovelAppRequest {
         private Integer iaaDialogStyle;
         @Schema(description = "是否屏蔽支付入口")
         private Boolean hidePayEntry;
+        @Schema(description = "是否屏蔽移动积分入口")
+        private Boolean hideScoreExchange;
 
     }
 }

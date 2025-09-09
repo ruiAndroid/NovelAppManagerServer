@@ -89,6 +89,10 @@ public class AppCommonConfig {
     @TableField("hide_pay_entry")
     private Boolean hidePayEntry;
 
+    @Schema(description = "是否屏蔽移动积分兑换入口")
+    @TableField("hide_score_exchange")
+    private Boolean hideScoreExchange;
+
     @Schema(description = "创建时间")
     @TableField("create_time")
     @JsonIgnore

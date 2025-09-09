@@ -110,6 +110,7 @@ public class CommonConfigFileOperationService extends AbstractConfigFileOperatio
                 iaaModeObj.put("dialogStyle", 2);
                 platformCommonConfigMap.put("iaaMode", iaaModeObj);
                 platformCommonConfigMap.put("hidePayEntry", false);
+                platformCommonConfigMap.put("hideScoreExchange", true);
                 
                 // 只对当前platform赋值
                 String key = platformToKey(platform);
@@ -128,6 +129,8 @@ public class CommonConfigFileOperationService extends AbstractConfigFileOperatio
                     iaaModeObj.put("dialogStyle", commonConfig.getIaaDialogStyle() != null ? commonConfig.getIaaDialogStyle() : 2);
                     // hidePayEntry
                     platformCommonConfigMap.put("hidePayEntry", commonConfig.getHidePayEntry() != null ? commonConfig.getHidePayEntry() : false);
+                    // hideScoreExchange
+                    platformCommonConfigMap.put("hideScoreExchange", commonConfig.getHideScoreExchange() != null ? commonConfig.getHideScoreExchange() : true);
                     // imId 仅tt
                     if ("tt".equals(key)) platformCommonConfigMap.put("imId", commonConfig.getDouyinImId() != null ? commonConfig.getDouyinImId() : "");
                 }
@@ -162,6 +165,7 @@ public class CommonConfigFileOperationService extends AbstractConfigFileOperatio
                         iaaModeObj.put("dialogStyle", 2);
                         pfMap.put("iaaMode", iaaModeObj);
                         pfMap.put("hidePayEntry", false);
+                        pfMap.put("hideScoreExchange", true);
 
                         // 平台特殊字段
                         if ("tt".equals(pf)) {
@@ -199,6 +203,7 @@ public class CommonConfigFileOperationService extends AbstractConfigFileOperatio
                     iaaModeObj.put("dialogStyle", commonConfig.getIaaDialogStyle() != null ? commonConfig.getIaaDialogStyle() : 2);
                     pfMap.put("iaaMode", iaaModeObj);
                     pfMap.put("hidePayEntry", commonConfig.getHidePayEntry() != null ? commonConfig.getHidePayEntry() : false);
+                    pfMap.put("hideScoreExchange", commonConfig.getHideScoreExchange() != null ? commonConfig.getHideScoreExchange() : true);
                     // imId 仅tt
                     if ("tt".equals(platformKey)) pfMap.put("imId", commonConfig.getDouyinImId() != null ? commonConfig.getDouyinImId() : "");
                 }

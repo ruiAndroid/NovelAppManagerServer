@@ -191,11 +191,11 @@ public class PreFileOperationService extends AbstractConfigFileOperationService{
                         String path = pageNode.get("path").asText();
                         ObjectNode styleNode = (ObjectNode) pageNode.get("style");
                         // navigationBarTitleText
-                        if (path.equals("pages/homePage/homePage") || path.equals("pages/bookPage/bookPage") || path.equals("pages/filterPage/filterPage") || path.equals("pages/minePage/minePage")) {
+                        if (path.equals("pages/homePage/homePage") || path.equals("pages/bookPage/bookPage") || path.equals("pages/filterPage/filterPage") || path.equals("pages/minePage/minePage")|| path.equals("pages/minePage/mineScoreExchange") || path.equals("pages/minePage/scoreExchangeRecord")) {
                             styleNode.put("navigationBarTitleText", baseConfig.getAppName());
                         }
                         // navigationBarBackgroundColor
-                        if (path.equals("pages/homePage/homePage") || path.equals("pages/bookPage/bookPage") || path.equals("pages/filterPage/filterPage") || path.equals("pages/detailPage/detailPage") || path.equals("pages/minePage/minePage")) {
+                        if (path.equals("pages/homePage/homePage") || path.equals("pages/bookPage/bookPage") || path.equals("pages/filterPage/filterPage") || path.equals("pages/detailPage/detailPage") || path.equals("pages/minePage/minePage") || path.equals("pages/minePage/mineScoreExchange")|| path.equals("pages/minePage/scoreExchangeRecord")) {
                             String secondTheme = baseConfig.getSecondTheme();
                             if (secondTheme != null && secondTheme.matches("#?[A-Fa-f0-9]{8}")) {
                                 // 转换#RRGGBBAA为#RRGGBB
