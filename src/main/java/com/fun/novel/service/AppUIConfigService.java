@@ -3,6 +3,8 @@ package com.fun.novel.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.fun.novel.entity.AppUIConfig;
 
+import java.util.List;
+
 public interface AppUIConfigService extends IService<AppUIConfig> {
     
     /**
@@ -11,6 +13,13 @@ public interface AppUIConfigService extends IService<AppUIConfig> {
      * @return UI配置信息
      */
     AppUIConfig getByAppId(String appid);
+    
+    /**
+     * 根据appid列表批量查询UI配置
+     * @param appIds 应用ID列表
+     * @return UI配置信息列表
+     */
+    List<AppUIConfig> getByAppIds(List<String> appIds);
     
     /**
      * 创建UI配置

@@ -20,6 +20,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/novel-ui")
@@ -69,7 +72,7 @@ public class AppUiController {
             //1.数据库操作
             AppUIConfig updatedConfig = appUIConfigService.updateAppUIConfig(appUIConfig);
             //通过config的appId 反向查询novelApp
-            NovelApp novelApp = novelAppService.getByAppId(updatedConfig.getAppid());
+            NovelApp novelApp = novelAppService.getByAppId(updatedConfig.getAppId());
 
 
             CreateNovelAppRequest params = convertToCreateNovelAppRequest(novelApp);
@@ -89,14 +92,14 @@ public class AppUiController {
     }
     
     @GetMapping("/deleteUiConfig")
-    @Operation(summary = "删除Ui配置", description = "根据appid删除Ui配置记录")
+    @Operation(summary = "删除Ui配置", description = "根据appId删除Ui配置记录")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1','ROLE_2')")
     @OperationLog(opType = OpType.DELETE_CODE, description = "删除Ui配置")
     public Result<String> deleteAppUiConfig(
             @Parameter(description = "应用ID", required = true)
-            @RequestParam String appid) {
+            @RequestParam String appId) {
         try {
-            boolean deleted = appUIConfigService.deleteAppUIConfigByAppId(appid);
+            boolean deleted = appUIConfigService.deleteAppUIConfigByAppId(appId);
             if (deleted) {
                 return Result.success("删除成功");
             } else {
@@ -127,6 +130,35 @@ public class AppUiController {
         }
     }
 
+    @GetMapping("/getUiConfigByAppName")
+    @Operation(summary = "根据应用名称获取Ui配置列表", description = "根据appName查询到所有同名的appid，并查询到对应的uiConfig，以数组形式返回")
+    @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1','ROLE_2')")
+    public Result<List<AppUIConfig>> getUiConfigByAppName(
+            @Parameter(description = "应用名称", required = true)
+            @RequestParam String appName) {
+        try {
+            // 根据应用名称获取所有应用
+            List<NovelApp> novelApps = novelAppService.getAppsByAppName(appName);
+            
+            // 如果没有找到应用，返回空数组
+            if (novelApps == null || novelApps.isEmpty()) {
+                return Result.success("查询成功", new ArrayList<>());
+            }
+            
+            // 收集所有应用的appid
+            List<String> appIds = novelApps.stream()
+                    .map(NovelApp::getAppid)
+                    .collect(Collectors.toList());
+            
+            // 根据appid列表批量查询对应的UI配置
+            List<AppUIConfig> uiConfigs = appUIConfigService.getByAppIds(appIds);
+            
+            return Result.success("查询成功", uiConfigs);
+        } catch (Exception e) {
+            return Result.error(500, "查询失败: " + e.getMessage());
+        }
+    }
+
     private CreateNovelAppRequest convertToCreateNovelAppRequest(NovelApp novelApp) {
         CreateNovelAppRequest req = new CreateNovelAppRequest();
         CreateNovelAppRequest.BaseConfig baseConfig = new CreateNovelAppRequest.BaseConfig();
@@ -152,8 +184,6 @@ public class AppUiController {
             commonConfig.setKuaishouClientId(dbCommonConfig.getKuaishouClientId());
             commonConfig.setKuaishouClientSecret(dbCommonConfig.getKuaishouClientSecret());
             commonConfig.setMineLoginType(dbCommonConfig.getMineLoginType());
-            commonConfig.setPayCardStyle(dbCommonConfig.getPayCardStyle());
-            commonConfig.setHomeCardStyle(dbCommonConfig.getHomeCardStyle());
             commonConfig.setReaderLoginType(dbCommonConfig.getReaderLoginType());
             commonConfig.setWeixinAppToken(dbCommonConfig.getWeixinAppToken());
             commonConfig.setDouyinAppToken(dbCommonConfig.getDouyinAppToken());

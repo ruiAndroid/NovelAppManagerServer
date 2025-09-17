@@ -205,8 +205,6 @@ public class AppAdController {
             commonConfig.setKuaishouClientId(dbCommonConfig.getKuaishouClientId());
             commonConfig.setKuaishouClientSecret(dbCommonConfig.getKuaishouClientSecret());
             commonConfig.setMineLoginType(dbCommonConfig.getMineLoginType());
-            commonConfig.setPayCardStyle(dbCommonConfig.getPayCardStyle());
-            commonConfig.setHomeCardStyle(dbCommonConfig.getHomeCardStyle());
             commonConfig.setReaderLoginType(dbCommonConfig.getReaderLoginType());
             commonConfig.setWeixinAppToken(dbCommonConfig.getWeixinAppToken());
             commonConfig.setDouyinAppToken(dbCommonConfig.getDouyinAppToken());

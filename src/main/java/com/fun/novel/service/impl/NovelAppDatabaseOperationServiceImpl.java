@@ -210,7 +210,7 @@ public class NovelAppDatabaseOperationServiceImpl implements NovelAppDatabaseOpe
         taskLogger.log(taskId, "[1-5] 开始更新app_ui_config表...", CreateNovelLogType.PROCESSING);
 
         AppUIConfig appUIConfig = new AppUIConfig();
-        appUIConfig.setAppid(appId);
+        appUIConfig.setAppId(appId);
         appUIConfig.setMainTheme(uiConfig.getMainTheme());
         appUIConfig.setSecondTheme(uiConfig.getSecondTheme());
         appUIConfig.setPayCardStyle(uiConfig.getPayCardStyle());

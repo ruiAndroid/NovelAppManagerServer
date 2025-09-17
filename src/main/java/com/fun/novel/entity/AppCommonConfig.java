@@ -49,14 +49,6 @@ public class AppCommonConfig {
     @TableField("weixin_app_token")
     private String weixinAppToken;
 
-    @Schema(description = "支付卡片样式")
-    @TableField("pay_card_style")
-    private Integer payCardStyle;
-    
-    @Schema(description = "首页卡片样式")
-    @TableField("home_card_style")
-    private Integer homeCardStyle;
-
 
     @NotNull(message = "阅读页登录类型不能为空")
     @Schema(description = "阅读页登录类型")

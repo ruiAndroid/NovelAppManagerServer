@@ -7,20 +7,33 @@ import com.fun.novel.mapper.AppUIConfigMapper;
 import com.fun.novel.service.AppUIConfigService;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class AppUIConfigServiceImpl extends ServiceImpl<AppUIConfigMapper, AppUIConfig> implements AppUIConfigService {
 
     @Override
-    public AppUIConfig getByAppId(String appId) {
+    public AppUIConfig getByAppId(String appid) {
         LambdaQueryWrapper<AppUIConfig> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(AppUIConfig::getAppid, appId);
+        queryWrapper.eq(AppUIConfig::getAppId, appid);
         return getOne(queryWrapper);
+    }
+
+    @Override
+    public List<AppUIConfig> getByAppIds(List<String> appIds) {
+        if (appIds == null || appIds.isEmpty()) {
+            return List.of();
+        }
+        
+        LambdaQueryWrapper<AppUIConfig> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.in(AppUIConfig::getAppId, appIds);
+        return list(queryWrapper);
     }
 
     @Override
     public AppUIConfig createAppUIConfig(AppUIConfig appUIConfig) {
         // 检查是否已存在该appid的配置
-        AppUIConfig existingConfig = getByAppId(appUIConfig.getAppid());
+        AppUIConfig existingConfig = getByAppId(appUIConfig.getAppId());
         if (existingConfig != null) {
             throw new IllegalArgumentException("该应用已存在UI配置");
         }
@@ -39,8 +52,8 @@ public class AppUIConfigServiceImpl extends ServiceImpl<AppUIConfigMapper, AppUI
         }
         
         // 检查appid是否被其他记录使用
-        if (!existingConfig.getAppid().equals(appUIConfig.getAppid())) {
-            AppUIConfig configWithSameAppId = getByAppId(appUIConfig.getAppid());
+        if (!existingConfig.getAppId().equals(appUIConfig.getAppId())) {
+            AppUIConfig configWithSameAppId = getByAppId(appUIConfig.getAppId());
             if (configWithSameAppId != null && !configWithSameAppId.getId().equals(appUIConfig.getId())) {
                 throw new IllegalArgumentException("该应用已存在UI配置");
             }
@@ -52,16 +65,16 @@ public class AppUIConfigServiceImpl extends ServiceImpl<AppUIConfigMapper, AppUI
     }
     
     @Override
-    public boolean deleteAppUIConfigByAppId(String appId) {
+    public boolean deleteAppUIConfigByAppId(String appid) {
         // 检查是否存在该配置
-        AppUIConfig existingConfig = getByAppId(appId);
+        AppUIConfig existingConfig = getByAppId(appid);
         if (existingConfig == null) {
             throw new IllegalArgumentException("UI配置不存在");
         }
         
         // 删除UI配置
         LambdaQueryWrapper<AppUIConfig> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(AppUIConfig::getAppid, appId);
+        queryWrapper.eq(AppUIConfig::getAppId, appid);
         return remove(queryWrapper);
     }
 }

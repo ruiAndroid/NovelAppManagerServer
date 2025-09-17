@@ -55,20 +55,6 @@ public class NovelAppController {
         return Result.success("获取成功", groupedApps);
     }
 
-    @GetMapping("/getByAppName")
-    @Operation(summary = "根据应用名查询应用信息", description = "根据应用名查询所有平台的应用信息")
-    @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
-    @OperationLog(opType = OpType.QUERY_CODE, description = "根据应用名查询应用信息")
-    public Result<List<NovelApp>> getNovelAppsByAppName(
-            @Parameter(description = "应用名称", required = true)
-            @RequestParam String appName) {
-        try {
-            List<NovelApp> novelApps = novelAppService.getAppsByAppName(appName);
-            return Result.success("获取成功", novelApps);
-        } catch (Exception e) {
-            return Result.error("获取应用失败: " + e.getMessage());
-        }
-    }
 
     @GetMapping("/getByAppId")
     @Operation(summary = "根据应用ID获取小说应用", description = "根据应用ID获取小说应用的详细信息")
@@ -150,8 +136,6 @@ public class NovelAppController {
             commonConfig.setKuaishouClientId(dbCommonConfig.getKuaishouClientId());
             commonConfig.setKuaishouClientSecret(dbCommonConfig.getKuaishouClientSecret());
             commonConfig.setMineLoginType(dbCommonConfig.getMineLoginType());
-            commonConfig.setPayCardStyle(dbCommonConfig.getPayCardStyle());
-            commonConfig.setHomeCardStyle(dbCommonConfig.getHomeCardStyle());
             commonConfig.setReaderLoginType(dbCommonConfig.getReaderLoginType());
             commonConfig.setWeixinAppToken(dbCommonConfig.getWeixinAppToken());
             commonConfig.setDouyinAppToken(dbCommonConfig.getDouyinAppToken());

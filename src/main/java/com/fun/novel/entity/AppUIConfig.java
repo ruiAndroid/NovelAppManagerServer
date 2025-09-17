@@ -21,7 +21,7 @@ public class AppUIConfig {
     @UniqueAppId
     @TableField("appid")
     @Schema(description = "应用ID")
-    private String appid;
+    private String appId;
 
     // 新增字段 main_theme
     @Schema(description = "主主题")
