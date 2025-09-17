@@ -23,6 +23,8 @@ public class NovelAppDatabaseOperationServiceImpl implements NovelAppDatabaseOpe
     @Autowired
     private AppCommonConfigService appCommonConfigService;
     @Autowired
+    private AppUIConfigService uiConfigService;
+    @Autowired
     private CreateNovelTaskLogger taskLogger;
 
     private static final int DB_STEP_DELAY_MS = 500;
@@ -35,6 +37,7 @@ public class NovelAppDatabaseOperationServiceImpl implements NovelAppDatabaseOpe
         CreateNovelAppRequest.PaymentConfig paymentConfig = params.getPaymentConfig();
         CreateNovelAppRequest.AdConfig adConfig = params.getAdConfig();
         CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
+        CreateNovelAppRequest.UiConfig uiConfig = params.getUiConfig();
         String appId = baseConfig.getAppid();
         //1.1 记录novel_app表
         taskLogger.log(taskId, "[1-1] 开始更新novel_app表...", CreateNovelLogType.PROCESSING);
@@ -51,8 +54,6 @@ public class NovelAppDatabaseOperationServiceImpl implements NovelAppDatabaseOpe
         novelApp.setTokenId(baseConfig.getTokenId());
         novelApp.setCl(baseConfig.getCl());
         taskLogger.log(taskId, "[1-1-2] 插入novel_app表theme信息", CreateNovelLogType.INFO);
-        novelApp.setMainTheme(baseConfig.getMainTheme());
-        novelApp.setSecondTheme(baseConfig.getSecondTheme());
         taskLogger.log(taskId, "[1-1-3] 插入novel_app表deliver信息", CreateNovelLogType.INFO);
         novelApp.setDeliverId(deliverConfig.getDeliverId());
         novelApp.setBannerId(deliverConfig.getBannerId());
@@ -205,6 +206,28 @@ public class NovelAppDatabaseOperationServiceImpl implements NovelAppDatabaseOpe
             taskLogger.log(taskId, "[1-4] 更新通用配置成功", CreateNovelLogType.SUCCESS);
         }
         taskLogger.log(taskId, "[1-4] app_common_config表更新成功", CreateNovelLogType.SUCCESS);
+        //1.5 记录UI配置 app_ui_config表
+        taskLogger.log(taskId, "[1-5] 开始更新app_ui_config表...", CreateNovelLogType.PROCESSING);
+
+        AppUIConfig appUIConfig = new AppUIConfig();
+        appUIConfig.setAppid(appId);
+        appUIConfig.setMainTheme(uiConfig.getMainTheme());
+        appUIConfig.setSecondTheme(uiConfig.getSecondTheme());
+        appUIConfig.setPayCardStyle(uiConfig.getPayCardStyle());
+        appUIConfig.setHomeCardStyle(uiConfig.getHomeCardStyle());
+        AppUIConfig existingUiConfig = uiConfigService.getByAppId(appId);
+        if (existingUiConfig == null){
+            taskLogger.log(taskId, "[1-5] 新增UI配置...", CreateNovelLogType.PROCESSING);
+            uiConfigService.createAppUIConfig(appUIConfig);
+            taskLogger.log(taskId, "[1-5] 新增UI配置成功", CreateNovelLogType.SUCCESS);
+        }else{
+            taskLogger.log(taskId, "[1-5] 更新UI配置...", CreateNovelLogType.PROCESSING);
+            uiConfigService.updateAppUIConfig(appUIConfig);
+            taskLogger.log(taskId, "[1-5] 更新UI配置成功", CreateNovelLogType.SUCCESS);
+        }
+
+
+
         try { Thread.sleep(DB_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
     }
 } 

@@ -70,16 +70,6 @@ public class NovelApp {
     @JsonIgnore
     private LocalDateTime updateTime;
 
-    // 新增字段 main_theme
-    @Schema(description = "主主题")
-    @TableField("main_theme")
-    private String mainTheme;
-
-    // 新增字段 second_theme
-    @Schema(description = "副主题")
-    @TableField("second_theme")
-    private String secondTheme;
-
     // deliver_id
     @Schema(description = "deliver_id")
     @TableField("deliver_id")

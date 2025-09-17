@@ -3,6 +3,8 @@ package com.fun.novel.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import org.checkerframework.checker.guieffect.qual.UI;
+
 import javax.validation.constraints.NotNull;
 
 @Data
@@ -27,6 +29,10 @@ public class CreateNovelAppRequest {
     @Schema(description = "通用配置")
     @JsonProperty("commonConfig")
     private CommonConfig commonConfig;
+
+    @Schema(description = "UI配置")
+    @JsonProperty("uiConfig")
+    private UiConfig uiConfig;
 
     @Data
     public static class BaseConfig {
@@ -169,5 +175,25 @@ public class CreateNovelAppRequest {
         @Schema(description = "是否屏蔽移动积分入口")
         private Boolean hideScoreExchange;
 
+    }
+
+    @Data
+    public static class UiConfig {
+        @NotNull
+        @Schema(description = "支付卡片样式")
+        private Integer payCardStyle;
+
+        @NotNull
+        @Schema(description = "首页卡片样式")
+        private Integer homeCardStyle;
+
+
+        @NotNull
+        @Schema(description = "主题色")
+        private String mainTheme;
+
+        @NotNull
+        @Schema(description = "第二主题色")
+        private String secondTheme;
     }
 }

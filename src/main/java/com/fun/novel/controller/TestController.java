@@ -18,7 +18,10 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/test")
 public class TestController {
-    
+
+
+
+
     @OperationLog(opType = OpType.QUERY_CODE, description = "查询测试数据")
     @GetMapping("/query")
     public Result<Map<String, Object>> queryTestData() {
@@ -44,4 +47,5 @@ public class TestController {
         result.put("message", "更新成功");
         return Result.success(result);
     }
+
 }

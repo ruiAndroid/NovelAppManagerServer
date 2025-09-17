@@ -484,63 +484,6 @@ public class PayConfigFileOperationService extends AbstractConfigFileOperationSe
         }
         return -1;
     }
-    
-    /**
-     * 格式化JSON字符串，外层键使用单引号，内层键不使用引号并修复缩进
-     * @param jsonString JSON字符串
-     * @return 格式化后的字符串
-     */
-    private static String formatJsonString(String jsonString) {
-        // 将带引号的键名替换为不带引号的键名（用于内层键）
-        jsonString = jsonString.replaceAll("\"([a-zA-Z_][a-zA-Z0-9_]*)\"\\s*:", "$1:");
-        
-        // 为外层键添加单引号 - 处理所有平台键
-        jsonString = jsonString.replaceAll("\"(tt|ks|wx|bd)\"\\s*:", "'$1':");
-        jsonString = jsonString.replaceAll("(\\{|,\\s+)\\b(tt|ks|wx|bd)\\b\\s*:", "$1'$2':");
-        // 特殊处理第一个键（对象开始后的第一个键）
-        jsonString = jsonString.replaceAll("\\{\\s*(tt|ks|wx|bd)\\s*:", "{'$1':");
-        
-        // 创建格式化的结果
-        StringBuilder result = new StringBuilder();
-        int indentLevel = 0;
-        String[] lines = jsonString.split("\n");
-        
-        for (String line : lines) {
-            line = line.trim();
-            if (line.isEmpty()) continue;
-            
-            // 判断是否是结束括号
-            if (line.startsWith("}") || line.startsWith("]")) {
-                indentLevel--;
-            }
-            
-            // 添加缩进
-            for (int i = 0; i < indentLevel; i++) {
-                result.append("    ");
-            }
-            
-            result.append(line).append("\n");
-            
-            // 判断是否是开始括号
-            if (line.endsWith("{") || line.endsWith("[")) {
-                indentLevel++;
-            }
-            
-            // 处理同时包含开始和结束括号的情况
-            if (line.contains("{") && line.contains("}")) {
-                // 同一行包含开始和结束，不改变缩进级别
-            }
-        }
-
-        // 返回结果，去掉最后的换行符
-        String formatted = result.toString();
-        if (formatted.endsWith("\n")) {
-            formatted = formatted.substring(0, formatted.length() - 1);
-        }
-        
-        return formatted;
-    }
-
     public void deletePayConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions, boolean isLast) {
         CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
         CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();

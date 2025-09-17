@@ -146,6 +146,8 @@ public class NovelAppResourceFileServiceImpl implements NovelAppResourceFileServ
                 processSvgFill(mineDir + File.separator + "mine_message_subscribe.svg", "id=\"我的-订阅关\"", mainTheme, rollbackActions, taskId, "mine_message_subscribe.svg");
                 processSvgFill(mineDir + File.separator + "mine_purchase_record.svg", "id=\"编组-2\"", mainTheme, rollbackActions, taskId, "mine_purchase_record.svg");
                 processSvgFill(mineDir + File.separator + "mine_set_icon.svg", "id=\"改svg合并\"", mainTheme, rollbackActions, taskId, "mine_set_icon.svg");
+                processSvgFill(mineDir + File.separator + "mine_score_exchange_icon.svg", "id=\"矩形\"", mainTheme, rollbackActions, taskId, "mine_score_exchange_icon.svg");
+                processSvgFill(mineDir + File.separator + "score_exchange_count.svg", "id=\"积分兑换-我的账号-默认\"", mainTheme, rollbackActions, taskId, "score_exchange_count.svg");
             } else if (withLogAndDelay) {
                 taskLogger.log(taskId, "未获取到主题色mainTheme，跳过SVG主题色替换", com.fun.novel.dto.CreateNovelLogType.INFO);
             }
@@ -245,6 +247,18 @@ public class NovelAppResourceFileServiceImpl implements NovelAppResourceFileServ
                 // 替换id="改svg合并"的g标签的fill属性为主题色
                 newContent = newContent.replaceAll(
                     "(<g[^>]*id=\\\"改svg合并\\\"[^>]*fill=\\\")#[A-Fa-f0-9]{6,8}(\\\"[^>]*>)",
+                    "$1" + themeColor + "$2"
+                );
+            } else if ("mine_score_exchange_icon.svg".equals(fileDesc)) {
+                // 替换id="矩形"的rect标签的fill属性为主题色
+                newContent = newContent.replaceAll(
+                    "(<rect[^>]*id=\\\"矩形\\\"[^>]*fill=\\\")#[A-Fa-f0-9]{6,8}(\\\"[^>]*>)",
+                    "$1" + themeColor + "$2"
+                );
+            } else if ("score_exchange_count.svg".equals(fileDesc)) {
+                // 替换id="积分兑换-我的账号-默认"的g标签的fill属性为主题色
+                newContent = newContent.replaceAll(
+                    "(<g[^>]*id=\\\"积分兑换-我的账号-默认\\\"[^>]*fill=\\\")#[A-Fa-f0-9]{6,8}(\\\"[^>]*>)",
                     "$1" + themeColor + "$2"
                 );
             }

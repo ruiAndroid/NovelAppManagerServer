@@ -137,8 +137,6 @@ public class NovelAppController {
         baseConfig.setAppid(novelApp.getAppid());
         baseConfig.setTokenId(novelApp.getTokenId());
         baseConfig.setCl(novelApp.getCl());
-        baseConfig.setMainTheme(novelApp.getMainTheme());
-        baseConfig.setSecondTheme(novelApp.getSecondTheme());
         req.setBaseConfig(baseConfig);
 
         CreateNovelAppRequest.CommonConfig commonConfig = new CreateNovelAppRequest.CommonConfig();

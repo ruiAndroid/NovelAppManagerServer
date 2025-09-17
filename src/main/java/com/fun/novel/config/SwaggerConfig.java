@@ -16,8 +16,8 @@ public class SwaggerConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("小说小程序管理系统")
-                        .description("小说小程序管理系统接口文档")
+                        .title("文曲")
+                        .description("文曲接口文档")
                         .version("1.0")
                         .license(new License()
                                 .name("Apache 2.0")

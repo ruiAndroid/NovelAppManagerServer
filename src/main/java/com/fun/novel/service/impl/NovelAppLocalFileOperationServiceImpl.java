@@ -30,6 +30,8 @@ public class NovelAppLocalFileOperationServiceImpl extends AbstractConfigFileOpe
     @Autowired
     private PreFileOperationService preFileOperationService;
 
+    @Autowired
+    private UiConfigFileOperationService uiConfigFileOperationService;
 
     @Override
     public void createNovelAppLocalCodeFiles(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions) {
@@ -100,6 +102,7 @@ public class NovelAppLocalFileOperationServiceImpl extends AbstractConfigFileOpe
         commonConfigFileOperationService.createCommonConfigLocalCodeFiles(taskId,params, rollbackActions);
 
         appConfigFileOperationService.updateAppConfigAndPackageFile(taskId,params, rollbackActions);
+        uiConfigFileOperationService.createUiConfigLocalCodeFiles(taskId,params, rollbackActions);
 
     }
 
