@@ -47,9 +47,16 @@ public class UiConfigFileOperationService extends AbstractConfigFileOperationSer
      * @param params          创建应用请求参数
      * @param rollbackActions 回滚操作列表
      */
-    public void updateUiConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions) {
+    public void updateUiConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions){
         CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
+        CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
+
+        CreateNovelAppRequest.UiConfig uiConfig = params.getUiConfig();
+
         String buildCode = commonConfig.getBuildCode();
+        String platform = baseConfig.getPlatform();
+        updateThemeFile(null, buildCode, uiConfig, rollbackActions, false);
+        createUiConfigFile(null, buildCode,platform, uiConfig, rollbackActions, false);
 
     }
 
@@ -183,7 +190,87 @@ public class UiConfigFileOperationService extends AbstractConfigFileOperationSer
         }
     }
 
-
+    /**
+     * 更新主题文件中的颜色值
+     */
+    private void updateThemeFile(String taskId, String buildCode, CreateNovelAppRequest.UiConfig uiConfig,
+                                 List<Runnable> rollbackActions, boolean withLogAndDelay) {
+        if (withLogAndDelay) {
+            taskLogger.log(taskId, "[2-5] 开始更新主题文件: " + buildWorkPath + File.separator + "src" + File.separator + "common" + File.separator + "styles" + File.separator + "theme.less", CreateNovelLogType.PROCESSING);
+            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        }
+        String themeFilePath = buildWorkPath + File.separator + "src" + File.separator + "common" + File.separator + "styles" + File.separator + "theme.less";
+        java.nio.file.Path themePath = java.nio.file.Paths.get(themeFilePath);
+        String backupPath = themeFilePath + ".bak";
+        try {
+            // 备份原文件
+            java.nio.file.Files.copy(themePath, java.nio.file.Paths.get(backupPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            // 立即添加回滚动作，确保后续任何失败都能回滚主题文件
+            rollbackActions.add(() -> {
+                try {
+                    taskLogger.log(taskId, "回滚动作：还原主题文件",CreateNovelLogType.ERROR);
+                    java.nio.file.Files.copy(java.nio.file.Paths.get(backupPath), themePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath));
+                } catch (Exception ignore) {}
+            });
+            taskLogger.log(taskId, "[2-5] 备份主题文件完成", CreateNovelLogType.INFO);
+            if (withLogAndDelay) {
+                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            }
+            
+            // 读取原内容
+            java.util.List<String> lines = java.nio.file.Files.readAllLines(themePath, java.nio.charset.StandardCharsets.UTF_8);
+            
+            // 构造新主题色变量
+            String mainTheme = uiConfig.getMainTheme();
+            String secondTheme = uiConfig.getSecondTheme();
+            String primaryColorLine = "@primary-color-" + buildCode + ": " + mainTheme + ";";
+            String secondColorLine = "@second-color-" + buildCode + ": " + secondTheme + ";";
+            
+            boolean foundPrimary = false, foundSecond = false;
+            int primaryLineIndex = -1, secondLineIndex = -1;
+            
+            // 查找现有的主题色配置行
+            for (int i = 0; i < lines.size(); i++) {
+                String line = lines.get(i);
+                if (line.startsWith("@primary-color-" + buildCode + ":")) {
+                    foundPrimary = true;
+                    primaryLineIndex = i;
+                }
+                if (line.startsWith("@second-color-" + buildCode + ":")) {
+                    foundSecond = true;
+                    secondLineIndex = i;
+                }
+            }
+            
+            // 更新或添加主题色配置
+            if (foundPrimary) {
+                lines.set(primaryLineIndex, primaryColorLine);
+            } else {
+                lines.add(primaryColorLine);
+            }
+            
+            if (foundSecond) {
+                lines.set(secondLineIndex, secondColorLine);
+            } else {
+                lines.add(secondColorLine);
+            }
+            
+            // 写回文件
+            java.nio.file.Files.write(themePath, lines, java.nio.charset.StandardCharsets.UTF_8);
+            taskLogger.log(taskId, "[2-5] 更新主题色变量完成", CreateNovelLogType.SUCCESS);
+            taskLogger.log(taskId, "[2-5] 更新内容：\n" + primaryColorLine + "\n" + secondColorLine, CreateNovelLogType.INFO);
+            if (withLogAndDelay) {
+                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            }
+            // 操作成功后删除theme.bak
+            try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath)); } catch (Exception ignore) {}
+        } catch (Exception e) {
+            // 还原自身
+            try { java.nio.file.Files.copy(java.nio.file.Paths.get(backupPath), themePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING); } catch (Exception ignore) {}
+            throw new RuntimeException("主题文件更新失败: " + e.getMessage(), e);
+        }
+    }
 
     private void createUiConfigFile(String taskId, String buildCode,String platform, CreateNovelAppRequest.UiConfig uiConfig, List<Runnable> rollbackActions, boolean withLogAndDelay) {
         if (withLogAndDelay) {

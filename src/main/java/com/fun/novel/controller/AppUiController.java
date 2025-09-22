@@ -199,6 +199,17 @@ public class AppUiController {
             commonConfig.setIaaDialogStyle(dbCommonConfig.getIaaDialogStyle());
         }
         req.setCommonConfig(commonConfig);
+        CreateNovelAppRequest.UiConfig uiConfig = new CreateNovelAppRequest.UiConfig();
+
+        AppUIConfig dbUiConfig = appUIConfigService.getByAppId(novelApp.getAppid());
+        if (dbUiConfig != null) {
+            uiConfig.setHomeCardStyle(dbUiConfig.getHomeCardStyle());
+            uiConfig.setPayCardStyle(dbUiConfig.getPayCardStyle());
+            uiConfig.setMainTheme(dbUiConfig.getMainTheme());
+            uiConfig.setSecondTheme(dbUiConfig.getSecondTheme());
+        }
+        req.setUiConfig(uiConfig);
+
         // 其它配置如有需要可补充
         return req;
     }

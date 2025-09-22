@@ -544,46 +544,55 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
             
             // 将平台名称映射到配置文件中的键名
             String platformKey = platformToKey(platform);
-            String quotedPlatformKey = "'" + platformKey + "'";
             
-            // 构造平台配置块的查找模式
-            // 匹配格式如: 'tt': {
-            String platformBlockPattern = "\\s*" + quotedPlatformKey + "\\s*:\\s*\\{";
-            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(platformBlockPattern);
-            java.util.regex.Matcher matcher = pattern.matcher(content);
+            // 解析配置文件内容
+            // 查找 AppConfig 对象开始位置
+            int appConfigStart = content.indexOf("AppConfig:");
+            if (appConfigStart == -1) {
+                appConfigStart = content.indexOf("AppConfig :");
+            }
             
-            if (matcher.find()) {
-                // 找到了平台配置块
-                int platformBlockStartIndex = matcher.start();
-                int openBracePos = matcher.end() - 1; // 开括号位置
+            if (appConfigStart != -1) {
+                // 查找平台配置块的开始位置
+                String platformBlockKey = "'" + platformKey + "':";
+                int platformBlockStart = content.indexOf(platformBlockKey, appConfigStart);
                 
-                // 查找匹配的结束大括号
-                int platformBlockEndIndex = findMatchingBrace(content, openBracePos);
-                if (platformBlockEndIndex != -1) {
-                    // 找到平台配置块的结束位置（包含结束大括号）
-                    platformBlockEndIndex += 1;
-                    
-                    // 处理逗号问题，确保删除配置块后语法仍然正确
-                    String beforeBlock = content.substring(0, platformBlockStartIndex);
-                    String afterBlock = content.substring(platformBlockEndIndex);
-                    
-                    // 移除beforeBlock末尾的逗号（如果存在）
-                    beforeBlock = beforeBlock.replaceAll(",\\s*$", "");
-                    
-                    // 移除afterBlock开头的逗号（如果存在）
-                    afterBlock = afterBlock.replaceFirst("^\\s*,", "");
-                    
-                    // 重新组合内容
-                    String newContent = beforeBlock + afterBlock;
-                    
-                    // 写入新内容
-                    Files.write(configPath, newContent.getBytes(StandardCharsets.UTF_8));
-                    
-                    // 操作成功后删除备份文件
-                    Files.deleteIfExists(Paths.get(backupPath));
-                    
-                    log.info("成功删除baseConfig文件中平台 {} 的配置: {}", platformKey, configPath.toString());
-                    return;
+                if (platformBlockStart != -1) {
+                    // 查找平台配置块的开始大括号
+                    int openBracePos = content.indexOf("{", platformBlockStart);
+                    if (openBracePos != -1) {
+                        // 查找匹配的结束大括号
+                        int closeBracePos = findMatchingBrace(content, openBracePos);
+                        if (closeBracePos != -1) {
+                            // 构造新的平台配置块内容（保留key但清空内容）
+                            String newPlatformBlock = "'" + platformKey + "': {}";
+                            
+                            // 替换旧的平台配置块
+                            String beforeBlock = content.substring(0, platformBlockStart);
+                            String afterBlock = content.substring(closeBracePos + 1);
+                            
+                            // 处理逗号问题，确保语法正确
+                            // 检查在afterBlock中是否有内容，如果有且不是以逗号或大括号开头，则需要添加逗号
+                            String trimmedAfterBlock = afterBlock.trim();
+                            if (!trimmedAfterBlock.isEmpty() && 
+                                !trimmedAfterBlock.startsWith(",") && 
+                                !trimmedAfterBlock.startsWith("}")) {
+                                newPlatformBlock += ",";
+                            }
+                            
+                            // 重新组合内容
+                            String newContent = beforeBlock + newPlatformBlock + afterBlock;
+                            
+                            // 写入新内容
+                            Files.write(configPath, newContent.getBytes(StandardCharsets.UTF_8));
+                            
+                            // 操作成功后删除备份文件
+                            Files.deleteIfExists(Paths.get(backupPath));
+                            
+                            log.info("成功清空baseConfig文件中平台 {} 的配置: {}", platformKey, configPath.toString());
+                            return;
+                        }
+                    }
                 }
             }
             
@@ -591,8 +600,8 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
             Files.deleteIfExists(Paths.get(backupPath));
             log.warn("未找到baseConfig文件中平台 {} 的配置块: {}", platformKey, configPath.toString());
         } catch (Exception e) {
-            log.error("删除baseConfig文件中平台配置失败: {}", e.getMessage(), e);
-            throw new RuntimeException("删除baseConfig文件中平台配置失败: " + e.getMessage(), e);
+            log.error("清空baseConfig文件中平台配置失败: {}", e.getMessage(), e);
+            throw new RuntimeException("清空baseConfig文件中平台配置失败: " + e.getMessage(), e);
         }
     }
     
