@@ -14,10 +14,6 @@ public class CreateNovelAppRequest {
     @JsonProperty("baseConfig")
     private BaseConfig baseConfig;
 
-    @Schema(description = "投放配置")
-    @JsonProperty("deliverConfig")
-    private DeliverConfig deliverConfig;
-
     @Schema(description = "支付配置")
     @JsonProperty("paymentConfig")
     private PaymentConfig paymentConfig;
@@ -64,23 +60,13 @@ public class CreateNovelAppRequest {
         @Schema(description = "cl")
         private String cl;
         @NotNull
-        @Schema(description = "主题色")
-        private String mainTheme;
-
-        @NotNull
-        @Schema(description = "第二主题色")
-        private String secondTheme;
-    }
-
-    @Data
-    public static class DeliverConfig {
-        @NotNull
         @Schema(description = "bannerId")
         private String bannerId;
         @NotNull
         @Schema(description = "deliverId")
         private String deliverId;
     }
+
 
     @Data
     public static class PaymentConfig {
@@ -142,9 +128,6 @@ public class CreateNovelAppRequest {
         private String contact;
         @Schema(description = "抖音IM ID，可为空")
         private String douyinImId;
-        @NotNull
-        @Schema(description = "首页卡片样式")
-        private Integer homeCardStyle;
         @Schema(description = "快手AppToken，可为空")
         private String kuaishouAppToken;
         @NotNull
@@ -156,9 +139,7 @@ public class CreateNovelAppRequest {
         @NotNull
         @Schema(description = "我的页登录类型")
         private String mineLoginType;
-        @NotNull
-        @Schema(description = "支付卡片样式")
-        private Integer payCardStyle;
+
         @NotNull
         @Schema(description = "阅读页登录类型")
         private String readerLoginType;

@@ -46,7 +46,7 @@ public class AdConfigFileOperationService extends AbstractConfigFileOperationSer
 
     private void createAdConfigFile(String taskId, String buildCode, String platform, CreateNovelAppRequest.AdConfig adConfig, List<Runnable> rollbackActions, boolean withLogAndDelay){
         if (withLogAndDelay) {
-            taskLogger.log(taskId, "[2-4-3] 开始处理adConfig配置文件: " + buildWorkPath + java.io.File.separator + "src" + java.io.File.separator + "modules" + java.io.File.separator + "mod_config" + java.io.File.separator + "adConfigs" + java.io.File.separator + buildCode + ".js", CreateNovelLogType.PROCESSING);
+            taskLogger.log(taskId, "[2-3-1] 开始处理adConfig配置文件: " + buildWorkPath + java.io.File.separator + "src" + java.io.File.separator + "modules" + java.io.File.separator + "mod_config" + java.io.File.separator + "adConfigs" + java.io.File.separator + buildCode + ".js", CreateNovelLogType.PROCESSING);
             try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
         }
         String configDir = buildWorkPath + java.io.File.separator + "src" + java.io.File.separator + "modules" + java.io.File.separator + "mod_config" + java.io.File.separator + "adConfigs";
@@ -221,7 +221,7 @@ public class AdConfigFileOperationService extends AbstractConfigFileOperationSer
             }
 
             Files.write(configPath, fileContent.getBytes(StandardCharsets.UTF_8));
-            taskLogger.log(taskId, "[2-4-3] adConfig配置文件写入完成", CreateNovelLogType.SUCCESS);
+            taskLogger.log(taskId, "[2-3-1] adConfig配置文件写入完成", CreateNovelLogType.SUCCESS);
             taskLogger.log(taskId, fileContent, CreateNovelLogType.INFO);
             if (withLogAndDelay) {
                 try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }

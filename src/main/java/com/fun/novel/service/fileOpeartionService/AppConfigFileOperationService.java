@@ -22,7 +22,7 @@ public class AppConfigFileOperationService extends AbstractConfigFileOperationSe
 
     private static final Logger log = LoggerFactory.getLogger(AppConfigFileOperationService.class);
 
-    public void updateAppConfigAndPackageFile(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions) {
+    public void createAppConfigAndPackageFile(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions) {
         CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
         CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
         CreateNovelAppRequest.PaymentConfig paymentConfig = params.getPaymentConfig();
@@ -30,8 +30,8 @@ public class AppConfigFileOperationService extends AbstractConfigFileOperationSe
         String buildCode = commonConfig.getBuildCode();
         String platform = baseConfig.getPlatform();
 
-        updateAppConfigFile(taskId, buildCode, rollbackActions,true);
-        updatePackageJsonFile(taskId, buildCode, platform, rollbackActions,true);
+        createAppConfigFile(taskId, buildCode, rollbackActions,true);
+        createPackageJsonFile(taskId, buildCode, platform, rollbackActions,true);
     }
 
     public void deleteAppConfigAndPackageFile(CreateNovelAppRequest params, List<Runnable> rollbackActions,boolean isLast){
@@ -42,9 +42,9 @@ public class AppConfigFileOperationService extends AbstractConfigFileOperationSe
     /**
      * 处理AppConfig.js文件
      */
-    private void updateAppConfigFile(String taskId, String buildCode, List<Runnable> rollbackActions, boolean withLogAndDelay) {
+    private void createAppConfigFile(String taskId, String buildCode, List<Runnable> rollbackActions, boolean withLogAndDelay) {
         if (withLogAndDelay) {
-            taskLogger.log(taskId, "[2-5] 开始处理AppConfig.js: " + buildWorkPath + java.io.File.separator + "src" + java.io.File.separator + "modules" + java.io.File.separator + "mod_config" + java.io.File.separator + "AppConfig.js", CreateNovelLogType.PROCESSING);
+            taskLogger.log(taskId, "[2-6-1] 开始处理AppConfig.js: " + buildWorkPath + java.io.File.separator + "src" + java.io.File.separator + "modules" + java.io.File.separator + "mod_config" + java.io.File.separator + "AppConfig.js", CreateNovelLogType.PROCESSING);
             try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
         }
         String configDir = buildWorkPath + java.io.File.separator + "src" + java.io.File.separator + "modules" + java.io.File.separator + "mod_config";
@@ -83,11 +83,14 @@ public class AppConfigFileOperationService extends AbstractConfigFileOperationSe
             String adVar = buildCode + "AdConfig";
             String deliverVar = buildCode + "DeliverConfig";
             String commonVar = buildCode + "CommonConfig";
+            String uiVar = buildCode + "UiConfig";
+
             String importBaseConfig = "import " + baseVar + " from './baseConfigs/" + buildCode + "';";
             String importPayConfig = "import " + payVar + " from './payConfigs/" + buildCode + "';";
             String importAdConfig = "import " + adVar + " from './adConfigs/" + buildCode + "';";
             String importDeliverConfig = "import " + deliverVar + " from './deliverConfigs/" + buildCode + "';";
             String importCommonConfig = "import " + commonVar + " from './commonConfigs/" + buildCode + "';";
+            String importUiConfig = "import " + uiVar + " from './uiConfigs/" + buildCode + "';";
             // 定义类型与导入语句映射
             java.util.LinkedHashMap<String, String> importMap = new java.util.LinkedHashMap<>();
             importMap.put("baseConfig", importBaseConfig);
@@ -95,6 +98,7 @@ public class AppConfigFileOperationService extends AbstractConfigFileOperationSe
             importMap.put("adConfig", importAdConfig);
             importMap.put("deliverConfig", importDeliverConfig);
             importMap.put("commonConfig", importCommonConfig);
+            importMap.put("uiConfig", importUiConfig);
             // 记录每种类型最后一行的下标
             java.util.Map<String, Integer> lastImportIndex = new java.util.HashMap<>();
             for (int i = 0; i < lines.size(); i++) {
@@ -181,12 +185,14 @@ public class AppConfigFileOperationService extends AbstractConfigFileOperationSe
             insertSwitchCaseCompat(lines, "loadCommonConfig", buildCode, commonVar);
             // 6. loadBrandConfig
             insertSwitchCaseCompat(lines, "loadBrandConfig", buildCode, baseVar);
+            //7.loadUiConfig
+            insertSwitchCaseCompat(lines, "loadUiConfig", buildCode, uiVar);
 
             // 写回文件
             StringBuilder sb = new StringBuilder();
             for (String line : lines) sb.append(line).append("\n");
             Files.write(configPath, sb.toString().getBytes(StandardCharsets.UTF_8));
-            taskLogger.log(taskId, "[2-5] AppConfig.js写入完成", CreateNovelLogType.SUCCESS);
+            taskLogger.log(taskId, "[2-6-1] AppConfig.js写入完成", CreateNovelLogType.SUCCESS);
             taskLogger.log(taskId, sb.toString(), CreateNovelLogType.INFO);
             if (withLogAndDelay) {
                 try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
@@ -203,9 +209,9 @@ public class AppConfigFileOperationService extends AbstractConfigFileOperationSe
     /**
      * 处理package.json文件
      */
-    private void updatePackageJsonFile(String taskId, String buildCode, String platform, List<Runnable> rollbackActions, boolean withLogAndDelay) {
+    private void createPackageJsonFile(String taskId, String buildCode, String platform, List<Runnable> rollbackActions, boolean withLogAndDelay) {
         if (withLogAndDelay) {
-            taskLogger.log(taskId, "[2-6] 开始处理package.json: " + buildWorkPath + java.io.File.separator + "package.json", CreateNovelLogType.PROCESSING);
+            taskLogger.log(taskId, "[2-6-2] 开始处理package.json: " + buildWorkPath + java.io.File.separator + "package.json", CreateNovelLogType.PROCESSING);
             try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
         }
         String packageJsonPath = buildWorkPath + java.io.File.separator + "package.json";
@@ -273,7 +279,7 @@ public class AppConfigFileOperationService extends AbstractConfigFileOperationSe
             // 写回文件
             String finalContent = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(root);
             Files.write(jsonPath, finalContent.getBytes(StandardCharsets.UTF_8));
-            taskLogger.log(taskId, "[2-6] package.json写入完成", CreateNovelLogType.SUCCESS);
+            taskLogger.log(taskId, "[2-6-2] package.json写入完成", CreateNovelLogType.SUCCESS);
             taskLogger.log(taskId, finalContent, CreateNovelLogType.INFO);
             if (withLogAndDelay) {
                 try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
@@ -336,6 +342,7 @@ public class AppConfigFileOperationService extends AbstractConfigFileOperationSe
             String importAdConfigLine = "import " + buildCode + "AdConfig from './adConfigs/" + buildCode + "';";
             String importDeliverConfigLine = "import " + buildCode + "DeliverConfig from './deliverConfigs/" + buildCode + "';";
             String importCommonConfigLine = "import " + buildCode + "CommonConfig from './commonConfigs/" + buildCode + "';";
+            String importUiConfigLine = "import " + buildCode + "UiConfig from './uiConfigs/" + buildCode + "';";
 
             // 构造getBrand方法中要删除的内容模式
             String brandCaseStart = "// #ifdef MP-" + buildCode.toUpperCase();
@@ -362,6 +369,9 @@ public class AppConfigFileOperationService extends AbstractConfigFileOperationSe
             String commonConfigCase = "case '" + buildCode + "':";
             String commonConfigReturn = "return " + buildCode + "CommonConfig;";
 
+            // 构造loadUiConfig方法中要删除的内容模式
+            String uiConfigCase = "case '" + buildCode + "':";
+            String uiConfigReturn = "return " + buildCode + "UiConfig;";
             // 过滤掉包含构建代码的行
             java.util.List<String> newLines = new java.util.ArrayList<>();
             boolean inBrandCaseBlock = false; // 用于跟踪是否在getBrand的case块中
@@ -374,7 +384,9 @@ public class AppConfigFileOperationService extends AbstractConfigFileOperationSe
                         trimmedLine.equals(importPayConfigLine) ||
                         trimmedLine.equals(importAdConfigLine) ||
                         trimmedLine.equals(importDeliverConfigLine) ||
-                        trimmedLine.equals(importCommonConfigLine)) {
+                        trimmedLine.equals(importCommonConfigLine) ||
+                        trimmedLine.equals(importUiConfigLine)
+                ) {
                     continue; // 跳过这些行
                 }
 
@@ -401,7 +413,9 @@ public class AppConfigFileOperationService extends AbstractConfigFileOperationSe
                         trimmedLine.equals(deliverConfigCase) ||
                         trimmedLine.equals(deliverConfigReturn) ||
                         trimmedLine.equals(commonConfigCase) ||
-                        trimmedLine.equals(commonConfigReturn)) {
+                        trimmedLine.equals(commonConfigReturn) ||
+                        trimmedLine.equals(uiConfigCase) ||
+                        trimmedLine.equals(uiConfigReturn)) {
                     continue; // 跳过这些行
                 }
 

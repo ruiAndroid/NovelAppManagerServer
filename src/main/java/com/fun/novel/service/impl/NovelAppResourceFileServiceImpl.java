@@ -94,6 +94,7 @@ public class NovelAppResourceFileServiceImpl implements NovelAppResourceFileServ
     private void doCreateImgFiles(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions, boolean withLogAndDelay) {
         String imgDir = buildWorkPath + File.separator + "src" + File.separator + "static";
         CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
+        CreateNovelAppRequest.UiConfig uiConfig = params.getUiConfig();
         String buildCode = commonConfig.getBuildCode();
         String imgSrcDir = imgDir + File.separator + "img-sample";
         String imgDestDir = imgDir + File.separator + "img-" + buildCode;
@@ -131,8 +132,7 @@ public class NovelAppResourceFileServiceImpl implements NovelAppResourceFileServ
                 try { Thread.sleep(RESOURCE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
             }
             // 复制完成后，处理SVG主题色
-            CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
-            String mainTheme = baseConfig != null ? baseConfig.getMainTheme() : null;
+            String mainTheme = uiConfig != null ? uiConfig.getMainTheme() : null;
             if (mainTheme != null && !mainTheme.isEmpty()) {
                 String errorSvgPath = imgDestDir + File.separator + "error" + File.separator + "error.svg";
                 String emptySvgPath = imgDestDir + File.separator + "error" + File.separator + "empty.svg";

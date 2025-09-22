@@ -88,6 +88,7 @@ public class NovelAppLocalFileOperationServiceImpl extends AbstractConfigFileOpe
         adConfigFileOperationService.deleteAdConfigLocalCodeFiles(params, rollbackActions,isLast);
         commonConfigFileOperationService.deleteCommonConfigLocalCodeFiles(params, rollbackActions,isLast);
         payConfigFileOperationService.deletePayConfigLocalCodeFiles(params, rollbackActions,isLast);
+        uiConfigFileOperationService.deleteUiConfigLocalCodeFiles(params, rollbackActions,isLast);
 
 
     }
@@ -101,7 +102,7 @@ public class NovelAppLocalFileOperationServiceImpl extends AbstractConfigFileOpe
         payConfigFileOperationService.createPayConfigLocalCodeFiles(taskId,params, rollbackActions);
         commonConfigFileOperationService.createCommonConfigLocalCodeFiles(taskId,params, rollbackActions);
 
-        appConfigFileOperationService.updateAppConfigAndPackageFile(taskId,params, rollbackActions);
+        appConfigFileOperationService.createAppConfigAndPackageFile(taskId,params, rollbackActions);
         uiConfigFileOperationService.createUiConfigLocalCodeFiles(taskId,params, rollbackActions);
 
     }

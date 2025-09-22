@@ -4,12 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fun.novel.entity.NovelApp;
 import com.fun.novel.mapper.NovelAppMapper;
-import com.fun.novel.service.NovelAppService;
-import com.fun.novel.service.AppAdService;
-import com.fun.novel.service.AppPayService;
-import com.fun.novel.service.AppWeijuBannerService;
-import com.fun.novel.service.AppWeijuDeliverService;
-import com.fun.novel.service.AppCommonConfigService;
+import com.fun.novel.service.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,7 +24,7 @@ public class NovelAppServiceImpl extends ServiceImpl<NovelAppMapper, NovelApp> i
     private final AppWeijuBannerService bannerService;
     private final AppWeijuDeliverService deliverService;
     private final AppCommonConfigService commonConfigService;
-
+    private final AppUIConfigService    uiConfigService;
     @Override
     @Transactional(rollbackFor = Exception.class)
     public NovelApp addNovelApp(NovelApp novelApp) {
@@ -101,8 +96,10 @@ public class NovelAppServiceImpl extends ServiceImpl<NovelAppMapper, NovelApp> i
                 deliverService.deleteByDeliverId(existingApp.getDeliverId());
                 log.info("已删除微距Deliver");
             }
-            
-            // 6. 最后删除应用本身
+
+            // 6. 删除UI配置
+            uiConfigService.deleteAppUIConfigByAppId(appId);
+            // 7. 最后删除应用本身
             boolean result = removeById(existingApp.getId());
             
             if (result) {

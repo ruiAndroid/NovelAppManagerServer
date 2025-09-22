@@ -1,5 +1,6 @@
 package com.fun.novel.service.fileOpeartionService;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fun.novel.dto.CreateNovelAppRequest;
 import com.fun.novel.dto.CreateNovelLogType;
 import org.slf4j.Logger;
@@ -7,6 +8,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 /**
@@ -28,11 +33,11 @@ public class UiConfigFileOperationService extends AbstractConfigFileOperationSer
     public void createUiConfigLocalCodeFiles(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions) {
         CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
         CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
-        CreateNovelAppRequest.PaymentConfig paymentConfig = params.getPaymentConfig();
+        CreateNovelAppRequest.UiConfig uiConfig = params.getUiConfig();
 
         String buildCode = commonConfig.getBuildCode();
         String platform = baseConfig.getPlatform();
-
+        createThemeFile(taskId, buildCode, uiConfig, rollbackActions, true);
         createUiConfigFile(taskId, buildCode,platform, params.getUiConfig(), rollbackActions, true);
     }
 
@@ -47,6 +52,137 @@ public class UiConfigFileOperationService extends AbstractConfigFileOperationSer
         String buildCode = commonConfig.getBuildCode();
 
     }
+
+    public void deleteUiConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions,boolean isLast) {
+        CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
+        CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
+        String buildCode = commonConfig.getBuildCode();
+        String platform = baseConfig.getPlatform();
+
+        deleteThemeFile(buildCode, rollbackActions, isLast);
+        deleteUiConfigFile(buildCode, platform, rollbackActions, isLast);
+
+    }
+    /**
+     * 删除指定appId的uiConfig配置
+     *
+     */
+    public void deleteUiConfigFile(String buildCode, String platform, List<Runnable> rollbackActions, boolean isLast) {
+
+        String configDir = buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "uiConfigs";
+        String configFile = configDir + File.separator + buildCode + ".js";
+        Path configPath = Paths.get(configFile);
+        String backupPath = configFile + ".bak";
+
+        try {
+            // 检查文件是否存在
+            if (!Files.exists(configPath)) {
+                log.warn("uiConfig文件不存在: {}", configFile);
+                return;
+            }
+
+            if (isLast) {
+                // 如果是最后一个平台，则直接删除整个文件
+                Files.copy(configPath, Paths.get(backupPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+                // 添加回滚动作
+                rollbackActions.add(() -> {
+                    try {
+                        taskLogger.log(null, "回滚动作：还原uiConfig文件", CreateNovelLogType.ERROR);
+                        Files.copy(Paths.get(backupPath), configPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                        Files.deleteIfExists(Paths.get(backupPath));
+                    } catch (Exception ignore) {}
+                });
+
+                // 删除文件
+                Files.deleteIfExists(configPath);
+
+                // 操作成功后删除备份文件
+                Files.deleteIfExists(Paths.get(backupPath));
+
+                log.info("成功删除uiConfig文件: {}", configFile);
+            } else {
+                // 如果不是最后一个平台，则只删除对应平台的配置块
+                deletePlatformUiConfig(configPath, platform, rollbackActions);
+            }
+        } catch (Exception e) {
+            log.error("删除uiConfig文件失败: {}", e.getMessage(), e);
+            throw new RuntimeException("删除uiConfig文件失败: " + e.getMessage(), e);
+        }
+
+    }
+
+    /**
+     * 处理主题文件
+     */
+    private void createThemeFile(String taskId, String buildCode, CreateNovelAppRequest.UiConfig uiConfig,
+                                 List<Runnable> rollbackActions, boolean withLogAndDelay) {
+        if (withLogAndDelay) {
+            taskLogger.log(taskId, "[2-5] 开始处理主题文件: " + buildWorkPath + File.separator + "src" + File.separator + "common" + File.separator + "styles" + File.separator + "theme.less", CreateNovelLogType.PROCESSING);
+            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        }
+        String themeFilePath = buildWorkPath + File.separator + "src" + File.separator + "common" + File.separator + "styles" + File.separator + "theme.less";
+        java.nio.file.Path themePath = java.nio.file.Paths.get(themeFilePath);
+        String backupPath = themeFilePath + ".bak";
+        try {
+            // 备份原文件
+            java.nio.file.Files.copy(themePath, java.nio.file.Paths.get(backupPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            // 立即添加回滚动作，确保后续任何失败都能回滚主题文件
+            rollbackActions.add(() -> {
+                try {
+                    taskLogger.log(taskId, "回滚动作：还原主题文件",CreateNovelLogType.ERROR);
+                    java.nio.file.Files.copy(java.nio.file.Paths.get(backupPath), themePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath));
+                } catch (Exception ignore) {}
+            });
+            taskLogger.log(taskId, "[2-5] 备份主题文件完成", CreateNovelLogType.INFO);
+            if (withLogAndDelay) {
+                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            }
+            // 读取原内容
+            java.util.List<String> lines = java.nio.file.Files.readAllLines(themePath, java.nio.charset.StandardCharsets.UTF_8);
+            // 构造新主题色变量
+            String mainTheme = uiConfig.getMainTheme();
+            String secondTheme = uiConfig.getSecondTheme();
+            String line1 = "@primary-color-" + buildCode + ": " + mainTheme + ";";
+            String line2 = "@second-color-" + buildCode + ": " + secondTheme + ";";
+            boolean foundPrimary = false, foundSecond = false;
+            for (int i = 0; i < lines.size(); i++) {
+                String line = lines.get(i).trim();
+                if (line.startsWith("@primary-color-" + buildCode + ":")) {
+                    foundPrimary = true;
+                }
+                if (line.startsWith("@second-color-" + buildCode + ":")) {
+                    foundSecond = true;
+                }
+            }
+
+            // 如果已经存在主题色配置，则忽略不处理
+            if (foundPrimary && foundSecond) {
+                taskLogger.log(taskId, "[2-5] 主题色变量已存在，跳过处理", CreateNovelLogType.SUCCESS);
+                // 操作成功后删除theme.bak
+                try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath)); } catch (Exception ignore) {}
+                return;
+            }
+
+            if (!foundPrimary) lines.add(line1);
+            if (!foundSecond) lines.add(line2);
+            // 写回文件
+            java.nio.file.Files.write(themePath, lines, java.nio.charset.StandardCharsets.UTF_8);
+            taskLogger.log(taskId, "[2-5] 新增主题色变量完成", CreateNovelLogType.SUCCESS);
+            taskLogger.log(taskId, "[2-5] 新增内容：\n" + line1 + "\n" + line2, CreateNovelLogType.INFO);
+            if (withLogAndDelay) {
+                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+            }
+            // 操作成功后删除theme.bak
+            try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath)); } catch (Exception ignore) {}
+        } catch (Exception e) {
+            // 还原自身
+            try { java.nio.file.Files.copy(java.nio.file.Paths.get(backupPath), themePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING); } catch (Exception ignore) {}
+            throw new RuntimeException("主题文件处理失败: " + e.getMessage(), e);
+        }
+    }
+
 
 
     private void createUiConfigFile(String taskId, String buildCode,String platform, CreateNovelAppRequest.UiConfig uiConfig, List<Runnable> rollbackActions, boolean withLogAndDelay) {
@@ -217,4 +353,131 @@ public class UiConfigFileOperationService extends AbstractConfigFileOperationSer
 
 
 
+    //删除主题文件
+    private void deleteThemeFile(String buildCode, List<Runnable> rollbackActions, boolean isLast) {
+        if(!isLast){
+            log.warn("删除主题文件，当前还存在其他平台小程序，不需要删除" );
+            return;
+        }
+        String themeConfigDir = buildWorkPath + File.separator + "src" + File.separator + "common" + File.separator + "styles";
+        String themeConfigFile = themeConfigDir + File.separator + "theme.less";
+        java.nio.file.Path themeConfigPath = java.nio.file.Paths.get(themeConfigFile);
+
+        try {
+            // 检查文件是否存在
+            if (!java.nio.file.Files.exists(themeConfigPath)) {
+                log.warn("主题文件不存在: {}", themeConfigFile);
+                return;
+            }
+
+            // 读取原内容
+            java.util.List<String> lines = java.nio.file.Files.readAllLines(themeConfigPath, java.nio.charset.StandardCharsets.UTF_8);
+
+            // 备份原文件
+            String backupPath = themeConfigFile + ".bak";
+            java.nio.file.Files.copy(themeConfigPath, java.nio.file.Paths.get(backupPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+            // 添加回滚动作
+            rollbackActions.add(() -> {
+                try {
+                    taskLogger.log(null, "回滚动作：还原主题文件", CreateNovelLogType.ERROR);
+                    java.nio.file.Files.copy(java.nio.file.Paths.get(backupPath), themeConfigPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath));
+                } catch (Exception ignore) {}
+            });
+
+            // 构造要删除的行
+            String primaryColorLine = "@primary-color-" + buildCode + ":";
+            String secondColorLine = "@second-color-" + buildCode + ":";
+
+            // 过滤掉包含构建代码的行
+            java.util.List<String> newLines = new java.util.ArrayList<>();
+            for (String line : lines) {
+                String trimmedLine = line.trim();
+                // 如果行不包含当前构建代码，则保留
+                if (!trimmedLine.startsWith(primaryColorLine) && !trimmedLine.startsWith(secondColorLine)) {
+                    newLines.add(line);
+                }
+            }
+
+            // 写入新内容
+            java.nio.file.Files.write(themeConfigPath, newLines, java.nio.charset.StandardCharsets.UTF_8);
+
+            // 操作成功后删除备份文件
+            java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath));
+
+            log.info("成功删除主题文件中的构建代码配置: {}", buildCode);
+        } catch (Exception e) {
+            log.error("删除主题文件配置失败: {}", e.getMessage(), e);
+            throw new RuntimeException("删除主题文件配置失败: " + e.getMessage(), e);
+        }
+    }
+
+
+    /**
+     * 删除指定平台的ui配置块
+     * @param configPath 配置文件路径
+     * @param platform 平台
+     * @param rollbackActions 回滚动作列表
+     */
+    private void deletePlatformUiConfig(Path configPath, String platform, List<Runnable> rollbackActions) {
+        try {
+            // 读取原内容
+            String content = new String(Files.readAllBytes(configPath), StandardCharsets.UTF_8);
+
+            // 备份原文件
+            String backupPath = configPath.toString() + ".bak";
+            Files.copy(configPath, Paths.get(backupPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+            // 添加回滚动作
+            rollbackActions.add(() -> {
+                try {
+                    taskLogger.log(null, "回滚动作：还原uiConfig文件", CreateNovelLogType.ERROR);
+                    Files.copy(Paths.get(backupPath), configPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    Files.deleteIfExists(Paths.get(backupPath));
+                } catch (Exception ignore) {}
+            });
+
+            // 将平台名称映射到配置文件中的键名
+            String platformKey = platformToKey(platform);
+
+            // 使用Jackson解析JSON配置
+            ObjectMapper objectMapper = new ObjectMapper();
+            // 配置ObjectMapper以允许单引号
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+            // 配置ObjectMapper以允许不带引号的字段名
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+
+            String jsonPart = content.substring(content.indexOf("export default ") + "export default ".length());
+            if (jsonPart.endsWith(";")) {
+                jsonPart = jsonPart.substring(0, jsonPart.length() - 1);
+            }
+
+            // 解析现有配置
+            java.util.Map<String, Object> existingConfigMap = objectMapper.readValue(jsonPart, java.util.Map.class);
+
+            // 清空指定平台的配置而不是删除整个平台配置块
+            existingConfigMap.put(platformKey, new java.util.LinkedHashMap<String, Object>());
+
+            // 重新生成配置文件内容
+            StringBuilder finalSb = new StringBuilder();
+            finalSb.append("export default ");
+            String jsonString = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(existingConfigMap);
+            // 统一使用带单引号的外层键名并修复缩进
+            jsonString = formatJsonString(jsonString);
+            finalSb.append(jsonString);
+            finalSb.append(";\n");
+
+            // 写入新内容
+            Files.write(configPath, finalSb.toString().getBytes(StandardCharsets.UTF_8));
+
+            // 操作成功后删除备份文件
+            Files.deleteIfExists(Paths.get(backupPath));
+
+            log.info("成功清空uiConfig文件中平台 {} 的配置: {}", platformKey, configPath.toString());
+        } catch (Exception e) {
+            log.error("清空uiConfig文件中平台配置失败: {}", e.getMessage(), e);
+            throw new RuntimeException("清空uiConfig文件中平台配置失败: " + e.getMessage(), e);
+        }
+    }
 }

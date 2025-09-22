@@ -102,6 +102,11 @@ public class AppWeijuBanner {
     @JsonProperty("ad_feedAd_switch")
     private String adFeedAdSwitch;
 
+    @TableField("ad_reading_switch")
+    @Schema(description = "ad reading 配置")
+    @JsonProperty("ad_reading_switch")
+    private String adReadingSwitch;
+
     @TableField("homepage_pop_01")
     @Schema(description = "首页弹窗01")
     @JsonProperty("homepage_pop_01")

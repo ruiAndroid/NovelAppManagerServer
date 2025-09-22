@@ -98,30 +98,114 @@ public abstract class AbstractConfigFileOperationService {
         String caseStr = "        case '" + buildCode + "':\n            return " + varName + ";";
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i);
-            if (line.contains("function " + funcName) || line.matches(".*(const|let)\\s+" + funcName + "\\s*=.*=>.*\\{")) {
-                // 找到switch
+            // 改进函数名匹配逻辑，确保能正确匹配各种形式的函数声明
+            if (line.contains("function " + funcName) || 
+                line.matches(".*(const|let)\\s+" + funcName + "\\s*=.*=>.*") || 
+                line.matches(".*" + funcName + "\\s*=.*=>.*") ||
+                line.matches(".*function\\s+" + funcName + ".*")) {
+                
+                // 找到函数开始位置后，寻找switch语句
                 int switchIdx = -1;
+                int funcStartIdx = i;
+                
+                // 找到函数体开始的 '{'
                 for (int j = i; j < lines.size(); j++) {
-                    if (lines.get(j).contains("switch")) {
+                    if (lines.get(j).contains("{")) {
+                        funcStartIdx = j;
+                        break;
+                    }
+                }
+                
+                // 在函数体内查找switch语句
+                int braceCount = 0;
+                boolean inFuncBody = false;
+                for (int j = funcStartIdx; j < lines.size(); j++) {
+                    String currentLine = lines.get(j).trim();
+                    
+                    if (currentLine.contains("{")) {
+                        if (!inFuncBody) {
+                            inFuncBody = true;
+                        } else {
+                            braceCount++;
+                        }
+                    }
+                    
+                    if (currentLine.contains("}")) {
+                        if (braceCount > 0) {
+                            braceCount--;
+                        } else if (inFuncBody) {
+                            // 函数体结束
+                            break;
+                        }
+                    }
+                    
+                    // 在函数体内查找switch语句
+                    if (inFuncBody && currentLine.contains("switch") && currentLine.contains("(")) {
                         switchIdx = j;
                         break;
                     }
                 }
+                
                 if (switchIdx != -1) {
+                    // 查找switch语句块的结束位置
+                    int switchEndIdx = -1;
+                    braceCount = 0;
+                    boolean inSwitchBlock = false;
+                    
+                    for (int k = switchIdx; k < lines.size(); k++) {
+                        String currentLine = lines.get(k);
+                        if (currentLine.contains("{") && !inSwitchBlock) {
+                            inSwitchBlock = true;
+                            continue;
+                        }
+                        
+                        if (inSwitchBlock) {
+                            if (currentLine.contains("{")) {
+                                braceCount++;
+                            }
+                            if (currentLine.contains("}")) {
+                                if (braceCount > 0) {
+                                    braceCount--;
+                                } else {
+                                    switchEndIdx = k;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
                     // 检查是否已存在该case
                     boolean already = false;
-                    int insertIdx = switchIdx + 1;
-                    while (insertIdx < lines.size() && !lines.get(insertIdx).contains("}")) {
-                        if (lines.get(insertIdx).contains("case '" + buildCode + "':")) {
-                            already = true;
-                            break;
+                    int insertIdx = switchIdx;
+                    
+                    if (switchEndIdx > switchIdx) {
+                        // 在switch语句块内查找是否已存在该case
+                        for (int k = switchIdx + 1; k < switchEndIdx; k++) {
+                            if (lines.get(k).contains("case '" + buildCode + "':")) {
+                                already = true;
+                                break;
+                            }
                         }
-                        insertIdx++;
-                    }
-                    if (!already) {
-                        lines.add(insertIdx, caseStr);
+                        
+                        // 如果未找到已存在的case，则在switch结束前插入
+                        if (!already) {
+                            // 找到合适的位置插入（在switch块结束前）
+                            insertIdx = switchEndIdx;
+                            
+                            // 向前查找合适的位置
+                            while (insertIdx > switchIdx + 1) {
+                                String prevLine = lines.get(insertIdx - 1).trim();
+                                if (!prevLine.equals("") && !prevLine.equals("}")) {
+                                    break;
+                                }
+                                insertIdx--;
+                            }
+                            
+                            lines.add(insertIdx, caseStr);
+                        }
                     }
                 }
+                // 处理完一个函数后跳出循环，避免重复处理
                 break;
             }
         }

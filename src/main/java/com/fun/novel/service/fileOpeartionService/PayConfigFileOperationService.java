@@ -166,7 +166,7 @@ public class PayConfigFileOperationService extends AbstractConfigFileOperationSe
                                     CreateNovelAppRequest.PaymentConfig payConfig, 
                                     List<Runnable> rollbackActions,boolean withLogAndDelay) {
         if (withLogAndDelay) {
-            taskLogger.log(taskId, "[2-4-4] 开始处理payConfig配置文件: " + buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "payConfigs" + File.separator + buildCode + ".js", CreateNovelLogType.PROCESSING);
+            taskLogger.log(taskId, "[2-4-1] 开始处理payConfig配置文件: " + buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "payConfigs" + File.separator + buildCode + ".js", CreateNovelLogType.PROCESSING);
             try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
         }
         String configDir = buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "payConfigs";
@@ -314,7 +314,7 @@ public class PayConfigFileOperationService extends AbstractConfigFileOperationSe
             }
             
             java.nio.file.Files.write(configPath, fileContent.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            taskLogger.log(taskId, "[2-4-4] payConfig配置文件写入完成", CreateNovelLogType.SUCCESS);
+            taskLogger.log(taskId, "[2-4-1] payConfig配置文件写入完成", CreateNovelLogType.SUCCESS);
             taskLogger.log(taskId, fileContent, CreateNovelLogType.INFO);
             if (withLogAndDelay) {
                 try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }

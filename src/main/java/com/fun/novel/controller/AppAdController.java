@@ -192,6 +192,8 @@ public class AppAdController {
         baseConfig.setAppid(novelApp.getAppid());
         baseConfig.setTokenId(novelApp.getTokenId());
         baseConfig.setCl(novelApp.getCl());
+        baseConfig.setDeliverId(novelApp.getDeliverId());
+        baseConfig.setBannerId(novelApp.getBannerId());
         req.setBaseConfig(baseConfig);
 
         CreateNovelAppRequest.CommonConfig commonConfig = new CreateNovelAppRequest.CommonConfig();
@@ -250,10 +252,6 @@ public class AppAdController {
 
         }
         req.setAdConfig(adConfig);
-        CreateNovelAppRequest.DeliverConfig deliverConfig = new CreateNovelAppRequest.DeliverConfig();
-        deliverConfig.setDeliverId(novelApp.getDeliverId());
-        deliverConfig.setBannerId(novelApp.getBannerId());
-        req.setDeliverConfig(deliverConfig);
         // 其它配置如有需要可补充
         return req;
     }

@@ -28,11 +28,12 @@ public class PreFileOperationService extends AbstractConfigFileOperationService{
     public void createPreFiles(String taskId,CreateNovelAppRequest params, List<Runnable> rollbackActions) {
         CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
         CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
+        CreateNovelAppRequest.UiConfig uiConfig = params.getUiConfig();
         String buildCode = commonConfig.getBuildCode();
         String platform = baseConfig.getPlatform();
 
 
-        createPrebuildBuildDir(taskId, buildCode, platform, baseConfig, rollbackActions, true);
+        createPrebuildBuildDir(taskId, buildCode, platform, baseConfig,uiConfig, rollbackActions, true);
         createDouyinPrefetchFile(taskId, buildCode, platform, rollbackActions, true);
 
     }
@@ -41,9 +42,10 @@ public class PreFileOperationService extends AbstractConfigFileOperationService{
      */
     private void createPrebuildBuildDir(String taskId, String buildCode, String platform,
                                        CreateNovelAppRequest.BaseConfig baseConfig, 
+                                       CreateNovelAppRequest.UiConfig uiConfig,
                                        List<Runnable> rollbackActions, boolean withLogAndDelay) {
         if (withLogAndDelay) {
-            taskLogger.log(taskId, "[2-1-1] 处理目录prebuild/build: ", CreateNovelLogType.PROCESSING);
+            taskLogger.log(taskId, "[2-2-1-1] 处理目录prebuild/build: ", CreateNovelLogType.PROCESSING);
             try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
         }
         String prebuildDir = buildWorkPath + File.separator + "prebuild" + File.separator + "build";
@@ -117,11 +119,11 @@ public class PreFileOperationService extends AbstractConfigFileOperationService{
             
             // 2-1-2 编辑manifest.json内容
             if (withLogAndDelay) {
-                taskLogger.log(taskId, "[2-1-2] 开始编辑manifest.json", CreateNovelLogType.PROCESSING);
+                taskLogger.log(taskId, "[2-2-1-2] 开始编辑manifest.json", CreateNovelLogType.PROCESSING);
                 try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
             }
             try {
-                taskLogger.log(taskId, "[2-1-2-1] 读取manifest.json", CreateNovelLogType.INFO);
+                taskLogger.log(taskId, "[2-2-1-2-1] 读取manifest.json", CreateNovelLogType.INFO);
                 String manifestContent = new String(Files.readAllBytes(manifestDest), StandardCharsets.UTF_8);
                 ObjectMapper objectMapper = new ObjectMapper();
                 ObjectNode manifestNode = (ObjectNode) objectMapper.readTree(manifestContent);
@@ -129,13 +131,13 @@ public class PreFileOperationService extends AbstractConfigFileOperationService{
                     try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
                 }
                 // 替换name字段
-                taskLogger.log(taskId, "[2-1-2-2] 替换name字段", CreateNovelLogType.INFO);
+                taskLogger.log(taskId, "[2-2-1-2-2] 替换name字段", CreateNovelLogType.INFO);
                 manifestNode.put("name", baseConfig.getAppName());
                 if (withLogAndDelay) {
                     try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
                 }
                 // 替换平台appid
-                taskLogger.log(taskId, "[2-1-2-3] 替换平台appid", CreateNovelLogType.INFO);
+                taskLogger.log(taskId, "[2-2-1-2-3] 替换平台appid", CreateNovelLogType.INFO);
                 switch (platform) {
                     case "douyin":
                         if (manifestNode.has("mp-toutiao")) {
@@ -157,9 +159,9 @@ public class PreFileOperationService extends AbstractConfigFileOperationService{
                     try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
                 }
                 // 写回文件
-                taskLogger.log(taskId, "[2-1-2-4] 写回manifest.json", CreateNovelLogType.INFO);
+                taskLogger.log(taskId, "[2-2-1-2-4] 写回manifest.json", CreateNovelLogType.INFO);
                 objectMapper.writerWithDefaultPrettyPrinter().writeValue(manifestDest.toFile(), manifestNode);
-                taskLogger.log(taskId, "[2-1-2] manifest.json 编辑完成", CreateNovelLogType.SUCCESS);
+                taskLogger.log(taskId, "[2-2-1-2-5] manifest.json 编辑完成", CreateNovelLogType.SUCCESS);
                 String formattedManifestContent = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(manifestNode);
                 taskLogger.log(taskId,formattedManifestContent, CreateNovelLogType.INFO);
                 // 操作成功后删除manifest.bak
@@ -174,11 +176,11 @@ public class PreFileOperationService extends AbstractConfigFileOperationService{
             }
             //2-1-3 编辑pages-xx.json文件
             if (withLogAndDelay) {
-                taskLogger.log(taskId, "[2-1-3] 开始编辑" + pagesFileName, CreateNovelLogType.PROCESSING);
+                taskLogger.log(taskId, "[2-2-1-4] 开始编辑" + pagesFileName, CreateNovelLogType.PROCESSING);
                 try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
             }
             try {
-                taskLogger.log(taskId, "[2-1-3-1] 读取" + pagesFileName, CreateNovelLogType.INFO);
+                taskLogger.log(taskId, "[2-2-1-4-1] 读取" + pagesFileName, CreateNovelLogType.INFO);
                 String pagesContent = new String(Files.readAllBytes(pagesDest), StandardCharsets.UTF_8);
                 ObjectMapper objectMapper = new ObjectMapper();
                 com.fasterxml.jackson.databind.JsonNode rootNode = objectMapper.readTree(pagesContent);
@@ -196,7 +198,7 @@ public class PreFileOperationService extends AbstractConfigFileOperationService{
                         }
                         // navigationBarBackgroundColor
                         if (path.equals("pages/homePage/homePage") || path.equals("pages/bookPage/bookPage") || path.equals("pages/filterPage/filterPage") || path.equals("pages/detailPage/detailPage") || path.equals("pages/minePage/minePage") || path.equals("pages/minePage/mineScoreExchange")|| path.equals("pages/minePage/scoreExchangeRecord")) {
-                            String secondTheme = baseConfig.getSecondTheme();
+                            String secondTheme = uiConfig.getSecondTheme();
                             if (secondTheme != null && secondTheme.matches("#?[A-Fa-f0-9]{8}")) {
                                 // 转换#RRGGBBAA为#RRGGBB
                                 if (secondTheme.startsWith("#")) {
@@ -213,9 +215,9 @@ public class PreFileOperationService extends AbstractConfigFileOperationService{
                     try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
                 }
                 // 写回文件
-                taskLogger.log(taskId, "[2-1-3-2] 写回" + pagesFileName, CreateNovelLogType.INFO);
+                taskLogger.log(taskId, "[2-2-1-4-2] 写回" + pagesFileName, CreateNovelLogType.INFO);
                 objectMapper.writerWithDefaultPrettyPrinter().writeValue(pagesDest.toFile(), rootNode);
-                taskLogger.log(taskId, "[2-1-3] " + pagesFileName + " 编辑完成", CreateNovelLogType.SUCCESS);
+                taskLogger.log(taskId, "[2-2-1-4] " + pagesFileName + " 编辑完成", CreateNovelLogType.SUCCESS);
                 String formattedPagesContent = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode);
                 taskLogger.log(taskId, formattedPagesContent, CreateNovelLogType.INFO);
                 // 操作成功后删除pages.bak
@@ -229,7 +231,7 @@ public class PreFileOperationService extends AbstractConfigFileOperationService{
                 throw new RuntimeException(pagesFileName+"内容编辑失败: " + e.getMessage(), e);
             }
         } catch (Exception e) {
-            taskLogger.log(taskId, "[2-1]目录prebuild/build处理失败: " + e.getMessage(), CreateNovelLogType.ERROR);
+            taskLogger.log(taskId, "[2-2-1]目录prebuild/build处理失败: " + e.getMessage(), CreateNovelLogType.ERROR);
             // 回滚自身
             try {
                 taskLogger.log(taskId, "回滚动作：删除" + destDir, CreateNovelLogType.ERROR);
@@ -249,7 +251,7 @@ public class PreFileOperationService extends AbstractConfigFileOperationService{
     private void createDouyinPrefetchFile(String taskId, String buildCode, String platform,
                                          List<Runnable> rollbackActions, boolean withLogAndDelay) {
         if (withLogAndDelay) {
-            taskLogger.log(taskId, "[2-3] 开始处理抖音预取文件: " + buildWorkPath + File.separator + "prefetchbuild" + File.separator + "prelaunch-" + buildCode + ".js", CreateNovelLogType.PROCESSING);
+            taskLogger.log(taskId, "[2-2-2] 开始处理抖音预取文件: " + buildWorkPath + File.separator + "prefetchbuild" + File.separator + "prelaunch-" + buildCode + ".js", CreateNovelLogType.PROCESSING);
             try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
         }
         if (!"douyin".equals(platform)) return;
@@ -278,7 +280,7 @@ public class PreFileOperationService extends AbstractConfigFileOperationService{
                     Files.deleteIfExists(Paths.get(backupPath));
                 } catch (Exception ignore) {}
             });
-            taskLogger.log(taskId, "[2-3-1] 复制prelaunch-fun.js完成", CreateNovelLogType.INFO);
+            taskLogger.log(taskId, "[2-2-2-1] 复制prelaunch-fun.js完成", CreateNovelLogType.INFO);
             if (withLogAndDelay) {
                 try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
             }
@@ -287,7 +289,7 @@ public class PreFileOperationService extends AbstractConfigFileOperationService{
             // 简单正则替换 param.brand = 'xxx' 或 param.brand: 'xxx'
             String newContent = content.replaceAll("(brand\\s*:\\s*)['\"][^'\"]+['\"]", "$1'" + buildCode + "'");
             Files.write(destPath, newContent.getBytes(StandardCharsets.UTF_8));
-            taskLogger.log(taskId, "[2-3-2] 修改param.brand为" + buildCode + "完成", CreateNovelLogType.SUCCESS);
+            taskLogger.log(taskId, "[2-2-2-2] 修改param.brand为" + buildCode + "完成", CreateNovelLogType.SUCCESS);
             taskLogger.log(taskId, newContent, CreateNovelLogType.INFO);
             if (withLogAndDelay) {
                 try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }

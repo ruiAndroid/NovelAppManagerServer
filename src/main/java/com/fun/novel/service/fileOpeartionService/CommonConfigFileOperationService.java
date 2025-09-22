@@ -55,7 +55,7 @@ public class CommonConfigFileOperationService extends AbstractConfigFileOperatio
                                        List<Runnable> rollbackActions, boolean withLogAndDelay) {
 
         if (withLogAndDelay) {
-            taskLogger.log(taskId, "[2-4-5] 开始处理commonConfig配置文件: " + buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "commonConfigs" + File.separator + buildCode + ".js", CreateNovelLogType.PROCESSING);
+            taskLogger.log(taskId, "[2-5-1] 开始处理commonConfig配置文件: " + buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "commonConfigs" + File.separator + buildCode + ".js", CreateNovelLogType.PROCESSING);
             try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
         }
         String configDir = buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "commonConfigs";
@@ -93,15 +93,10 @@ public class CommonConfigFileOperationService extends AbstractConfigFileOperatio
                 
                 // 构造当前平台的通用配置
                 java.util.LinkedHashMap<String, Object> platformCommonConfigMap = new java.util.LinkedHashMap<>();
-                java.util.LinkedHashMap<String, Object> homeCard = new java.util.LinkedHashMap<>();
-                homeCard.put("style", 1);
-                java.util.LinkedHashMap<String, Object> payCard = new java.util.LinkedHashMap<>();
-                payCard.put("style", 1);
+
                 java.util.LinkedHashMap<String, Object> loginType = new java.util.LinkedHashMap<>();
                 loginType.put("mine", "anonymousLogin");
                 loginType.put("reader", "anonymousLogin");
-                platformCommonConfigMap.put("homeCard", homeCard);
-                platformCommonConfigMap.put("payCard", payCard);
                 platformCommonConfigMap.put("loginType", loginType);
                 platformCommonConfigMap.put("contact", "");
                 // iaaMode 默认
@@ -115,10 +110,6 @@ public class CommonConfigFileOperationService extends AbstractConfigFileOperatio
                 // 只对当前platform赋值
                 String key = platformToKey(platform);
                 if (commonConfig != null) {
-                    // homeCard.style
-                    homeCard.put("style", commonConfig.getHomeCardStyle() != null ? commonConfig.getHomeCardStyle() : 1);
-                    // payCard.style
-                    payCard.put("style", commonConfig.getPayCardStyle() != null ? commonConfig.getPayCardStyle() : 1);
                     // loginType
                     loginType.put("mine", commonConfig.getMineLoginType() != null ? commonConfig.getMineLoginType() : "anonymousLogin");
                     loginType.put("reader", commonConfig.getReaderLoginType() != null ? commonConfig.getReaderLoginType() : "anonymousLogin");
@@ -148,15 +139,9 @@ public class CommonConfigFileOperationService extends AbstractConfigFileOperatio
                     java.util.LinkedHashMap<String, Object> pfMap = new java.util.LinkedHashMap<>();
                     if (pf.equals(platformKey)) {
                         // 为当前平台生成详细配置
-                        java.util.LinkedHashMap<String, Object> homeCard = new java.util.LinkedHashMap<>();
-                        homeCard.put("style", 1);
-                        java.util.LinkedHashMap<String, Object> payCard = new java.util.LinkedHashMap<>();
-                        payCard.put("style", 1);
                         java.util.LinkedHashMap<String, Object> loginType = new java.util.LinkedHashMap<>();
                         loginType.put("mine", "anonymousLogin");
                         loginType.put("reader", "anonymousLogin");
-                        pfMap.put("homeCard", homeCard);
-                        pfMap.put("payCard", payCard);
                         pfMap.put("loginType", loginType);
                         pfMap.put("contact", "");
                         // iaaMode 默认
@@ -179,16 +164,6 @@ public class CommonConfigFileOperationService extends AbstractConfigFileOperatio
                 // 只对当前platform赋值
                 if (commonConfig != null && commonConfigMap.containsKey(platformKey)) {
                     java.util.Map<String, Object> pfMap = (java.util.Map<String, Object>) commonConfigMap.get(platformKey);
-                    // homeCard.style
-                    java.util.Map<String, Object> homeCard = (java.util.Map<String, Object>) pfMap.get("homeCard");
-                    if (homeCard != null) {
-                        homeCard.put("style", commonConfig.getHomeCardStyle() != null ? commonConfig.getHomeCardStyle() : 1);
-                    }
-                    // payCard.style
-                    java.util.Map<String, Object> payCard = (java.util.Map<String, Object>) pfMap.get("payCard");
-                    if (payCard != null) {
-                        payCard.put("style", commonConfig.getPayCardStyle() != null ? commonConfig.getPayCardStyle() : 1);
-                    }
                     // loginType
                     java.util.Map<String, Object> loginType = (java.util.Map<String, Object>) pfMap.get("loginType");
                     if (loginType != null) {
@@ -220,7 +195,7 @@ public class CommonConfigFileOperationService extends AbstractConfigFileOperatio
             }
             
             java.nio.file.Files.write(configPath, fileContent.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            taskLogger.log(taskId, "[2-4-5] commonConfig配置文件写入完成", CreateNovelLogType.SUCCESS);
+            taskLogger.log(taskId, "[2-5-1] commonConfig配置文件写入完成", CreateNovelLogType.SUCCESS);
             taskLogger.log(taskId, fileContent, CreateNovelLogType.INFO);
             if (withLogAndDelay) {
                 try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }

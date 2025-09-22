@@ -29,99 +29,29 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
     public void createBaseConfigLocalCodeFiles(String taskId, CreateNovelAppRequest params, List<Runnable> rollbackActions) {
         CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
         CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
+        CreateNovelAppRequest.UiConfig uiConfig = params.getUiConfig();
         String buildCode = commonConfig.getBuildCode();
         String platform = baseConfig.getPlatform();
 
-        createThemeFile(taskId, buildCode, baseConfig, rollbackActions, true);
         createBaseConfigFile(taskId, buildCode, platform, baseConfig, commonConfig, rollbackActions, true);
-        createDeliverConfigFile(taskId, buildCode, platform, params.getDeliverConfig(),rollbackActions, true);
+        createDeliverConfigFile(taskId, buildCode, platform, params.getBaseConfig(),rollbackActions, true);
 
     }
 
     public void updateBaseConfigLocalCodeFiles(CreateNovelAppRequest params, List<Runnable> rollbackActions) {
         CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
         CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
+        CreateNovelAppRequest.UiConfig uiConfig = params.getUiConfig();
         String buildCode = commonConfig.getBuildCode();
         String platform = baseConfig.getPlatform();
 
 
-        createThemeFile(null, buildCode, baseConfig, rollbackActions, false);
         createBaseConfigFile(null, buildCode, platform, baseConfig, commonConfig, rollbackActions, false);
-        createDeliverConfigFile(null, buildCode, platform, params.getDeliverConfig(),rollbackActions, false);
+        createDeliverConfigFile(null, buildCode, platform, params.getBaseConfig(),rollbackActions, false);
     }
 
 
     
-    /**
-     * 处理主题文件
-     */
-    private void createThemeFile(String taskId, String buildCode, CreateNovelAppRequest.BaseConfig baseConfig,
-                                List<Runnable> rollbackActions, boolean withLogAndDelay) {
-        if (withLogAndDelay) {
-            taskLogger.log(taskId, "[2-2] 开始处理主题文件: " + buildWorkPath + File.separator + "src" + File.separator + "common" + File.separator + "styles" + File.separator + "theme.less", CreateNovelLogType.PROCESSING);
-            try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-        }
-        String themeFilePath = buildWorkPath + File.separator + "src" + File.separator + "common" + File.separator + "styles" + File.separator + "theme.less";
-        java.nio.file.Path themePath = java.nio.file.Paths.get(themeFilePath);
-        String backupPath = themeFilePath + ".bak";
-        try {
-            // 备份原文件
-            java.nio.file.Files.copy(themePath, java.nio.file.Paths.get(backupPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            // 立即添加回滚动作，确保后续任何失败都能回滚主题文件
-            rollbackActions.add(() -> {
-                try {
-                    taskLogger.log(taskId, "回滚动作：还原主题文件",CreateNovelLogType.ERROR);
-                    java.nio.file.Files.copy(java.nio.file.Paths.get(backupPath), themePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                    java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath));
-                } catch (Exception ignore) {}
-            });
-            taskLogger.log(taskId, "[2-2-1] 备份主题文件完成", CreateNovelLogType.INFO);
-            if (withLogAndDelay) {
-                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-            }
-            // 读取原内容
-            java.util.List<String> lines = java.nio.file.Files.readAllLines(themePath, java.nio.charset.StandardCharsets.UTF_8);
-            // 构造新主题色变量
-            String mainTheme = baseConfig.getMainTheme();
-            String secondTheme = baseConfig.getSecondTheme();
-            String line1 = "@primary-color-" + buildCode + ": " + mainTheme + ";";
-            String line2 = "@second-color-" + buildCode + ": " + secondTheme + ";";
-            boolean foundPrimary = false, foundSecond = false;
-            for (int i = 0; i < lines.size(); i++) {
-                String line = lines.get(i).trim();
-                if (line.startsWith("@primary-color-" + buildCode + ":")) {
-                    foundPrimary = true;
-                }
-                if (line.startsWith("@second-color-" + buildCode + ":")) {
-                    foundSecond = true;
-                }
-            }
-
-            // 如果已经存在主题色配置，则忽略不处理
-            if (foundPrimary && foundSecond) {
-                taskLogger.log(taskId, "[2-2-2] 主题色变量已存在，跳过处理", CreateNovelLogType.SUCCESS);
-                // 操作成功后删除theme.bak
-                try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath)); } catch (Exception ignore) {}
-                return;
-            }
-
-            if (!foundPrimary) lines.add(line1);
-            if (!foundSecond) lines.add(line2);
-            // 写回文件
-            java.nio.file.Files.write(themePath, lines, java.nio.charset.StandardCharsets.UTF_8);
-            taskLogger.log(taskId, "[2-2-2] 新增主题色变量完成", CreateNovelLogType.SUCCESS);
-            taskLogger.log(taskId, "[2-2-3] 新增内容：\n" + line1 + "\n" + line2, CreateNovelLogType.INFO);
-            if (withLogAndDelay) {
-                try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
-            }
-            // 操作成功后删除theme.bak
-            try { java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath)); } catch (Exception ignore) {}
-        } catch (Exception e) {
-            // 还原自身
-            try { java.nio.file.Files.copy(java.nio.file.Paths.get(backupPath), themePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING); } catch (Exception ignore) {}
-            throw new RuntimeException("主题文件处理失败: " + e.getMessage(), e);
-        }
-    }
 
     /**
      * 处理基础配置文件
@@ -131,7 +61,7 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
                                      CreateNovelAppRequest.CommonConfig commonConfig, 
                                      List<Runnable> rollbackActions, boolean withLogAndDelay) {
         if (withLogAndDelay) {
-            taskLogger.log(taskId, "[2-4-1] 开始处理baseConfig配置文件: " + buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "baseConfigs" + File.separator + buildCode + ".js", CreateNovelLogType.PROCESSING);
+            taskLogger.log(taskId, "[2-1-1] 开始处理baseConfig配置文件: " + buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "baseConfigs" + File.separator + buildCode + ".js", CreateNovelLogType.PROCESSING);
             try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
         }
         String configDir = buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "baseConfigs";
@@ -240,7 +170,7 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
             }
             
             java.nio.file.Files.write(configPath, fileContent.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            taskLogger.log(taskId, "[2-4-1] baseConfig配置文件写入完成", CreateNovelLogType.SUCCESS);
+            taskLogger.log(taskId, "[2-1-1] baseConfig配置文件写入完成", CreateNovelLogType.SUCCESS);
             taskLogger.log(taskId, fileContent, CreateNovelLogType.INFO);
             if (withLogAndDelay) {
                 try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
@@ -373,9 +303,9 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
     /**
      * 处理deliver配置
      */
-    private void createDeliverConfigFile(String taskId, String buildCode, String platform, CreateNovelAppRequest.DeliverConfig deliverConfig, List<Runnable> rollbackActions, boolean withLogAndDelay) {
+    private void createDeliverConfigFile(String taskId, String buildCode, String platform, CreateNovelAppRequest.BaseConfig baseConfig, List<Runnable> rollbackActions, boolean withLogAndDelay) {
         if (withLogAndDelay) {
-            taskLogger.log(taskId, "[2-4-2] 开始处理deliverConfig配置文件: " + buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "deliverConfigs" + File.separator + buildCode + ".js", CreateNovelLogType.PROCESSING);
+            taskLogger.log(taskId, "[2-1-2] 开始处理deliverConfig配置文件: " + buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "deliverConfigs" + File.separator + buildCode + ".js", CreateNovelLogType.PROCESSING);
             try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
         }
         String configDir = buildWorkPath + File.separator + "src" + File.separator + "modules" + File.separator + "mod_config" + File.separator + "deliverConfigs";
@@ -413,8 +343,8 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
                 
                 // 构造当前平台的配置
                 java.util.LinkedHashMap<String, Object> platformConfigMap = new java.util.LinkedHashMap<>();
-                platformConfigMap.put("deliver_id", deliverConfig != null && deliverConfig.getDeliverId() != null ? deliverConfig.getDeliverId() : "");
-                platformConfigMap.put("banner_id", deliverConfig != null && deliverConfig.getBannerId() != null ? deliverConfig.getBannerId() : "");
+                platformConfigMap.put("deliver_id", baseConfig != null && baseConfig.getDeliverId() != null ? baseConfig.getDeliverId() : "");
+                platformConfigMap.put("banner_id", baseConfig != null && baseConfig.getBannerId() != null ? baseConfig.getBannerId() : "");
                 platformConfigMap.put("deliverAdId", "");
                 platformConfigMap.put("bannerAdId", "");
                 platformConfigMap.put("enable", true);
@@ -445,10 +375,10 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
                 }
                 
                 // 根据platform写入对应数据
-                if (deliverConfig != null && deliverConfigMap.containsKey(platformKey)) {
+                if (baseConfig != null && deliverConfigMap.containsKey(platformKey)) {
                     java.util.Map<String, Object> pfMap = (java.util.Map<String, Object>) deliverConfigMap.get(platformKey);
-                    pfMap.put("deliver_id", deliverConfig.getDeliverId() != null ? deliverConfig.getDeliverId() : "");
-                    pfMap.put("banner_id", deliverConfig.getBannerId() != null ? deliverConfig.getBannerId() : "");
+                    pfMap.put("deliver_id", baseConfig.getDeliverId() != null ? baseConfig.getDeliverId() : "");
+                    pfMap.put("banner_id", baseConfig.getBannerId() != null ? baseConfig.getBannerId() : "");
                 }
                 // 生成最终内容
                 com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
@@ -463,7 +393,7 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
             }
             
             java.nio.file.Files.write(configPath, fileContent.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            taskLogger.log(taskId, "[2-4-2] deliverConfig配置文件写入完成", CreateNovelLogType.SUCCESS);
+            taskLogger.log(taskId, "[2-1-2] deliverConfig配置文件写入完成", CreateNovelLogType.SUCCESS);
             taskLogger.log(taskId, fileContent, CreateNovelLogType.INFO);
             if (withLogAndDelay) {
                 try { Thread.sleep(FILE_STEP_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
@@ -540,7 +470,6 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
         String buildCode = commonConfig.getBuildCode();
         String platform = baseConfig.getPlatform();
 
-        deleteThemeFile(buildCode, baseConfig, rollbackActions, isLast);
         deleteDeliverFile(buildCode, baseConfig, rollbackActions, isLast);
         deleteBaseConfigFile(buildCode, platform, baseConfig, rollbackActions, isLast);
 
@@ -801,63 +730,5 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
         }
     }
     
-    //删除主题文件
-    private void deleteThemeFile(String buildCode, CreateNovelAppRequest.BaseConfig baseConfig, List<Runnable> rollbackActions, boolean isLast) {
-        if(!isLast){
-            log.warn("删除主题文件，当前还存在其他平台小程序，不需要删除" );
-            return;
-        }
-        String themeConfigDir = buildWorkPath + File.separator + "src" + File.separator + "common" + File.separator + "styles";
-        String themeConfigFile = themeConfigDir + File.separator + "theme.less";
-        java.nio.file.Path themeConfigPath = java.nio.file.Paths.get(themeConfigFile);
-        
-        try {
-            // 检查文件是否存在
-            if (!java.nio.file.Files.exists(themeConfigPath)) {
-                log.warn("主题文件不存在: {}", themeConfigFile);
-                return;
-            }
-            
-            // 读取原内容
-            java.util.List<String> lines = java.nio.file.Files.readAllLines(themeConfigPath, java.nio.charset.StandardCharsets.UTF_8);
-            
-            // 备份原文件
-            String backupPath = themeConfigFile + ".bak";
-            java.nio.file.Files.copy(themeConfigPath, java.nio.file.Paths.get(backupPath), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            
-            // 添加回滚动作
-            rollbackActions.add(() -> {
-                try {
-                    taskLogger.log(null, "回滚动作：还原主题文件", CreateNovelLogType.ERROR);
-                    java.nio.file.Files.copy(java.nio.file.Paths.get(backupPath), themeConfigPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                    java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath));
-                } catch (Exception ignore) {}
-            });
-            
-            // 构造要删除的行
-            String primaryColorLine = "@primary-color-" + buildCode + ":";
-            String secondColorLine = "@second-color-" + buildCode + ":";
-            
-            // 过滤掉包含构建代码的行
-            java.util.List<String> newLines = new java.util.ArrayList<>();
-            for (String line : lines) {
-                String trimmedLine = line.trim();
-                // 如果行不包含当前构建代码，则保留
-                if (!trimmedLine.startsWith(primaryColorLine) && !trimmedLine.startsWith(secondColorLine)) {
-                    newLines.add(line);
-                }
-            }
-            
-            // 写入新内容
-            java.nio.file.Files.write(themeConfigPath, newLines, java.nio.charset.StandardCharsets.UTF_8);
-            
-            // 操作成功后删除备份文件
-            java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(backupPath));
-            
-            log.info("成功删除主题文件中的构建代码配置: {}", buildCode);
-        } catch (Exception e) {
-            log.error("删除主题文件配置失败: {}", e.getMessage(), e);
-            throw new RuntimeException("删除主题文件配置失败: " + e.getMessage(), e);
-        }
-    }
+
 }

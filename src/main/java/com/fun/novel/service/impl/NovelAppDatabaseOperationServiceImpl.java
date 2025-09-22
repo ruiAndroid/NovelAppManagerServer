@@ -33,7 +33,6 @@ public class NovelAppDatabaseOperationServiceImpl implements NovelAppDatabaseOpe
     @Transactional(rollbackFor = Exception.class)
     public void processDatabaseOperations(String taskId, CreateNovelAppRequest params) {
         CreateNovelAppRequest.BaseConfig baseConfig = params.getBaseConfig();
-        CreateNovelAppRequest.DeliverConfig deliverConfig = params.getDeliverConfig();
         CreateNovelAppRequest.PaymentConfig paymentConfig = params.getPaymentConfig();
         CreateNovelAppRequest.AdConfig adConfig = params.getAdConfig();
         CreateNovelAppRequest.CommonConfig commonConfig = params.getCommonConfig();
@@ -53,10 +52,10 @@ public class NovelAppDatabaseOperationServiceImpl implements NovelAppDatabaseOpe
         novelApp.setAppid(baseConfig.getAppid());
         novelApp.setTokenId(baseConfig.getTokenId());
         novelApp.setCl(baseConfig.getCl());
+        novelApp.setDeliverId(baseConfig.getDeliverId());
+        novelApp.setBannerId(baseConfig.getBannerId());
         taskLogger.log(taskId, "[1-1-2] 插入novel_app表theme信息", CreateNovelLogType.INFO);
         taskLogger.log(taskId, "[1-1-3] 插入novel_app表deliver信息", CreateNovelLogType.INFO);
-        novelApp.setDeliverId(deliverConfig.getDeliverId());
-        novelApp.setBannerId(deliverConfig.getBannerId());
         NovelApp existingApp = novelAppService.getByAppId(appId);
         if (existingApp != null) {
             taskLogger.log(taskId, "[1-1] 小说应用已存在，创建失败", CreateNovelLogType.ERROR);
@@ -188,8 +187,6 @@ public class NovelAppDatabaseOperationServiceImpl implements NovelAppDatabaseOpe
         commonConfigDTO.setWeixinAppToken(commonConfig.getWeixinAppToken());
         commonConfigDTO.setBuildCode(commonConfig.getBuildCode());
         commonConfigDTO.setDouyinAppToken(commonConfig.getDouyinAppToken());
-        commonConfigDTO.setPayCardStyle(commonConfig.getPayCardStyle());
-        commonConfigDTO.setHomeCardStyle(commonConfig.getHomeCardStyle());
         commonConfigDTO.setIaaMode(commonConfig.getIaaMode());
         commonConfigDTO.setIaaDialogStyle(commonConfig.getIaaDialogStyle());
 

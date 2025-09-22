@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/novel-ui")
@@ -92,14 +91,14 @@ public class AppUiController {
     }
     
     @GetMapping("/deleteUiConfig")
-    @Operation(summary = "删除Ui配置", description = "根据appId删除Ui配置记录")
+    @Operation(summary = "删除Ui配置", description = "根据appid删除Ui配置记录")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1','ROLE_2')")
     @OperationLog(opType = OpType.DELETE_CODE, description = "删除Ui配置")
     public Result<String> deleteAppUiConfig(
             @Parameter(description = "应用ID", required = true)
-            @RequestParam String appId) {
+            @RequestParam String appid) {
         try {
-            boolean deleted = appUIConfigService.deleteAppUIConfigByAppId(appId);
+            boolean deleted = appUIConfigService.deleteAppUIConfigByAppId(appid);
             if (deleted) {
                 return Result.success("删除成功");
             } else {
@@ -146,12 +145,19 @@ public class AppUiController {
             }
             
             // 收集所有应用的appid
-            List<String> appIds = novelApps.stream()
-                    .map(NovelApp::getAppid)
-                    .collect(Collectors.toList());
+            List<String> appIds = new ArrayList<>();
+            for (NovelApp novelApp : novelApps) {
+                appIds.add(novelApp.getAppid());
+            }
             
-            // 根据appid列表批量查询对应的UI配置
-            List<AppUIConfig> uiConfigs = appUIConfigService.getByAppIds(appIds);
+            // 根据appid列表查询对应的UI配置
+            List<AppUIConfig> uiConfigs = new ArrayList<>();
+            for (String appId : appIds) {
+                AppUIConfig config = appUIConfigService.getByAppId(appId);
+                if (config != null) {
+                    uiConfigs.add(config);
+                }
+            }
             
             return Result.success("查询成功", uiConfigs);
         } catch (Exception e) {
@@ -171,6 +177,8 @@ public class AppUiController {
         baseConfig.setAppid(novelApp.getAppid());
         baseConfig.setTokenId(novelApp.getTokenId());
         baseConfig.setCl(novelApp.getCl());
+        baseConfig.setDeliverId(novelApp.getDeliverId());
+        baseConfig.setBannerId(novelApp.getBannerId());
         req.setBaseConfig(baseConfig);
 
         CreateNovelAppRequest.CommonConfig commonConfig = new CreateNovelAppRequest.CommonConfig();
@@ -191,11 +199,6 @@ public class AppUiController {
             commonConfig.setIaaDialogStyle(dbCommonConfig.getIaaDialogStyle());
         }
         req.setCommonConfig(commonConfig);
-
-        CreateNovelAppRequest.DeliverConfig deliverConfig = new CreateNovelAppRequest.DeliverConfig();
-        deliverConfig.setDeliverId(novelApp.getDeliverId());
-        deliverConfig.setBannerId(novelApp.getBannerId());
-        req.setDeliverConfig(deliverConfig);
         // 其它配置如有需要可补充
         return req;
     }
