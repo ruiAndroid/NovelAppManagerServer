@@ -48,6 +48,15 @@ public class UserOpLog {
     private Integer opStatus;
 
     /**
+     * 操作名称
+     */
+    @JsonIgnore
+    @TableField("op_name")
+    @Schema(description = "操作名称")
+    private String opName;
+
+
+    /**
      * 操作的接口方法名
      */
     @TableField("method_name")

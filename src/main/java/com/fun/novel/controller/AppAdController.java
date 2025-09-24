@@ -45,7 +45,7 @@ public class AppAdController {
     @PostMapping("/appAd/create")
     @Operation(summary = "创建AppAd", description = "创建新的AppAd记录")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
-    @OperationLog(opType = OpType.INSERT_CODE, description = "创建AppAd")
+    @OperationLog(opType = OpType.INSERT_CODE, opName = "创建AppAd")
     public Result<AppAd> createAppAd(
             @Parameter(description = "AppAd对象", required = true)
             @Valid @RequestBody AppAd appAd) {
@@ -59,7 +59,7 @@ public class AppAdController {
 
     @GetMapping("/appAd/getAppAdByAppId")
     @Operation(summary = "获取AppAd", description = "根据appId获取AppAd记录")
-    @OperationLog(opType = OpType.QUERY_CODE, description = "根据appId获取AppAd记录")
+    @OperationLog(opType = OpType.QUERY_CODE, opName = "根据appId获取AppAd记录")
 
     public Result<AppAdWithConfigDTO> getAppAdByAppId(
             @Parameter(description = "AppAd ID", required = true)
@@ -74,7 +74,7 @@ public class AppAdController {
     @GetMapping("/appAd/deleteAppAdByAppId")
     @Operation(summary = "删除AppAd", description = "根据appId删除AppAd")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
-    @OperationLog(opType = OpType.DELETE_CODE, description = "根据appId删除AppAd")
+    @OperationLog(opType = OpType.DELETE_CODE, opName = "根据appId删除AppAd")
     public Result<String> deleteAppAdByAppId(
             @Parameter(description = "AppAd ID", required = true)
             @RequestParam String appId) {
@@ -92,7 +92,7 @@ public class AppAdController {
     @PostMapping("/adConfig/create")
     @Operation(summary = "创建AdConfig", description = "创建新的AdConfig记录")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
-    @OperationLog(opType = OpType.INSERT_CODE, description = "创建AdConfig")
+    @OperationLog(opType = OpType.INSERT_CODE, opName = "创建新的AdConfig记录")
     public Result<AdConfig> createAdConfig(
             @Parameter(description = "AdConfig对象", required = true)
             @Valid @RequestBody AdConfig adConfig) {
@@ -121,7 +121,7 @@ public class AppAdController {
     @PostMapping("/adConfig/update")
     @Operation(summary = "更新AdConfig", description = "更新广告配置信息")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
-    @OperationLog(opType = OpType.UPDATE_CODE, description = "更新AdConfig")
+    @OperationLog(opType = OpType.UPDATE_CODE, opName = "更新广告配置信息")
     public Result<AdConfig> updateAdConfig(
             @Parameter(description = "更新广告配置请求", required = true)
             @Valid @RequestBody UpdateAdConfigRequest request) {
@@ -150,7 +150,7 @@ public class AppAdController {
     @GetMapping("/adConfig/deleteByAppAdIdAndType")
     @Operation(summary = "删除AdConfig", description = "根据appAdId和广告类型删除广告配置")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
-    @OperationLog(opType = OpType.DELETE_CODE, description = "删除AdConfig")
+    @OperationLog(opType = OpType.DELETE_CODE, opName = "根据appAdId和广告类型删除广告配置")
     public Result<String> deleteAdConfigByAppAdIdAndType(
             @Parameter(description = "应用广告ID", required = true)
             @RequestParam Integer appAdId,

@@ -44,7 +44,7 @@ public class AppUiController {
     @PostMapping("/createUiConfig")
     @Operation(summary = "创建Ui配置", description = "创建新的Ui配置记录")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1','ROLE_2')")
-    @OperationLog(opType = OpType.INSERT_CODE, description = "创建Ui配置")
+    @OperationLog(opType = OpType.INSERT_CODE, opName = "创建新的Ui配置记录")
     public Result<AppUIConfig> createAppUiConfig(
             @Parameter(description = "appUIConfig对象", required = true)
             @Valid @RequestBody AppUIConfig appUIConfig) {
@@ -61,7 +61,7 @@ public class AppUiController {
     @PostMapping("/updateUiConfig")
     @Operation(summary = "更新Ui配置", description = "更新Ui配置记录")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1','ROLE_2')")
-    @OperationLog(opType = OpType.UPDATE_CODE, description = "更新Ui配置")
+    @OperationLog(opType = OpType.UPDATE_CODE, opName = "更新Ui配置记录")
     public Result<AppUIConfig> updateAppUiConfig(
             @Parameter(description = "appUIConfig对象", required = true)
             @Valid @RequestBody AppUIConfig appUIConfig) {
@@ -93,7 +93,7 @@ public class AppUiController {
     @GetMapping("/deleteUiConfig")
     @Operation(summary = "删除Ui配置", description = "根据appid删除Ui配置记录")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1','ROLE_2')")
-    @OperationLog(opType = OpType.DELETE_CODE, description = "删除Ui配置")
+    @OperationLog(opType = OpType.DELETE_CODE, opName = "根据appid删除Ui配置记录")
     public Result<String> deleteAppUiConfig(
             @Parameter(description = "应用ID", required = true)
             @RequestParam String appid) {
@@ -114,6 +114,7 @@ public class AppUiController {
     @GetMapping("/getUiConfig")
     @Operation(summary = "获取Ui配置", description = "根据appid获取Ui配置记录")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1','ROLE_2')")
+    @OperationLog(opType = OpType.QUERY_CODE, opName = "根据appid获取Ui配置记录")
     public Result<AppUIConfig> getAppUiConfig(
             @Parameter(description = "应用ID", required = true)
             @RequestParam String appId) {
@@ -132,6 +133,7 @@ public class AppUiController {
     @GetMapping("/getUiConfigByAppName")
     @Operation(summary = "根据应用名称获取Ui配置列表", description = "根据appName查询到所有同名的appid，并查询到对应的uiConfig，以数组形式返回")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1','ROLE_2')")
+    @OperationLog(opType = OpType.QUERY_CODE, opName = "根据appName查询到所有同名的appid")
     public Result<List<AppUIConfig>> getUiConfigByAppName(
             @Parameter(description = "应用名称", required = true)
             @RequestParam String appName) {

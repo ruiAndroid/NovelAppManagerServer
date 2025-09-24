@@ -21,7 +21,7 @@ public @interface OperationLog {
     /**
      * 操作描述
      */
-    String description() default "";
+    String opName() default "";
     
     /**
      * 是否记录请求参数

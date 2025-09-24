@@ -171,7 +171,7 @@ public class AuthController {
     @GetMapping("/users")
     @Operation(summary = "分页查询用户信息", description = "分页查询所有用户信息，按更新时间排序")
     @PreAuthorize("hasAnyRole('ROLE_0')")
-    @OperationLog(opType = OpType.QUERY_CODE, description = "分页查询用户信息", recordParams = false)
+    @OperationLog(opType = OpType.QUERY_CODE, opName = "分页查询用户信息", recordParams = false)
     public Result<Page<User>> getUserPage(
             @Parameter(description = "页码，默认为1") 
             @RequestParam(defaultValue = "1") Integer page,
@@ -190,7 +190,7 @@ public class AuthController {
     @GetMapping("/users/approve/{userId}")
     @Operation(summary = "审核通过用户", description = "将待审核的用户状态改为审核通过状态")
     @PreAuthorize("hasAnyRole('ROLE_0')")
-    @OperationLog(opType = OpType.UPDATE_CODE, description = "审核通过用户")
+    @OperationLog(opType = OpType.UPDATE_CODE, opName = "将待审核的用户状态改为审核通过状态")
     public Result<User> approveUser(
             @Parameter(description = "用户ID", required = true)
             @PathVariable Long userId) {
@@ -224,7 +224,7 @@ public class AuthController {
     @GetMapping("/users/delete/{userId}")
     @Operation(summary = "删除用户", description = "根据用户ID删除用户")
     @PreAuthorize("hasAnyRole('ROLE_0')")
-    @OperationLog(opType = OpType.DELETE_CODE, description = "删除用户")
+    @OperationLog(opType = OpType.DELETE_CODE, opName = "根据用户ID删除用户")
     public Result<String> deleteUser(
             @Parameter(description = "用户ID", required = true)
             @PathVariable Long userId) {

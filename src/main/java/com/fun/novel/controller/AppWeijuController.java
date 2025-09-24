@@ -32,7 +32,7 @@ public class AppWeijuController {
     @PostMapping("/banner/createBanner")
     @Operation(summary = "创建Banner", description = "创建新的Banner记录")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1','ROLE_2')")
-    @OperationLog(opType = OpType.INSERT_CODE, description = "创建Banner")
+    @OperationLog(opType = OpType.INSERT_CODE, opName = "创建新的Banner记录")
     public Result<AppWeijuBanner> createBanner(
             @Parameter(description = "Banner对象", required = true)
             @Valid @RequestBody AppWeijuBanner banner) {
@@ -54,7 +54,7 @@ public class AppWeijuController {
 
     @PostMapping("/banner/updateBanner")
     @Operation(summary = "更新Banner", description = "更新Banner信息")
-    @OperationLog(opType = OpType.UPDATE_CODE, description = "更新Banner信息")
+    @OperationLog(opType = OpType.UPDATE_CODE, opName = "更新Banner信息")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1','ROLE_2')")
     public Result<AppWeijuBanner> updateBanner(
             @Parameter(description = "Banner对象", required = true)
@@ -71,7 +71,7 @@ public class AppWeijuController {
     @GetMapping("/banner/deleteBannerByBannerId")
     @Operation(summary = "根据bannerId删除Banner", description = "根据bannerId删除对应的Banner记录")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1','ROLE_2')")
-    @OperationLog(opType = OpType.DELETE_CODE, description = "deleteBannerByBannerId")
+    @OperationLog(opType = OpType.DELETE_CODE, opName = "根据bannerId删除对应的Banner记录")
     public Result<String> deleteBannerByBannerId(
             @Parameter(description = "Banner ID", required = true)
             @RequestParam String bannerId) {
@@ -98,7 +98,7 @@ public class AppWeijuController {
     @PostMapping("/deliver/createDeliver")
     @Operation(summary = "创建Deliver", description = "创建新的Deliver记录")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1','ROLE_2')")
-    @OperationLog(opType = OpType.INSERT_CODE, description = "创建新的Deliver记录")
+    @OperationLog(opType = OpType.INSERT_CODE, opName = "创建新的Deliver记录")
     public Result<AppWeijuDeliver> createDeliver(
             @Parameter(description = "Deliver对象", required = true)
             @Valid @RequestBody AppWeijuDeliver deliver) {
@@ -109,7 +109,7 @@ public class AppWeijuController {
     @PostMapping("/deliver/updateDeliver")
     @Operation(summary = "更新Deliver", description = "更新Deliver信息")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1','ROLE_2')")
-    @OperationLog(opType = OpType.UPDATE_CODE, description = "更新Deliver")
+    @OperationLog(opType = OpType.UPDATE_CODE, opName = "更新Deliver信息")
     public Result<AppWeijuDeliver> updateDeliver(
             @Parameter(description = "Deliver对象", required = true)
             @Valid @RequestBody AppWeijuDeliver deliver) {
@@ -124,7 +124,7 @@ public class AppWeijuController {
     @GetMapping("/deliver/deleteByDeliverId")
     @Operation(summary = "根据deliverId删除Deliver", description = "根据deliverId删除对应的Deliver记录")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1','ROLE_2')")
-    @OperationLog(opType = OpType.DELETE_CODE, description = "根据deliverId删除Deliver")
+    @OperationLog(opType = OpType.DELETE_CODE, opName = "根据deliverId删除对应的Deliver记录")
     public Result<String> deleteDeliverByDeliverId(
             @Parameter(description = "Deliver ID", required = true)
             @RequestParam String deliverId) {

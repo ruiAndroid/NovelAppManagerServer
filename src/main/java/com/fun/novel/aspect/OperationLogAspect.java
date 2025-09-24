@@ -100,6 +100,7 @@ public class OperationLogAspect {
             UserOpLog userOpLog = new UserOpLog();
             userOpLog.setOpStatus(e == null ? 1 : 0); // 1表示成功，0表示失败
             userOpLog.setOpType(controllerLog.opType());
+            userOpLog.setOpName(controllerLog.opName());
             userOpLog.setMethodName(joinPoint.getTarget().getClass().getName() + "." + joinPoint.getSignature().getName());
             userOpLog.setRequestType(request.getMethod());
             userOpLog.setRequestUrl(request.getRequestURI());

@@ -44,7 +44,7 @@ public class NovelAppCreateController {
     @Operation(summary = "创建小说小程序")
     @PostMapping("/createNovelApp")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
-    @OperationLog(opType = OpType.INSERT_CODE, description = "创建小说小程序")
+    @OperationLog(opType = OpType.INSERT_CODE, opName = "创建小说小程序")
     public Result<Map<String, String>> createNovelApp(@RequestBody CreateNovelAppRequest params) {
         String taskId = createNovelTaskManager.createTask();
         if (taskId == null) {

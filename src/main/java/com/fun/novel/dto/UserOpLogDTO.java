@@ -17,6 +17,7 @@ public class UserOpLogDTO {
     private String userName;
     private Integer opType;
     private Integer opStatus;
+    private String opName;
     private String methodName;
     private String requestType;
     private String requestUrl;

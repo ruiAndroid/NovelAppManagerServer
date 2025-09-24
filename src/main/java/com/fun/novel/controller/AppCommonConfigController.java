@@ -39,7 +39,7 @@ public class AppCommonConfigController {
     @PostMapping("/createAppCommonConfig")
     @Operation(summary = "创建应用通用配置", description = "创建新的应用通用配置")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
-    @OperationLog(opType = OpType.INSERT_CODE, description = "创建应用通用配置")
+    @OperationLog(opType = OpType.INSERT_CODE, opName = "创建新的应用通用配置")
     public Result<AppCommonConfig> createAppCommonConfig(
             @Parameter(description = "应用通用配置信息", required = true)
             @Valid @RequestBody AppCommonConfigDTO dto) {
@@ -62,7 +62,7 @@ public class AppCommonConfigController {
 
     @GetMapping("/getAppCommonConfig")
     @Operation(summary = "获取应用通用配置", description = "根据appid获取应用通用配置信息")
-    @OperationLog(opType = OpType.QUERY_CODE, description = "获取应用通用配置")
+    @OperationLog(opType = OpType.QUERY_CODE, opName = "根据appid获取应用通用配置信息")
     public Result<AppCommonConfig> getAppCommonConfig(
             @Parameter(description = "小程序ID", required = true)
             @RequestParam String appId) {
@@ -75,7 +75,7 @@ public class AppCommonConfigController {
     
     @GetMapping("/getAppCommonConfigByAppName")
     @Operation(summary = "根据应用名称获取通用配置", description = "根据应用名称获取所有平台的通用配置信息")
-    @OperationLog(opType = OpType.QUERY_CODE, description = "根据应用名称获取通用配置")
+    @OperationLog(opType = OpType.QUERY_CODE, opName = "根据应用名称获取所有平台的通用配置信息")
     public Result<List<AppCommonConfig>> getAppCommonConfigByAppName(
             @Parameter(description = "应用名称", required = true)
             @RequestParam String appName) {
@@ -89,7 +89,7 @@ public class AppCommonConfigController {
     @GetMapping("/deleteAppCommonConfig")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
     @Operation(summary = "删除应用通用配置", description = "根据appId删除应用通用配置")
-    @OperationLog(opType = OpType.DELETE_CODE, description = "删除应用通用配置")
+    @OperationLog(opType = OpType.DELETE_CODE, opName = "根据appId删除应用通用配置")
     public Result<String> deleteAppCommonConfig(
             @Parameter(description = "小程序ID", required = true)
             @RequestParam String appId) {
@@ -108,7 +108,7 @@ public class AppCommonConfigController {
     @PostMapping("/updateAppCommonConfig")
     @Operation(summary = "更新应用通用配置", description = "更新应用通用配置信息")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
-    @OperationLog(opType = OpType.UPDATE_CODE, description = "更新应用通用配置")
+    @OperationLog(opType = OpType.UPDATE_CODE, opName = "更新应用通用配置信息")
     public Result<AppCommonConfig> updateAppCommonConfig(
             @Parameter(description = "应用通用配置信息", required = true)
             @Valid @RequestBody AppCommonConfigDTO dto) {                    
