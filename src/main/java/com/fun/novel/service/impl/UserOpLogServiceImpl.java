@@ -29,6 +29,13 @@ public class UserOpLogServiceImpl extends ServiceImpl<UserOpLogMapper, UserOpLog
     }
     
     @Override
+    public List<UserOpLog> queryAllOp() {
+        return this.lambdaQuery()
+                .orderByDesc(UserOpLog::getUpdateTime)
+                .list();
+    }
+    
+    @Override
     public IPage<UserOpLog> queryUserAllOpWithPage(Long userId, Page<UserOpLog> page) {
         return this.lambdaQuery()
                 .eq(UserOpLog::getUserId, userId)

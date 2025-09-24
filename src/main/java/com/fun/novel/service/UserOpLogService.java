@@ -25,6 +25,12 @@ public interface UserOpLogService {
     List<UserOpLog> queryUserAllOp(Long userId);
     
     /**
+     * 查询所有操作日志记录（默认按时间倒序）
+     * @return 操作日志列表
+     */
+    List<UserOpLog> queryAllOp();
+    
+    /**
      * 根据用户ID分页查询操作日志记录
      * @param userId 用户ID
      * @param page 分页参数

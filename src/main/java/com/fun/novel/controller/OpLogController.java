@@ -147,9 +147,8 @@ public class OpLogController {
                 // 查询所有用户
                 java.time.LocalDateTime finalStart = start;
                 java.time.LocalDateTime finalEnd = end;
-                logs = userOpLogService.queryAllOpWithPage(
-                    new com.baomidou.mybatisplus.extension.plugins.pagination.Page<com.fun.novel.entity.UserOpLog>(1, 10000))
-                    .getRecords().stream()
+                logs = userOpLogService.queryAllOp()
+                    .stream()
                     .filter(log -> {
                         java.time.LocalDateTime updateTime = log.getUpdateTime();
                         // 添加空值检查
@@ -169,10 +168,8 @@ public class OpLogController {
                 // 查询指定用户
                 java.time.LocalDateTime finalStart1 = start;
                 java.time.LocalDateTime finalEnd1 = end;
-                logs = userOpLogService.queryUserAllOpWithPage(
-                    Long.valueOf(userId),
-                    new com.baomidou.mybatisplus.extension.plugins.pagination.Page<com.fun.novel.entity.UserOpLog>(1, 10000))
-                    .getRecords().stream()
+                logs = userOpLogService.queryUserAllOp(Long.valueOf(userId))
+                    .stream()
                     .filter(log -> {
                         java.time.LocalDateTime updateTime = log.getUpdateTime();
                         // 添加空值检查
@@ -197,7 +194,7 @@ public class OpLogController {
                     .userName(log.getUserName())
                     .opType(log.getOpType())
                     .opStatus(log.getOpStatus())
-                    .opName(log.getMethodName())
+                    .opName(log.getOpName())
                     .requestUrl(log.getRequestUrl())
                     .requestParams(log.getRequestParams())
                     .responseResult(log.getResponseResult())
