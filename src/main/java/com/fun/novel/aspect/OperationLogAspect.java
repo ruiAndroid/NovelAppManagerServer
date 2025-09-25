@@ -2,6 +2,7 @@ package com.fun.novel.aspect;
 
 import com.alibaba.fastjson.JSON;
 import com.fun.novel.annotation.OperationLog;
+import com.fun.novel.common.Result;
 import com.fun.novel.entity.UserOpLog;
 import com.fun.novel.enums.OpType;
 import com.fun.novel.service.UserOpLogService;
@@ -98,7 +99,19 @@ public class OperationLogAspect {
             
             // 创建操作日志对象
             UserOpLog userOpLog = new UserOpLog();
-            userOpLog.setOpStatus(e == null ? 1 : 0); // 1表示成功，0表示失败
+            // 判断操作状态：如果有异常则为失败(0)，否则检查是否为error结果
+            int opStatus = 1; // 默认成功
+            if (e != null) {
+                opStatus = 0; // 异常情况为失败
+            } else if (jsonResult instanceof Result) {
+                // 检查Result结果是否为error状态
+                Result<?> result = (Result<?>) jsonResult;
+                if (result.getCode() != null && result.getCode() != 200) {
+                    opStatus = 0; // Result错误码不是200表示操作失败
+                }
+            }
+            userOpLog.setOpStatus(opStatus);
+            
             userOpLog.setOpType(controllerLog.opType());
             userOpLog.setOpName(controllerLog.opName());
             userOpLog.setMethodName(joinPoint.getTarget().getClass().getName() + "." + joinPoint.getSignature().getName());

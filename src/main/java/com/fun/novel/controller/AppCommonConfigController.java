@@ -111,7 +111,7 @@ public class AppCommonConfigController {
     @OperationLog(opType = OpType.UPDATE_CODE, opName = "更新应用通用配置信息")
     public Result<AppCommonConfig> updateAppCommonConfig(
             @Parameter(description = "应用通用配置信息", required = true)
-            @Valid @RequestBody AppCommonConfigDTO dto) {                    
+            @Valid @RequestBody AppCommonConfigDTO dto) {
         java.util.List<Runnable> rollbackActions = new java.util.ArrayList<>();
         try {
             // 1. 数据库操作
