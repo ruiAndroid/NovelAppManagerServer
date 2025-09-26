@@ -85,4 +85,31 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 执行分页查询
         return page(userPage, queryWrapper);
     }
+    
+    @Override
+    public Page<User> getUserPage(Integer page, Integer size, String keyword) {
+        // 创建分页对象
+        Page<User> userPage = new Page<>(page, size);
+        
+        // 创建查询条件，按更新时间降序排列
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.orderByDesc("update_time");
+        
+        // 如果提供了关键词，则添加搜索条件
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            // 尝试将关键词解析为ID
+            try {
+                Long userId = Long.parseLong(keyword.trim());
+                // 使用or条件搜索ID或用户名
+                queryWrapper.and(wrapper -> wrapper.eq("id", userId).or().like("user_name", keyword.trim()));
+            } catch (NumberFormatException e) {
+                // 如果不是数字，则只按用户名搜索
+                queryWrapper.like("user_name", keyword.trim());
+            }
+        }
+        
+        // 执行分页查询
+        return page(userPage, queryWrapper);
+    }
+
 }

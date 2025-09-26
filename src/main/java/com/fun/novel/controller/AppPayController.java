@@ -209,6 +209,14 @@ public class AppPayController {
                 douzuanPay.setGatewayIos(appPayWithConfigDTO.getDouzuanPay().getGatewayIos() == null ? null : appPayWithConfigDTO.getDouzuanPay().getGatewayIos().toString());
                 paymentConfig.setDouzuanPay(douzuanPay);
             }
+            // imPay
+            if (appPayWithConfigDTO.getImPay() != null) {
+                CreateNovelAppRequest.PayTypeConfig imPay = new CreateNovelAppRequest.PayTypeConfig();
+                imPay.setEnabled(appPayWithConfigDTO.getImPay().getEnabled());
+                imPay.setGatewayAndroid(appPayWithConfigDTO.getImPay().getGatewayAndroid() == null ? null : appPayWithConfigDTO.getImPay().getGatewayAndroid().toString());
+                imPay.setGatewayIos(appPayWithConfigDTO.getImPay().getGatewayIos() == null ? null : appPayWithConfigDTO.getImPay().getGatewayIos().toString());
+                paymentConfig.setImPay(imPay);
+            }
             // wxVirtualPay
             if (appPayWithConfigDTO.getWxVirtualPay() != null) {
                 CreateNovelAppRequest.PayTypeConfig wxVirtualPay = new CreateNovelAppRequest.PayTypeConfig();
@@ -286,6 +294,9 @@ public class AppPayController {
             case "douzuanPay":
                 paymentConfig.setDouzuanPay(payTypeConfig);
                 break;
+            case "imPay":
+                paymentConfig.setImPay(payTypeConfig);
+                break;
             case "wxVirtualPay":
                 paymentConfig.setWxVirtualPay(payTypeConfig);
                 break;
@@ -358,6 +369,9 @@ public class AppPayController {
                 break;
             case "douzuanPay":
                 paymentConfig.setDouzuanPay(payTypeConfig);
+                break;
+            case "imPay":
+                paymentConfig.setImPay(payTypeConfig);
                 break;
             case "wxVirtualPay":
                 paymentConfig.setWxVirtualPay(payTypeConfig);
@@ -465,6 +479,20 @@ public class AppPayController {
                     douzuanPay.setEnabled(false);
                 }
                 paymentConfig.setDouzuanPay(douzuanPay);
+            }
+
+            // imPay
+            if (appPayWithConfigDTO.getImPay() != null) {
+                CreateNovelAppRequest.PayTypeConfig imPay = new CreateNovelAppRequest.PayTypeConfig();
+                imPay.setEnabled(appPayWithConfigDTO.getImPay().getEnabled());
+                imPay.setGatewayAndroid(appPayWithConfigDTO.getImPay().getGatewayAndroid() == null ? null : appPayWithConfigDTO.getImPay().getGatewayAndroid().toString());
+                imPay.setGatewayIos(appPayWithConfigDTO.getImPay().getGatewayIos() == null ? null : appPayWithConfigDTO.getImPay().getGatewayIos().toString());
+
+                // 如果是删除的支付类型，则设置为禁用
+                if ("imPay".equals(payType)) {
+                    imPay.setEnabled(false);
+                }
+                paymentConfig.setImPay(imPay);
             }
             // wxVirtualPay
             if (appPayWithConfigDTO.getWxVirtualPay() != null) {

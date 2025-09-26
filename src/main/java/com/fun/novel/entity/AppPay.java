@@ -102,6 +102,21 @@ public class AppPay {
     @JsonProperty("wx_virtual_pay_gateway_ios")
     private Integer wxVirtualPayGatewayIos;
 
+    @TableField("im_pay_enabled")
+    @Schema(description = "是否启用IM支付")
+    @JsonProperty("im_pay_enabled")
+    private Integer imPayEnabled;
+
+    @TableField("im_pay_gateway_android")
+    @Schema(description = "IM支付Android网关")
+    @JsonProperty("im_pay_gateway_android")
+    private Integer imPayGatewayAndroid;
+
+    @TableField("im_pay_gateway_ios")
+    @Schema(description = "IM支付iOS网关")
+    @JsonProperty("im_pay_gateway_ios")
+    private Integer imPayGatewayIos;
+
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
     @JsonProperty("create_time")

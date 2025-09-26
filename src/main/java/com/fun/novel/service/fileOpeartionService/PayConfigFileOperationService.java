@@ -124,6 +124,9 @@ public class PayConfigFileOperationService extends AbstractConfigFileOperationSe
                     if (payConfig.getDouzuanPay() != null) {
                         platformConfig.put("dou_zuan_pay", buildPayTypeMap(payConfig.getDouzuanPay()));
                     }
+                    if (payConfig.getImPay() != null) {
+                        platformConfig.put("im_pay", buildPayTypeMap(payConfig.getImPay()));
+                    }
                     break;
                 case "wx":
                     if (payConfig.getWxVirtualPay() != null) {
@@ -213,6 +216,7 @@ public class PayConfigFileOperationService extends AbstractConfigFileOperationSe
                         platformPayConfigMap.put("order_pay", buildPayTypeMap(payConfig.getOrderPay()));
                         platformPayConfigMap.put("renew_pay", buildPayTypeMap(payConfig.getRenewPay()));
                         platformPayConfigMap.put("dou_zuan_pay", buildPayTypeMap(payConfig.getDouzuanPay()));
+                        platformPayConfigMap.put("im_pay", buildPayTypeMap(payConfig.getImPay()));
                         break;
                     case "ks":
                         platformPayConfigMap.put("normal_pay", buildPayTypeMap(payConfig.getNormalPay()));
@@ -250,6 +254,7 @@ public class PayConfigFileOperationService extends AbstractConfigFileOperationSe
                                 pfMap.put("order_pay", buildPayTypeMap(null));
                                 pfMap.put("renew_pay", buildPayTypeMap(null));
                                 pfMap.put("dou_zuan_pay", buildPayTypeMap(null));
+                                pfMap.put("im_pay", buildPayTypeMap(null));
                                 break;
                             case "ks":
                                 pfMap.put("normal_pay", buildPayTypeMap(null));
@@ -280,6 +285,7 @@ public class PayConfigFileOperationService extends AbstractConfigFileOperationSe
                         ttMap.put("order_pay", buildPayTypeMap(payConfig.getOrderPay()));
                         ttMap.put("renew_pay", buildPayTypeMap(payConfig.getRenewPay()));
                         ttMap.put("dou_zuan_pay", buildPayTypeMap(payConfig.getDouzuanPay()));
+                        ttMap.put("im_pay", buildPayTypeMap(payConfig.getImPay()));
                         break;
                     case "ks":
                         java.util.Map<String, Object> ksMap = (java.util.Map<String, Object>) payConfigMap.get("ks");
@@ -616,6 +622,8 @@ public class PayConfigFileOperationService extends AbstractConfigFileOperationSe
                 return "renew_pay";
             case "douzuanPay":
                 return "dou_zuan_pay";
+            case "imPay":
+                return "im_pay";
             case "wxVirtualPay":
                 return "wx_virtual_pay";
             default:
@@ -712,6 +720,11 @@ public class PayConfigFileOperationService extends AbstractConfigFileOperationSe
                 case "douzuanPay":
                     if (paymentConfig.getDouzuanPay() != null) {
                         platformConfig.put("dou_zuan_pay", buildPayTypeMap(paymentConfig.getDouzuanPay()));
+                    }
+                    break;
+                case "imPay":
+                    if (paymentConfig.getImPay() != null) {
+                        platformConfig.put("im_pay", buildPayTypeMap(paymentConfig.getImPay()));
                     }
                     break;
                 case "wxVirtualPay":

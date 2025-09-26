@@ -75,6 +75,7 @@ public class CreateNovelAppRequest {
         private PayTypeConfig douzuanPay;
         private PayTypeConfig renewPay;
         private PayTypeConfig wxVirtualPay;
+        private PayTypeConfig imPay;
     }
 
     @Data

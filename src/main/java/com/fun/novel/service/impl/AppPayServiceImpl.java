@@ -19,7 +19,7 @@ import java.util.List;
 public class AppPayServiceImpl extends ServiceImpl<AppPayMapper, AppPay> implements AppPayService {
 
     private static final List<String> VALID_PAY_TYPES = Arrays.asList(
-            "normalPay", "orderPay", "renewPay", "douzuanPay", "wxVirtualPay");
+            "normalPay", "orderPay", "renewPay", "douzuanPay","imPay", "wxVirtualPay");
 
     @Override
     public AppPayWithConfigDTO createAppPay(CreateAppPayRequest request) {
@@ -71,6 +71,11 @@ public class AppPayServiceImpl extends ServiceImpl<AppPayMapper, AppPay> impleme
                 appPay.setDouzuanPayEnabled(enabledValue);
                 appPay.setDouzuanPayGatewayAndroid(request.getGatewayAndroid());
                 appPay.setDouzuanPayGatewayIos(request.getGatewayIos());
+                break;
+            case "imPay":
+                appPay.setImPayEnabled(enabledValue);
+                appPay.setImPayGatewayAndroid(request.getGatewayAndroid());
+                appPay.setImPayGatewayIos(request.getGatewayIos());
                 break;
             case "wxVirtualPay":
                 appPay.setWxVirtualPayEnabled(enabledValue);
@@ -128,12 +133,20 @@ public class AppPayServiceImpl extends ServiceImpl<AppPayMapper, AppPay> impleme
                     douzuanConfig.setGatewayIos(appPay.getDouzuanPayGatewayIos());
                     result.setDouzuanPay(douzuanConfig);
                     break;
+                case "imPay":
+                    ImPayConfigDetail imPayConfig = new ImPayConfigDetail();
+                    imPayConfig.setEnabled(appPay.getImPayEnabled() == 1);
+                    imPayConfig.setGatewayAndroid(appPay.getImPayGatewayAndroid());
+                    imPayConfig.setGatewayIos(appPay.getImPayGatewayIos());
+                    result.setImPay(imPayConfig);
+                    break;
                 case "wxVirtualPay":
                     WxVirtualPayConfigDetail wxVirtualPayConfig = new WxVirtualPayConfigDetail();
                     wxVirtualPayConfig.setEnabled(appPay.getWxVirtualPayEnabled() == 1);
                     wxVirtualPayConfig.setGatewayAndroid(appPay.getWxVirtualPayGatewayAndroid());
                     wxVirtualPayConfig.setGatewayIos(appPay.getWxVirtualPayGatewayIos());
                     result.setWxVirtualPay(wxVirtualPayConfig);
+                    break;
             }
         }
 
@@ -185,6 +198,12 @@ public class AppPayServiceImpl extends ServiceImpl<AppPayMapper, AppPay> impleme
                 existingAppPay.setDouzuanPayEnabled(enabledValue);
                 existingAppPay.setDouzuanPayGatewayAndroid(request.getGatewayAndroid());
                 existingAppPay.setDouzuanPayGatewayIos(request.getGatewayIos());
+                break;
+            case "imPay":
+                existingAppPay.setImPayEnabled(enabledValue);
+                existingAppPay.setImPayGatewayAndroid(request.getGatewayAndroid());
+                existingAppPay.setImPayGatewayIos(request.getGatewayIos());
+                break;
             case "wxVirtualPay":
                 existingAppPay.setWxVirtualPayEnabled(enabledValue);
                 existingAppPay.setWxVirtualPayGatewayAndroid(request.getGatewayAndroid());

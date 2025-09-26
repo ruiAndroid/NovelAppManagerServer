@@ -71,6 +71,7 @@ public class NovelAppDatabaseOperationServiceImpl implements NovelAppDatabaseOpe
         payTypeMap.put("normalPay", paymentConfig.getNormalPay());
         payTypeMap.put("orderPay", paymentConfig.getOrderPay());
         payTypeMap.put("douzuanPay", paymentConfig.getDouzuanPay());
+        payTypeMap.put("imPay", paymentConfig.getImPay());
         payTypeMap.put("renewPay", paymentConfig.getRenewPay());
         payTypeMap.put("wxVirtualPay", paymentConfig.getWxVirtualPay());
         for (Map.Entry<String, CreateNovelAppRequest.PayTypeConfig> entry : payTypeMap.entrySet()) {
@@ -85,6 +86,7 @@ public class NovelAppDatabaseOperationServiceImpl implements NovelAppDatabaseOpe
                     case "normalPay": exists = appPayConfigDTO.getNormalPay() != null; break;
                     case "orderPay": exists = appPayConfigDTO.getOrderPay() != null; break;
                     case "douzuanPay": exists = appPayConfigDTO.getDouzuanPay() != null; break;
+                    case "imPay": exists = appPayConfigDTO.getImPay() != null; break;
                     case "renewPay": exists = appPayConfigDTO.getRenewPay() != null; break;
                     case "wxVirtualPay": exists = appPayConfigDTO.getWxVirtualPay() != null; break;
                 }

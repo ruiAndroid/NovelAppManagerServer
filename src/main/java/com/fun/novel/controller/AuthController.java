@@ -177,10 +177,13 @@ public class AuthController {
             @RequestParam(defaultValue = "1") Integer page,
             
             @Parameter(description = "每页条数，默认为10") 
-            @RequestParam(defaultValue = "10") Integer size) {
+            @RequestParam(defaultValue = "10") Integer size,
+            
+            @Parameter(description = "搜索关键词，可以是用户ID或用户名") 
+            @RequestParam(required = false) String keyword) {
         
         try {
-            Page<User> userPage = userService.getUserPage(page, size);
+            Page<User> userPage = userService.getUserPage(page, size, keyword);
             return Result.success("查询成功", userPage);
         } catch (Exception e) {
             return Result.error("查询失败: " + e.getMessage());
