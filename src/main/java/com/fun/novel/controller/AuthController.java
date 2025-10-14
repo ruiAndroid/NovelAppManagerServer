@@ -122,6 +122,7 @@ public class AuthController {
             // 根据用户类型设置状态
             // 用户类型: 0研发，1产品，2测试
             // 用户状态: 0审核通过，1待审核，2审核失败
+
             if (registerRequest.getType() != null) {
                 if (registerRequest.getType() == 0) {
                     // 研发人员默认审核通过

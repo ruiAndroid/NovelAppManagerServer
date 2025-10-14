@@ -333,13 +333,21 @@ public class NovelAppPublishUtil {
             //步骤3：预览生成二维码
             messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[微信] 开始生成二维码...");
             String previewCmd = buildWeixinPreviewCommand(appId, projectPath,version,log);
-            boolean previewExecuteCommandResult=executeCommand(taskId, previewCmd, processBuilder, line -> {});
+
+
+
+            boolean previewExecuteCommandResult=executeCommand(taskId, previewCmd, processBuilder, line -> {
+                if (line.contains("\"message\":\"upload\",\"status\":\"done\"")) {
+                    String qrcodePath = projectPath + "\\wx_qrcode.png";
+                    messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[微信] 二维码生成成功: "+ qrcodePath);
+                }
+            });
             if(!previewExecuteCommandResult){
                 messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish error [微信]预览二维码失败");
                 return;
             }
 
-            String completeMsg = "[微信] 发布流程全部完成";
+            String completeMsg = "Publish success [微信] 发布流程全部完成";
             messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, completeMsg);
 
 
@@ -482,15 +490,16 @@ public class NovelAppPublishUtil {
         if (!keyFile.exists()) {
             throw new RuntimeException("密钥文件不存在: " + keyFile.getAbsolutePath());
         }
+        String qrcodePath = projectPath + "\\wx_qrcode.png";
 
         // 构建发布命令
         return String.format(
-                "miniprogram-ci preview --pp %s --appid %s --pkp %s --uv %s --ud %s --enable-es6 true --enable-es7 true --enable-minify-wxss true --enable-minify-js true --enable-minify-wxml true --enable-minify true",
+                "miniprogram-ci preview --pp %s --appid %s --pkp %s --uv %s --ud %s --enable-es6 true --enable-es7 true --enable-minify-wxss true --enable-minify-js true --enable-minify-wxml true --enable-minify true  --qrcode-format image --qrcode-output-dest %s",
                 projectPath,
                 appId,
                 keyFile.getAbsolutePath(),
                 version,
-                log
+                log,qrcodePath
         );
     }
 

@@ -256,11 +256,6 @@ public class NovelAppPublishController {
                 logger.warn("任务不存在: {}", taskId);
                 return ResponseEntity.notFound().build();
             }
-            
-            if (!"mp-kuaishou".equals(platformCode)) {
-                logger.warn("不是快手平台任务: {}", platformCode);
-                return ResponseEntity.notFound().build();
-            }
 
             // 获取项目路径
             String projectPath = publishTaskManager.getProjectPath(taskId);
@@ -272,7 +267,13 @@ public class NovelAppPublishController {
             }
 
             // 构建二维码文件路径
-            String qrcodePath = projectPath + "\\ks_qrcode.png";
+            String qrcodePath = projectPath + "\\qrcode.png";
+            if("mp-kuaishou".equals(platformCode)){
+                qrcodePath = projectPath + "\\ks_qrcode.png";
+            } else if ("mp-weixin".equals(platformCode)) {
+                qrcodePath = projectPath + "\\wx_qrcode.png";
+            }
+
             logger.info("二维码文件路径: {}", qrcodePath);
 
             // 读取二维码文件
