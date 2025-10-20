@@ -62,17 +62,11 @@ public class NovelAppPublishUtil {
                 PlatformPublishHandler handler = getPlatformHandler(platformCode);
                 if (handler != null) {
                     handler.handlePublish(taskId, appId, projectPath, douyinAppToken, kuaishouAppToken,weixinAppToken, version, log, processBuilder);
-                    // 发送成功状态
-//                    messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish success");
+
                 } else {
-                    // 默认处理流程
-                    String publishCmd = buildPublishCommand(platformCode, appId, projectPath, douyinAppToken, version, log);
-                    logger.info("开始发布小程序，命令: {}", publishCmd);
-                    if (executeCommand(taskId, publishCmd, processBuilder, null)) {
-                        messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish success");
-                    } else {
-                        messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish error");
-                    }
+                    String errorMsg = "发布过程发生错误: handler is null ";
+                    logger.error(errorMsg);
+                    messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish error");
                 }
             } catch (Exception e) {
                 String errorMsg = "发布过程发生错误: " + e.getMessage();
@@ -88,8 +82,72 @@ public class NovelAppPublishUtil {
     }
 
     /**
-     * 获取平台对应的发布处理器
+     * 生成指定小程序的预览码
      */
+    public String previewQrCode(String platformCode,
+                                String appId,
+                                String projectPath,
+                                String douyinAppToken,
+                                String kuaishouAppToken,
+                                String weixinAppToken,
+                                String path,
+                                String query,
+                                String scene
+                                ) {
+        // 创建任务，检查平台是否已有任务在运行
+        String taskId = publishTaskManager.createTask(platformCode);
+        if (taskId == null) {
+            String runningTaskId = publishTaskManager.getPlatformRunningTask(platformCode);
+            logger.warn("平台 {} 已有任务 {} 在运行中，请稍后再试", platformCode, runningTaskId);
+            return null;
+        }
+        // 设置项目路径
+        publishTaskManager.setProjectPath(taskId, projectPath);
+        // 发送生成预览码开始消息
+        messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "开始生成预览码...");
+
+        // 使用异步方式执行发布任务
+        CompletableFuture.runAsync(() -> {
+            Process process = null;
+            try {
+                // 检查项目路径
+                File projectDir = new File(projectPath);
+                if (!projectDir.exists() || !projectDir.isDirectory()) {
+                    throw new RuntimeException("项目路径不存在或不是目录: " + projectPath);
+                }
+
+                // 创建 ProcessBuilder，供所有平台使用
+                ProcessBuilder processBuilder = new ProcessBuilder();
+                processBuilder.directory(projectDir);
+                processBuilder.redirectErrorStream(true);
+
+                // 根据平台选择对应的处理器
+                PlatformPublishHandler handler = getPlatformHandler(platformCode);
+                if (handler != null) {
+                    handler.handlePreview(taskId, appId, projectPath, douyinAppToken, kuaishouAppToken,weixinAppToken,path, query, scene, processBuilder);
+                } else {
+                    String errorMsg = "生成预览码过程发生错误: handler is null ";
+                    logger.error(errorMsg);
+                    messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Preview QrCode error");
+
+                }
+            } catch (Exception e) {
+                String errorMsg = "生成预览码过程发生错误: " + e.getMessage();
+                logger.error(errorMsg);
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Preview QrCode error " + errorMsg);
+            } finally {
+                // 清理任务
+                publishTaskManager.removeTask(taskId);
+            }
+        }, executorService);
+
+        return taskId;
+
+    }
+
+        /**
+         * 获取平台对应的发布处理器
+         */
     private PlatformPublishHandler getPlatformHandler(String platformCode) {
         switch (platformCode) {
             case "mp-toutiao":
@@ -182,6 +240,7 @@ public class NovelAppPublishUtil {
      */
     private interface PlatformPublishHandler {
         void handlePublish(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken,String weixinAppToken, String version, String log, ProcessBuilder processBuilder);
+        void handlePreview(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken,String weixinAppToken, String path, String query, String scene, ProcessBuilder processBuilder);
     }
 
     /**
@@ -234,6 +293,39 @@ public class NovelAppPublishUtil {
 
 
             messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish success [抖音] 发布流程全部完成");
+        }
+
+        @Override
+        public void handlePreview(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken, String weixinAppToken, String path, String query, String scene, ProcessBuilder processBuilder) {
+            //步骤1：设置token
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[抖音] 开始设置Token...");
+            String tokenCmd = buildDouyinTokenCommand(appId, douyinAppToken);
+            logger.info("[抖音] tokenCmd :{}",tokenCmd);
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[抖音] tokenCmd :"+tokenCmd);
+            boolean publishExecuteCommandResult = executeCommand(taskId, tokenCmd, processBuilder, line -> {});
+            if(!publishExecuteCommandResult){
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Preview QrCode error [抖音]设置小程序Token失败");
+                return;
+            }
+
+            // 步骤2：生成二维码
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[抖音] 开始生成二维码...");
+            String previewCmd = buildDouyinAppointQrCodePreviewCommand(projectPath,path,query,scene);
+            logger.info("[抖音] previewCmd :{}",previewCmd);
+
+            boolean previewExecuteCommandResult = executeCommand(taskId, previewCmd, processBuilder, line -> {
+                if (line.contains("二维码信息：")) {
+                    String qrCodeUrl = line.substring(line.indexOf("二维码信息：") + 6);
+                    messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Preview QrCode success [抖音] 二维码生成成功: " + qrCodeUrl);
+                }
+            });
+            if(!previewExecuteCommandResult){
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Preview QrCode error [抖音] 二维码生成失败");
+            }
+
+
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Preview QrCode success [抖音] 生成二维码完成");
+
         }
     }
 
@@ -293,6 +385,11 @@ public class NovelAppPublishUtil {
             String completeMsg = "Publish success [快手] 发布流程全部完成";
             messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, completeMsg);
         }
+
+        @Override
+        public void handlePreview(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken, String weixinAppToken, String path, String query, String scene, ProcessBuilder processBuilder) {
+
+        }
     }
 
     /**
@@ -349,6 +446,45 @@ public class NovelAppPublishUtil {
 
             String completeMsg = "Publish success [微信] 发布流程全部完成";
             messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, completeMsg);
+
+
+        }
+
+        @Override
+        public void handlePreview(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken, String weixinAppToken, String path, String query, String scene, ProcessBuilder processBuilder) {
+            // 步骤1：生成密钥
+            try {
+                // 发送开始生成密钥的消息
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[微信] 开始生成密钥文件...");
+
+                // 使用现有的方法生成密钥文件
+                buildWeixinKeyFile(appId, projectPath, weixinAppToken);
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[微信] 密钥文件生成成功");
+
+            } catch (Exception e) {
+                String errorMsg = "[微信] 密钥文件生成失败: " + e.getMessage();
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Preview QrCode error [微信] 密钥文件生成失败:" + errorMsg);
+                return;
+            }
+            logger.info("[微信] 开始生成预览码...");
+
+            // 步骤2：生成二维码
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[微信] 开始生成二维码...");
+            String previewCmd = buildWeixinAppointQrCodePreviewCommand(appId,projectPath,path,query,scene);
+            logger.info("[微信] previewCmd :{}",previewCmd);
+
+            boolean previewExecuteCommandResult = executeCommand(taskId, previewCmd, processBuilder, line -> {
+                if (line.contains("\"message\":\"upload\",\"status\":\"done\"")) {
+                    String qrcodePath = projectPath + "\\wx_qrcode.png";
+                    messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Preview QrCode success [微信] 二维码生成成功: "+ qrcodePath);
+                }
+            });
+            if(!previewExecuteCommandResult){
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Preview QrCode error [微信] 二维码生成失败");
+            }
+
+
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Preview QrCode success [微信] 生成二维码完成");
 
 
         }
@@ -425,6 +561,28 @@ public class NovelAppPublishUtil {
         return "tma preview " + projectPath;
     }
 
+    /**
+     * 生成抖音指定路径和参数的预览命令
+     *
+     */
+    private String buildDouyinAppointQrCodePreviewCommand(String projectPath,String path,String query,String scene){
+        // 确保参数不为空，避免命令执行时报错
+        String safePath = (path != null) ? path : "";
+        String safeQuery = (query != null) ? query : "";
+        String safeScene = (scene != null) ? scene : "";
+        
+        // 对参数进行转义以防止特殊字符引起问题
+        safePath = safePath.replace("\"", "\\\"");
+        safeQuery = safeQuery.replace("\"", "\\\"");
+        
+        return String.format(
+                "tma preview --miniapp-path \"%s\" --miniapp-query \"%s\" --miniapp-scene %s %s",
+                safePath,
+                safeQuery,
+                safeScene,
+                projectPath
+        );
+    }
     /**
      * 快手平台：发布命令
      */
@@ -503,25 +661,30 @@ public class NovelAppPublishUtil {
         );
     }
 
-    /**
-     * 构建发布命令
-     */
-    private String buildPublishCommand(String platformCode, String appId, String projectPath, String douyinAppToken, String version, String log) {
-        StringBuilder cmd = new StringBuilder();
-        
-        switch (platformCode) {
-            case "mp-weixin":
-                cmd.append("npx @vue/cli-service uni-publish --platform mp-weixin");
-                break;
-            case "mp-baidu":
-                cmd.append("npx @vue/cli-service uni-publish --platform mp-baidu");
-                break;
-            default:
-                throw new IllegalArgumentException("不支持的平台代码: " + platformCode);
+    private String buildWeixinAppointQrCodePreviewCommand(String appId, String projectPath, String path, String query, String scene) {
+        // 构建密钥文件路径
+        File keyFile = new File(projectPath, "private." + appId + ".key");
+        if (!keyFile.exists()) {
+            throw new RuntimeException("密钥文件不存在: " + keyFile.getAbsolutePath());
         }
-        
-        return cmd.toString();
+        String qrcodePath = projectPath + "\\wx_qrcode.png";
+
+        // 构建发布命令
+        // 构建发布命令
+        return String.format(
+                "miniprogram-ci preview --pp %s --appid %s --pkp %s --uv %s --ud %s --enable-es6 true --enable-es7 true --enable-minify-wxss true --enable-minify-js true --enable-minify-wxml true --enable-minify true  --qrcode-format image --preview-page-path %s --preview-search-query %s --scene %s --qrcode-output-dest %s",
+                projectPath,
+                appId,
+                keyFile.getAbsolutePath(),
+                "2.0.7",    //TODO jianrui
+                "test",
+                path,
+                query,
+                scene,
+                qrcodePath
+        );
     }
+
 
     /**
      * 停止发布任务

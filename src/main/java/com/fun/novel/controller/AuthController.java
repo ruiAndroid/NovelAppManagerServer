@@ -116,6 +116,7 @@ public class AuthController {
             user.setUserName(registerRequest.getUserName());
             user.setPassword(registerRequest.getPassword());
             user.setPhone(registerRequest.getPhone());
+            user.setEmail(registerRequest.getEmail());
             user.setAvatar(Const.USER_DEFAULT_AVATAR);
             user.setType(registerRequest.getType());
             

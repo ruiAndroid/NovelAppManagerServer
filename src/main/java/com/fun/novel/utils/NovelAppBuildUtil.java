@@ -89,7 +89,7 @@ public class NovelAppBuildUtil {
 
                 int exitCode = process.waitFor();
                 if (exitCode != 0) {
-                    String errorMsg = "Build process for task " + taskId + " exited with code: " + exitCode;
+                    String errorMsg = "Build error for task " + taskId + " exited with code: " + exitCode;
                     logger.error(errorMsg);
                     messagingTemplate.convertAndSend("/topic/build-logs/" + taskId, "ERROR: " + errorMsg);
                 } else {

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fun.novel.annotation.OperationLog;
 import com.fun.novel.common.Result;
 import com.fun.novel.dto.NovelAppBuildInfoDTO;
+import com.fun.novel.dto.NovelAppPreviewQrCodeDTO;
 import com.fun.novel.dto.NovelAppPublishDTO;
 import com.fun.novel.entity.NovelApp;
 import com.fun.novel.enums.OpType;
@@ -228,6 +229,79 @@ public class NovelAppPublishController {
         }
     }
 
+    @PostMapping("/previewQrCode")
+    @Operation(summary = "生成指定path预览码", description = "生成指定path预览码")
+    @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
+    @OperationLog(opType = OpType.OTHER_CODE, opName = "生成指定path预览码")
+    public Result<NovelAppPreviewQrCodeDTO> previewQrCode(@RequestBody Map<String, String> params) {
+        try{
+            String platformCode = params.get("platformCode");
+            String appId = params.get("appId");
+            String projectPath = params.get("projectPath");
+            String douyinAppToken = params.get("douyinAppToken");
+            String kuaishouAppToken = params.get("kuaishouAppToken");
+            String weixinAppToken = params.get("weixinAppToken");
+            String path = params.get("path");
+            String query = params.get("query");
+            String scene = params.get("scene");
+
+            // 验证必填参数
+            if (platformCode == null || appId == null || projectPath == null || path == null || query == null || scene == null) {
+                return Result.error("缺少必要参数");
+            }
+
+            // 验证平台代码
+            if (!PLATFORM_NAMES.containsKey(platformCode)) {
+                return Result.error("不支持的平台代码: " + platformCode);
+            }
+
+            // 验证应用是否存在
+            NovelApp novelApp = novelAppService.getByAppId(appId);
+            if (novelApp == null) {
+                return Result.error("未找到对应的应用: " + appId);
+            }
+
+            // 如果是抖音平台，验证token
+            if ("mp-toutiao".equals(platformCode) && (douyinAppToken == null || douyinAppToken.trim().isEmpty())) {
+                return Result.error("抖音平台发布需要提供 douyinAppToken");
+            }
+
+            // 如果是快手平台，验证token
+            if ("mp-kuaishou".equals(platformCode) && (kuaishouAppToken == null || kuaishouAppToken.trim().isEmpty())) {
+                return Result.error("快手平台发布需要提供 kuaishouAppToken");
+            }
+
+            // 如果是微信平台，验证token
+            if ("mp-weixin".equals(platformCode) && (weixinAppToken == null || weixinAppToken.trim().isEmpty())) {
+                return Result.error("微信平台发布需要提供 weixinAppToken");
+            }
+
+
+
+
+            // 创建发布任务
+            String taskId = novelAppPublishUtil.previewQrCode(
+                    platformCode,
+                    appId,
+                    projectPath,
+                    douyinAppToken,
+                    kuaishouAppToken, weixinAppToken,
+                    path,
+                    query,
+                    scene
+            );
+
+            if (taskId == null) {
+                return Result.error("当前平台已有发布/预览任务在进行中，请等待完成后再试");
+            }
+
+            return Result.success("预览任务已启动", new NovelAppPreviewQrCodeDTO(taskId));
+        } catch (Exception e) {
+            logger.error("生成指定path预览码失败", e);
+            return Result.error("生成指定path预览码失败: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/stop/{taskId}")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
     @OperationLog(opType = OpType.OTHER_CODE, opName = "停止发布小程序")
@@ -240,6 +314,8 @@ public class NovelAppPublishController {
             return Result.error("停止发布失败: " + e.getMessage());
         }
     }
+
+
 
     @GetMapping("/qrcode/{taskId}")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
@@ -296,4 +372,7 @@ public class NovelAppPublishController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+
+
+
 } 

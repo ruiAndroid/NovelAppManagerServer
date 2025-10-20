@@ -52,6 +52,13 @@ public class User {
     @Schema(description = "用户头像")
     private String avatar;
 
+
+    /**
+     * 头像
+     */
+    @TableField("email")
+    @Schema(description = "用户邮箱")
+    private String email;
     /**
      * 手机号
      */
