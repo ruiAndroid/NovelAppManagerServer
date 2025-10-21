@@ -53,6 +53,12 @@ public class NovelAppBuildUtil {
 
         String taskId = taskManager.createTask();
         CompletableFuture.runAsync(() -> {
+
+            try {
+                // 给前端一些时间建立WebSocket连接
+                Thread.sleep(3000);
+            } catch (InterruptedException ignored) {
+            }
             Process process = null;
             try {
                 // 检查工作目录是否存在

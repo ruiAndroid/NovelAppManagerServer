@@ -39,12 +39,18 @@ public class NovelAppPublishUtil {
         // 设置项目路径
         publishTaskManager.setProjectPath(taskId, projectPath);
 
-        // 发送任务开始消息
-        messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "开始发布任务...");
-        logger.info("开始发布任务: {}", taskId);
+
 
         // 使用异步方式执行发布任务
         CompletableFuture.runAsync(() -> {
+            try {
+                // 给前端一些时间建立WebSocket连接
+                Thread.sleep(3000);
+            } catch (InterruptedException ignored) {
+            }
+            // 发送任务开始消息
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "开始发布任务...");
+            logger.info("开始发布任务: {}", taskId);
             Process process = null;
             try {
                 // 检查项目路径
@@ -73,8 +79,16 @@ public class NovelAppPublishUtil {
                 logger.error(errorMsg);
                 messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish error " + errorMsg);
             } finally {
-                // 清理任务
-                publishTaskManager.removeTask(taskId);
+                // 发送任务完成信号，让前端知道可以断开连接
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "TASK_COMPLETED");
+                // 延迟清理任务，确保前端能接收到所有消息
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        Thread.sleep(3000); // 等待5秒确保消息发送完成
+                    } catch (InterruptedException ignored) {
+                    }
+                    publishTaskManager.removeTask(taskId);
+                });
             }
         }, executorService);
 
@@ -101,13 +115,20 @@ public class NovelAppPublishUtil {
             logger.warn("平台 {} 已有任务 {} 在运行中，请稍后再试", platformCode, runningTaskId);
             return null;
         }
+
         // 设置项目路径
         publishTaskManager.setProjectPath(taskId, projectPath);
-        // 发送生成预览码开始消息
-        messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "开始生成预览码...");
+
 
         // 使用异步方式执行发布任务
         CompletableFuture.runAsync(() -> {
+            try {
+                // 给前端一些时间建立WebSocket连接
+                Thread.sleep(3000);
+            } catch (InterruptedException ignored) {
+            }
+            // 发送生成预览码开始消息
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "开始生成预览码...");
             Process process = null;
             try {
                 // 检查项目路径
@@ -136,8 +157,16 @@ public class NovelAppPublishUtil {
                 logger.error(errorMsg);
                 messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Preview QrCode error " + errorMsg);
             } finally {
-                // 清理任务
-                publishTaskManager.removeTask(taskId);
+                // 发送任务完成信号，让前端知道可以断开连接
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "TASK_COMPLETED");
+                // 延迟清理任务，确保前端能接收到所有消息
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        Thread.sleep(3000); // 等待5秒确保消息发送完成
+                    } catch (InterruptedException ignored) {
+                    }
+                    publishTaskManager.removeTask(taskId);
+                });
             }
         }, executorService);
 
@@ -388,6 +417,38 @@ public class NovelAppPublishUtil {
 
         @Override
         public void handlePreview(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken, String weixinAppToken, String path, String query, String scene, ProcessBuilder processBuilder) {
+            // 步骤1：生成密钥
+            try {
+                // 发送开始生成密钥的消息
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[快手] 开始生成密钥文件...");
+
+                // 使用现有的方法生成密钥文件
+                buildKuaishouKeyFile(appId, projectPath, kuaishouAppToken);
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[快手] 密钥文件生成成功");
+
+            } catch (Exception e) {
+                String errorMsg = "[快手] 密钥文件生成失败: " + e.getMessage();
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish error [快手] 密钥文件生成失败:" + errorMsg);
+                return;
+            }
+            logger.info("[快手] 开始生成二维码...");
+
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[快手] 开始生成二维码...");
+            String previewCmd = buildKuaishouAppointQrCodePreviewCommand(appId,projectPath,path,query,scene);
+            logger.info("[快手] previewCmd :{}",previewCmd);
+
+            boolean previewExecuteCommandResult = executeCommand(taskId, previewCmd, processBuilder, line -> {
+                if (line.contains("[ks preview]  done.")) {
+                    String qrcodePath = projectPath + "\\ks_qrcode.png";
+                    messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Preview QrCode success [快手] 二维码生成成功: " + qrcodePath);
+
+                }
+            });
+            logger.info("[快手] 二维码生成完成 previewExecuteCommandResult："+previewExecuteCommandResult);
+            if(!previewExecuteCommandResult){
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Preview QrCode error [快手] 二维码生成失败");
+            }
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Preview QrCode success [快手] 生成二维码完成");
 
         }
     }
@@ -576,7 +637,7 @@ public class NovelAppPublishUtil {
         safeQuery = safeQuery.replace("\"", "\\\"");
         
         return String.format(
-                "tma preview --miniapp-path \"%s\" --miniapp-query \"%s\" --miniapp-scene %s %s",
+                "tma preview --miniapp-path \"%s\" --miniapp-query \"%s\" --miniapp-scene %s  %s",
                 safePath,
                 safeQuery,
                 safeScene,
@@ -618,6 +679,27 @@ public class NovelAppPublishUtil {
             qrcodePath);
     }
 
+
+    private String buildKuaishouAppointQrCodePreviewCommand(String appId, String projectPath, String path, String query, String scene) {
+        // 构建密钥文件路径
+        File keyFile = new File(projectPath, "private." + appId + ".key");
+        if (!keyFile.exists()) {
+            throw new RuntimeException("密钥文件不存在: " + keyFile.getAbsolutePath());
+        }
+
+        String qrcodePath = projectPath + "\\ks_qrcode.png";
+
+        return String.format(
+                "ks-miniprogram-ci preview --pp %s --appid %s --pkp %s --qrcode-format image  --preview-page-path %s --preview-search-query %s --scene %s --qrcode-output-dest %s ",
+                projectPath,
+                appId,
+                projectPath + "\\private." + appId + ".key",
+                path,
+                query,
+                scene,
+                qrcodePath);
+
+    }
     /**
      * 微信平台：发布命令
      */
@@ -670,7 +752,6 @@ public class NovelAppPublishUtil {
         String qrcodePath = projectPath + "\\wx_qrcode.png";
 
         // 构建发布命令
-        // 构建发布命令
         return String.format(
                 "miniprogram-ci preview --pp %s --appid %s --pkp %s --uv %s --ud %s --enable-es6 true --enable-es7 true --enable-minify-wxss true --enable-minify-js true --enable-minify-wxml true --enable-minify true  --qrcode-format image --preview-page-path %s --preview-search-query %s --scene %s --qrcode-output-dest %s",
                 projectPath,
@@ -684,6 +765,7 @@ public class NovelAppPublishUtil {
                 qrcodePath
         );
     }
+
 
 
     /**
