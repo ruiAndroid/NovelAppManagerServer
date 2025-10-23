@@ -17,31 +17,19 @@ public interface UserOpLogService {
      */
     void saveOpLog(UserOpLog userOpLog);
     
-    /**
-     * 根据用户ID查询所有操作日志记录
-     * @param userId 用户ID
-     * @return 操作日志列表
-     */
-    List<UserOpLog> queryUserAllOp(Long userId);
-    
+
     /**
      * 查询所有操作日志记录（默认按时间倒序）
      * @return 操作日志列表
      */
     List<UserOpLog> queryAllOp();
     
+
     /**
-     * 根据用户ID分页查询操作日志记录
-     * @param userId 用户ID
+     * 根据查询条件分页查询所有操作日志记录
+     * @param query 查询条件
      * @param page 分页参数
      * @return 分页结果
      */
-    IPage<UserOpLog> queryUserAllOpWithPage(Long userId, Page<UserOpLog> page);
-    
-    /**
-     * 分页查询所有操作日志记录（默认按时间倒序）
-     * @param page 分页参数
-     * @return 分页结果
-     */
-    IPage<UserOpLog> queryAllOpWithPage(Page<UserOpLog> page);
+    IPage<UserOpLog> queryAllOpWithPageAndQuery(String query, Page<UserOpLog> page);
 }

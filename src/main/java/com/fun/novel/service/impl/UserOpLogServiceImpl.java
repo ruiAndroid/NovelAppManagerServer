@@ -20,13 +20,7 @@ public class UserOpLogServiceImpl extends ServiceImpl<UserOpLogMapper, UserOpLog
         this.save(userOpLog);
     }
     
-    @Override
-    public List<UserOpLog> queryUserAllOp(Long userId) {
-        return this.lambdaQuery()
-                .eq(UserOpLog::getUserId, userId)
-                .orderByDesc(UserOpLog::getUpdateTime)
-                .list();
-    }
+
     
     @Override
     public List<UserOpLog> queryAllOp() {
@@ -34,18 +28,29 @@ public class UserOpLogServiceImpl extends ServiceImpl<UserOpLogMapper, UserOpLog
                 .orderByDesc(UserOpLog::getUpdateTime)
                 .list();
     }
-    
     @Override
-    public IPage<UserOpLog> queryUserAllOpWithPage(Long userId, Page<UserOpLog> page) {
+    public IPage<UserOpLog> queryAllOpWithPageAndQuery(String query, Page<UserOpLog> page) {
+        if (query == null || query.trim().isEmpty()) {
+            // 如果查询条件为空，则返回所有记录
+            return this.lambdaQuery()
+                    .orderByDesc(UserOpLog::getUpdateTime)
+                    .page(page);
+        }
+        
+        // 根据查询条件进行模糊匹配
         return this.lambdaQuery()
-                .eq(UserOpLog::getUserId, userId)
-                .orderByDesc(UserOpLog::getUpdateTime)
-                .page(page);
-    }
-    
-    @Override
-    public IPage<UserOpLog> queryAllOpWithPage(Page<UserOpLog> page) {
-        return this.lambdaQuery()
+                .and(wrapper -> wrapper
+                    .like(UserOpLog::getUserName, query)
+                    .or()
+                    .like(UserOpLog::getMethodName, query)
+                    .or()
+                    .like(UserOpLog::getRequestUrl, query)
+                    .or()
+                    .like(UserOpLog::getRequestParams, query)
+                    .or()
+                    .like(UserOpLog::getResponseResult, query)
+                    .or()
+                    .like(UserOpLog::getOpName, query))
                 .orderByDesc(UserOpLog::getUpdateTime)
                 .page(page);
     }

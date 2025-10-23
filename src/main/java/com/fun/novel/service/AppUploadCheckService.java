@@ -125,7 +125,7 @@ public class AppUploadCheckService {
     /**
      * 执行发版前小程序检查
      */
-    public AppUploadCheckDTO performUploadCheck(String appId) {
+    public AppUploadCheckDTO performUploadCheck(String appId,String projectPath) {
         try {
             logger.info("开始执行发版前小程序检查，appId: {}", appId);
             
@@ -143,7 +143,7 @@ public class AppUploadCheckService {
             checkTestCode(appId, appCommonConfig, result);
             
             // 3. 获取线上版本号以及本地版本号数据
-            getVersionInfo(appId, appCommonConfig, result);
+            getVersionInfo(appId,projectPath, appCommonConfig, result);
             
             // 4. 获取微距配置
             getMicroConfig(appId, result);
@@ -226,7 +226,7 @@ public class AppUploadCheckService {
     /**
      * 获取线上版本号以及本地版本号数据
      */
-    private void getVersionInfo(String appId, AppCommonConfig appCommonConfig, AppUploadCheckDTO result) {
+    private void getVersionInfo(String appId,String projectPath, AppCommonConfig appCommonConfig, AppUploadCheckDTO result) {
         try {
             logger.info("获取版本信息，appId: {}", appId);
             
@@ -243,7 +243,7 @@ public class AppUploadCheckService {
             
             // 3. 获取线上版本号
             String platform = novelApp.getPlatform();
-            String onlineVersion = getOnlineVersion(appId, platform, novelApp, appCommonConfig);
+            String onlineVersion = getOnlineVersion(appId,projectPath, platform, novelApp, appCommonConfig);
             versionInfo.setOnlineVersion(onlineVersion);
             
             // 4. 将VersionInfo设置到结果对象中
@@ -259,14 +259,14 @@ public class AppUploadCheckService {
     /**
      * 获取线上版本号
      */
-    private String getOnlineVersion(String appId, String platform, NovelApp novelApp, AppCommonConfig appCommonConfig) {
+    private String getOnlineVersion(String appId,String projectPath, String platform, NovelApp novelApp, AppCommonConfig appCommonConfig) {
         try {
             logger.info("获取线上版本号，appId: {}, platform: {}", appId, platform);
             
             // 根据平台选择对应的处理器
             OnlineVersionHandler handler = getOnlineVersionHandler(platform);
             if (handler != null) {
-                return handler.handle(appId, novelApp, appCommonConfig);
+                return handler.handle(appId, projectPath,novelApp, appCommonConfig);
             } else {
                 logger.warn("不支持的平台，appId: {}, platform: {}", appId, platform);
                 return null;
@@ -297,7 +297,7 @@ public class AppUploadCheckService {
      * 线上版本号处理器接口
      */
     private interface OnlineVersionHandler {
-        String handle(String appId, NovelApp novelApp, AppCommonConfig appCommonConfig);
+        String handle(String appId,String projectPath, NovelApp novelApp, AppCommonConfig appCommonConfig);
     }
     
     /**
@@ -306,7 +306,7 @@ public class AppUploadCheckService {
     private class DouyinOnlineVersionHandler implements OnlineVersionHandler {
 
         @Override
-        public String handle(String appId, NovelApp novelApp, AppCommonConfig appCommonConfig) {
+        public String handle(String appId,String projectPath, NovelApp novelApp, AppCommonConfig appCommonConfig) {
             try {
                 logger.info("获取抖音平台线上版本号，appId: {}", appId);
                 
@@ -367,19 +367,97 @@ public class AppUploadCheckService {
     private class KuaishouOnlineVersionHandler implements OnlineVersionHandler {
 
         @Override
-        public String handle(String appId, NovelApp novelApp, AppCommonConfig appCommonConfig) {
-            return "";
+        public String handle(String appId,String projectPath, NovelApp novelApp, AppCommonConfig appCommonConfig) {
+            try {
+                logger.info("获取快手平台线上版本号，appId: {}", appId);
+                // 构建设置token命令
+                String kuaishouAppToken = appCommonConfig.getKuaishouAppToken();
+                if (kuaishouAppToken == null || kuaishouAppToken.isEmpty()) {
+                    logger.warn("快手平台token为空，appId: {}", appId);
+                    return null;
+                }
+
+                try {
+                    // 使用现有的方法生成密钥文件
+                    buildKuaishouKeyFile(appId, projectPath, kuaishouAppToken);
+
+                } catch (Exception e) {
+                    String errorMsg = "[快手] 密钥文件生成失败: " + e.getMessage();
+                    logger.error(errorMsg);
+                    return null;
+                }
+
+
+                // 构建获取线上版本号命令
+                // 构建密钥文件路径
+                File keyFile = new File(projectPath, "private." + appId + ".key");
+                if (!keyFile.exists()) {
+                    throw new RuntimeException("密钥文件不存在: " + keyFile.getAbsolutePath());
+                }
+                String versionCmd = String.format("ks-miniprogram-ci appinfo --pp %s --pkp %s --appid %s",
+                        projectPath,
+                        keyFile.getAbsolutePath(),
+                        appId);
+                logger.info("执行快手获取线上版本号命令: {}", versionCmd);
+
+
+                // 执行获取版本号命令并解析结果
+                CommandResult versionResult = executeCommand(versionCmd, line -> {
+
+                });
+                if (!versionResult.success) {
+                    logger.error("执行快手获取线上版本号命令失败，appId: {}, 输出: {}", appId, versionResult.output);
+                    return null;
+                }
+                return null;
+            } catch (Exception e) {
+                logger.error("获取快手平台线上版本号时发生异常，appId: {}", appId, e);
+                return null;
+            }
         }
     }
-    
+
+    /**
+     * 快手平台：生成密钥文件
+     */
+    private void buildKuaishouKeyFile(String appId, String projectPath, String kuaishouAppToken) {
+        // 构建密钥文件路径
+        File keyFile = new File(projectPath, "private." + appId + ".key");
+
+        // 确保父目录存在
+        if (!keyFile.getParentFile().exists()) {
+            keyFile.getParentFile().mkdirs();
+        }
+
+        // 写入token内容到文件，使用UTF-8编码
+        try (java.io.OutputStreamWriter writer = new java.io.OutputStreamWriter(
+                new java.io.FileOutputStream(keyFile), java.nio.charset.StandardCharsets.UTF_8)) {
+            writer.write(kuaishouAppToken);
+        } catch (Exception e) {
+            String errorMsg = "生成快手密钥文件失败: " + e.getMessage();
+            logger.error(errorMsg);
+            throw new RuntimeException(errorMsg);
+        }
+
+        logger.info("快手密钥文件生成成功: {}", keyFile.getAbsolutePath());
+    }
+
+
     /**
      * 微信平台线上版本号处理器
      */
     private class WeixinOnlineVersionHandler implements OnlineVersionHandler {
 
         @Override
-        public String handle(String appId, NovelApp novelApp, AppCommonConfig appCommonConfig) {
-            return "";
+        public String handle(String appId,String projectPath, NovelApp novelApp, AppCommonConfig appCommonConfig) {
+            try {
+                logger.info("获取微信平台线上版本号，appId: {}", appId);
+
+                return null;
+            } catch (Exception e) {
+                logger.error("获取微信平台线上版本号时发生异常，appId: {}", appId, e);
+                return null;
+            }
         }
     }
 

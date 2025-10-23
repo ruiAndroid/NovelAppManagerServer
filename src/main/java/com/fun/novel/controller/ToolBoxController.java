@@ -36,12 +36,14 @@ public class ToolBoxController {
     @Operation(summary = "发版前小程序检查", description = "发版前小程序检查")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
     @OperationLog(opType = OpType.OTHER_CODE, opName = "发版前小程序检查")
-    @Parameters({@Parameter(name = "appId", description = "小程序appid")})
-    public Result<AppUploadCheckDTO> appUploadCheck(@RequestParam String appId) {
+    @Parameters({@Parameter(name = "appId", description = "小程序appid",required = true),
+            @Parameter(name = "projectPath", description = "项目路径",required = false)})
+    public Result<AppUploadCheckDTO> appUploadCheck(@RequestParam String appId ,
+                                                    @RequestParam(required = false) String projectPath) {
         try {
             logger.info("开始执行发版前小程序检查，appId: {}", appId);
             
-            AppUploadCheckDTO result = appUploadCheckService.performUploadCheck(appId);
+            AppUploadCheckDTO result = appUploadCheckService.performUploadCheck(appId,projectPath);
             
             logger.info("发版前小程序检查完成，appId: {}", appId);
             return Result.success(result);

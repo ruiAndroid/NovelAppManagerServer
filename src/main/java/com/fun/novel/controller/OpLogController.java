@@ -31,95 +31,61 @@ public class OpLogController {
     @Autowired
     private UserOpLogService userOpLogService;
 
-    @GetMapping("/queryUserAllOp")
-    @Operation(summary = "获取指定用户的所有操作记录", description = "获取指定用户的所有操作记录")
+
+    @GetMapping("/queryAllOpByQuery")
+    @Operation(summary = "根据查询条件获取所有操作记录", description = "根据查询条件获取所有操作记录")
     @Parameters({
-        @Parameter(name = "userId", description = "用户ID"),
+        @Parameter(name = "query", description = "查询条件"),
         @Parameter(name = "page", description = "页码，从1开始"),
         @Parameter(name = "size", description = "每页条数")
     })
-    public Result<IPage<UserOpLogDTO>> queryUserAllOp(
-            @RequestParam String userId,
+    public Result<IPage<UserOpLogDTO>> queryAllOpByQuery(
+            @RequestParam(required = false) String query,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size) {
         
-        // 创建分页对象
-        Page<UserOpLog> pageParam = new Page<>(page, size);
-        
-        // 根据用户ID分页查询所有操作日志，并按更新时间倒序排列
-        IPage<UserOpLog> userOpLogPage = userOpLogService.queryUserAllOpWithPage(Long.valueOf(userId), pageParam);
+        try {
+            // 创建分页对象
+            Page<UserOpLog> pageParam = new Page<>(page, size);
+            
+            // 根据查询条件分页查询所有操作日志
+            IPage<UserOpLog> userOpLogPage = userOpLogService.queryAllOpWithPageAndQuery(query, pageParam);
 
-        // 转换为DTO对象
-        List<UserOpLogDTO> userOpLogDTOs = userOpLogPage.getRecords().stream().map(userOpLog -> UserOpLogDTO.builder()
-                .id(userOpLog.getId())
-                .userId(userOpLog.getUserId())
-                .userName(userOpLog.getUserName())
-                .opType(userOpLog.getOpType())
-                .opStatus(userOpLog.getOpStatus())
-                .methodName(userOpLog.getMethodName())
-                .requestType(userOpLog.getRequestType())
-                .requestUrl(userOpLog.getRequestUrl())
-                .requestIp(userOpLog.getRequestIp())
-                .requestParams(userOpLog.getRequestParams())
-                .responseResult(userOpLog.getResponseResult())
-                .updateTime(userOpLog.getUpdateTime())
-                .build()).collect(Collectors.toList());
+            // 转换为DTO对象
+            List<UserOpLogDTO> userOpLogDTOs = userOpLogPage.getRecords().stream().map(userOpLog -> UserOpLogDTO.builder()
+                    .id(userOpLog.getId())
+                    .userId(userOpLog.getUserId())
+                    .userName(userOpLog.getUserName())
+                    .opType(userOpLog.getOpType())
+                    .opStatus(userOpLog.getOpStatus())
+                    .methodName(userOpLog.getMethodName())
+                    .requestType(userOpLog.getRequestType())
+                    .requestUrl(userOpLog.getRequestUrl())
+                    .requestIp(userOpLog.getRequestIp())
+                    .requestParams(userOpLog.getRequestParams())
+                    .responseResult(userOpLog.getResponseResult())
+                    .updateTime(userOpLog.getUpdateTime())
+                    .build()).collect(Collectors.toList());
 
-        // 构造返回的分页结果
-        IPage<UserOpLogDTO> userOpLogDTOPage = new Page<>(userOpLogPage.getCurrent(), userOpLogPage.getSize(), userOpLogPage.getTotal());
-        userOpLogDTOPage.setRecords(userOpLogDTOs);
-        
-        return Result.success(userOpLogDTOPage);
-    }
-
-    @GetMapping("/queryAllOp")
-    @Operation(summary = "获取所有操作记录", description = "获取所有操作记录，默认按时间倒序")
-    @Parameters({
-        @Parameter(name = "page", description = "页码，从1开始"),
-        @Parameter(name = "size", description = "每页条数")
-    })
-    public Result<IPage<UserOpLogDTO>> queryAllOp(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
-        
-        // 创建分页对象
-        Page<UserOpLog> pageParam = new Page<>(page, size);
-        
-        // 分页查询所有操作日志，并按更新时间倒序排列
-        IPage<UserOpLog> userOpLogPage = userOpLogService.queryAllOpWithPage(pageParam);
-
-        // 转换为DTO对象
-        List<UserOpLogDTO> userOpLogDTOs = userOpLogPage.getRecords().stream().map(userOpLog -> UserOpLogDTO.builder()
-                .id(userOpLog.getId())
-                .userId(userOpLog.getUserId())
-                .userName(userOpLog.getUserName())
-                .opType(userOpLog.getOpType())
-                .opStatus(userOpLog.getOpStatus())
-                .methodName(userOpLog.getMethodName())
-                .requestType(userOpLog.getRequestType())
-                .requestUrl(userOpLog.getRequestUrl())
-                .requestIp(userOpLog.getRequestIp())
-                .requestParams(userOpLog.getRequestParams())
-                .responseResult(userOpLog.getResponseResult())
-                .updateTime(userOpLog.getUpdateTime())
-                .build()).collect(Collectors.toList());
-
-        // 构造返回的分页结果
-        IPage<UserOpLogDTO> userOpLogDTOPage = new Page<>(userOpLogPage.getCurrent(), userOpLogPage.getSize(), userOpLogPage.getTotal());
-        userOpLogDTOPage.setRecords(userOpLogDTOs);
-        
-        return Result.success(userOpLogDTOPage);
+            // 构造返回的分页结果
+            IPage<UserOpLogDTO> userOpLogDTOPage = new Page<>(userOpLogPage.getCurrent(), userOpLogPage.getSize(), userOpLogPage.getTotal());
+            userOpLogDTOPage.setRecords(userOpLogDTOs);
+            
+            return Result.success(userOpLogDTOPage);
+        } catch (Exception e) {
+            return Result.error(500, "查询失败: " + e.getMessage());
+        }
     }
 
     @GetMapping("/queryUserArchive")
     @Operation(summary = "获取用户所有重要操作记录", description = "获取用户所有重要操作记录")
     @Parameters({
-            @Parameter(name = "userId", description = "用户id"),
+            @Parameter(name = "query", description = "查询关键字"),
             @Parameter(name = "startTime", description = "起始时间"),
             @Parameter(name = "endTime", description = "结束时间")
     })
     @PreAuthorize("hasAnyRole('ROLE_0')")
-    public Result<List<UserOpArchiveDTO>> queryUserArchive( @RequestParam(required = false) String userId,
+    public Result<List<UserOpArchiveDTO>> queryUserArchive( @RequestParam(required = false) String query,
                                                             @RequestParam(required = false) String startTime,
                                                             @RequestParam(required = false) String endTime){
         try {
@@ -143,49 +109,41 @@ public class OpLogController {
             
             // 查询操作日志
             java.util.List<com.fun.novel.entity.UserOpLog> logs;
-            if (userId == null || userId.isEmpty()) {
-                // 查询所有用户
-                java.time.LocalDateTime finalStart = start;
-                java.time.LocalDateTime finalEnd = end;
-                logs = userOpLogService.queryAllOp()
-                    .stream()
-                    .filter(log -> {
-                        java.time.LocalDateTime updateTime = log.getUpdateTime();
-                        // 添加空值检查
-                        if (updateTime == null) return false;
-                        
-                        // 时间范围检查：更新时间在[start, end]范围内（包含边界）
-                        boolean timeInRange = (updateTime.isEqual(finalStart) || updateTime.isAfter(finalStart)) &&
-                                             (updateTime.isEqual(finalEnd) || updateTime.isBefore(finalEnd));
-                        
-                        // 操作类型检查
-                        boolean isImportantType = importantOpTypes.contains(log.getOpType());
-                        
-                        return timeInRange && isImportantType;
-                    })
-                    .collect(java.util.stream.Collectors.toList());
-            } else {
-                // 查询指定用户
-                java.time.LocalDateTime finalStart1 = start;
-                java.time.LocalDateTime finalEnd1 = end;
-                logs = userOpLogService.queryUserAllOp(Long.valueOf(userId))
-                    .stream()
-                    .filter(log -> {
-                        java.time.LocalDateTime updateTime = log.getUpdateTime();
-                        // 添加空值检查
-                        if (updateTime == null) return false;
-                        
-                        // 时间范围检查：更新时间在[start, end]范围内（包含边界）
-                        boolean timeInRange = (updateTime.isEqual(finalStart1) || updateTime.isAfter(finalStart1)) &&
-                                             (updateTime.isEqual(finalEnd1) || updateTime.isBefore(finalEnd1));
-                        
-                        // 操作类型检查
-                        boolean isImportantType = importantOpTypes.contains(log.getOpType());
-                        
-                        return timeInRange && isImportantType;
-                    })
-                    .collect(java.util.stream.Collectors.toList());
-            }
+            
+            // 根据查询条件过滤日志
+            java.time.LocalDateTime finalStart = start;
+            java.time.LocalDateTime finalEnd = end;
+            logs = userOpLogService.queryAllOp()
+                .stream()
+                .filter(log -> {
+                    java.time.LocalDateTime updateTime = log.getUpdateTime();
+                    // 添加空值检查
+                    if (updateTime == null) return false;
+                    
+                    // 时间范围检查：更新时间在[start, end]范围内（包含边界）
+                    boolean timeInRange = (updateTime.isEqual(finalStart) || updateTime.isAfter(finalStart)) &&
+                                         (updateTime.isEqual(finalEnd) || updateTime.isBefore(finalEnd));
+                    
+                    // 操作类型检查
+                    boolean isImportantType = importantOpTypes.contains(log.getOpType());
+                    
+                    // 如果查询条件为空，则不过滤；否则根据查询条件过滤
+                    boolean matchesQuery = true;
+                    if (query != null && !query.isEmpty()) {
+                        matchesQuery =
+                                (log.getUserId() != null && query.equals(log.getUserId().toString())) ||
+                                (log.getUserName() != null && log.getUserName().contains(query)) ||
+                                      (log.getOpName() != null && log.getOpName().contains(query)) ||
+                                      (log.getMethodName() != null && log.getMethodName().contains(query)) ||
+                                      (log.getRequestUrl() != null && log.getRequestUrl().contains(query)) ||
+                                      (log.getRequestIp() != null && log.getRequestIp().contains(query)) ||
+                                      (log.getRequestParams() != null && log.getRequestParams().contains(query)) ||
+                                      (log.getResponseResult() != null && log.getResponseResult().contains(query));
+                    }
+                    
+                    return timeInRange && isImportantType && matchesQuery;
+                })
+                .collect(java.util.stream.Collectors.toList());
             
             // 转换为UserOpArchiveDTO并格式化时间
             java.util.List<UserOpArchiveDTO> result = logs.stream()
