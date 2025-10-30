@@ -2,14 +2,12 @@ package com.fun.novel.controller;
 
 import com.fun.novel.annotation.OperationLog;
 import com.fun.novel.common.Result;
+import com.fun.novel.entity.AppUIConfig;
 import com.fun.novel.entity.NovelApp;
 import com.fun.novel.dto.CreateNovelAppRequest;
 import com.fun.novel.enums.OpType;
-import com.fun.novel.service.NovelAppService;
-import com.fun.novel.service.NovelAppLocalFileOperationService;
-import com.fun.novel.service.NovelAppResourceFileService;
+import com.fun.novel.service.*;
 import com.fun.novel.entity.AppCommonConfig;
-import com.fun.novel.service.AppCommonConfigService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -38,6 +36,9 @@ public class NovelAppController {
 
     @Autowired
     private AppCommonConfigService appCommonConfigService;
+
+    @Autowired
+    private AppUIConfigService appUIConfigService;
 
     @PostMapping("/create")
     @Operation(summary = "创建小说应用", description = "创建一个新的小说应用记录")
@@ -74,7 +75,7 @@ public class NovelAppController {
 
     @PostMapping("/update")
     @Operation(summary = "修改小说应用基础信息", description = "根据传入的小说应用信息修改记录")
-    @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
+    @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1','ROLE_2')")
     @OperationLog(opType = OpType.UPDATE_CODE, opName = "修改小说应用基础信息")
     public Result<NovelApp> updateNovelApp(@Valid @RequestBody NovelApp novelApp) {
         // 版本号校验逻辑
@@ -146,6 +147,17 @@ public class NovelAppController {
 
         }
         req.setCommonConfig(commonConfig);
+
+        CreateNovelAppRequest.UiConfig uiConfig = new CreateNovelAppRequest.UiConfig();
+
+        AppUIConfig dbUiConfig = appUIConfigService.getByAppId(novelApp.getAppid());
+        if (dbUiConfig != null) {
+            uiConfig.setHomeCardStyle(dbUiConfig.getHomeCardStyle());
+            uiConfig.setPayCardStyle(dbUiConfig.getPayCardStyle());
+            uiConfig.setMainTheme(dbUiConfig.getMainTheme());
+            uiConfig.setSecondTheme(dbUiConfig.getSecondTheme());
+        }
+        req.setUiConfig(uiConfig);
 
         // 其它配置如有需要可补充
         return req;

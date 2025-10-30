@@ -133,6 +133,8 @@ public class NovelAppResourceFileServiceImpl implements NovelAppResourceFileServ
             }
             // 复制完成后，处理SVG主题色
             String mainTheme = uiConfig != null ? uiConfig.getMainTheme() : null;
+            log.error("即将处理的资源的主题色: {}",mainTheme );
+
             if (mainTheme != null && !mainTheme.isEmpty()) {
                 String errorSvgPath = imgDestDir + File.separator + "error" + File.separator + "error.svg";
                 String emptySvgPath = imgDestDir + File.separator + "error" + File.separator + "empty.svg";

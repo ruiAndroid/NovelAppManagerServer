@@ -284,6 +284,7 @@ public class NovelAppPublishController {
                     platformCode,
                     appId,
                     projectPath,
+                    novelApp.getVersion(),
                     douyinAppToken,
                     kuaishouAppToken, weixinAppToken,
                     path,

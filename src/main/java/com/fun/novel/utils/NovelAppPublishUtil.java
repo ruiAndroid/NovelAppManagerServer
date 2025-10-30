@@ -101,6 +101,7 @@ public class NovelAppPublishUtil {
     public String previewQrCode(String platformCode,
                                 String appId,
                                 String projectPath,
+                                String version,
                                 String douyinAppToken,
                                 String kuaishouAppToken,
                                 String weixinAppToken,
@@ -145,7 +146,7 @@ public class NovelAppPublishUtil {
                 // 根据平台选择对应的处理器
                 PlatformPublishHandler handler = getPlatformHandler(platformCode);
                 if (handler != null) {
-                    handler.handlePreview(taskId, appId, projectPath, douyinAppToken, kuaishouAppToken,weixinAppToken,path, query, scene, processBuilder);
+                    handler.handlePreview(taskId, appId, projectPath,version, douyinAppToken, kuaishouAppToken,weixinAppToken,path, query, scene, processBuilder);
                 } else {
                     String errorMsg = "生成预览码过程发生错误: handler is null ";
                     logger.error(errorMsg);
@@ -269,7 +270,7 @@ public class NovelAppPublishUtil {
      */
     private interface PlatformPublishHandler {
         void handlePublish(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken,String weixinAppToken, String version, String log, ProcessBuilder processBuilder);
-        void handlePreview(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken,String weixinAppToken, String path, String query, String scene, ProcessBuilder processBuilder);
+        void handlePreview(String taskId, String appId, String projectPath,String version, String douyinAppToken, String kuaishouAppToken,String weixinAppToken, String path, String query, String scene, ProcessBuilder processBuilder);
     }
 
     /**
@@ -325,7 +326,7 @@ public class NovelAppPublishUtil {
         }
 
         @Override
-        public void handlePreview(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken, String weixinAppToken, String path, String query, String scene, ProcessBuilder processBuilder) {
+        public void handlePreview(String taskId, String appId, String projectPath,String version, String douyinAppToken, String kuaishouAppToken, String weixinAppToken, String path, String query, String scene, ProcessBuilder processBuilder) {
             //步骤1：设置token
             messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[抖音] 开始设置Token...");
             String tokenCmd = buildDouyinTokenCommand(appId, douyinAppToken);
@@ -416,7 +417,7 @@ public class NovelAppPublishUtil {
         }
 
         @Override
-        public void handlePreview(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken, String weixinAppToken, String path, String query, String scene, ProcessBuilder processBuilder) {
+        public void handlePreview(String taskId, String appId, String projectPath,String version, String douyinAppToken, String kuaishouAppToken, String weixinAppToken, String path, String query, String scene, ProcessBuilder processBuilder) {
             // 步骤1：生成密钥
             try {
                 // 发送开始生成密钥的消息
@@ -512,7 +513,7 @@ public class NovelAppPublishUtil {
         }
 
         @Override
-        public void handlePreview(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken, String weixinAppToken, String path, String query, String scene, ProcessBuilder processBuilder) {
+        public void handlePreview(String taskId, String appId, String projectPath,String version, String douyinAppToken, String kuaishouAppToken, String weixinAppToken, String path, String query, String scene, ProcessBuilder processBuilder) {
             // 步骤1：生成密钥
             try {
                 // 发送开始生成密钥的消息
@@ -531,7 +532,7 @@ public class NovelAppPublishUtil {
 
             // 步骤2：生成二维码
             messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[微信] 开始生成二维码...");
-            String previewCmd = buildWeixinAppointQrCodePreviewCommand(appId,projectPath,path,query,scene);
+            String previewCmd = buildWeixinAppointQrCodePreviewCommand(appId,projectPath,version, path,query,scene);
             logger.info("[微信] previewCmd :{}",previewCmd);
 
             boolean previewExecuteCommandResult = executeCommand(taskId, previewCmd, processBuilder, line -> {
@@ -743,7 +744,7 @@ public class NovelAppPublishUtil {
         );
     }
 
-    private String buildWeixinAppointQrCodePreviewCommand(String appId, String projectPath, String path, String query, String scene) {
+    private String buildWeixinAppointQrCodePreviewCommand(String appId, String projectPath,String version, String path, String query, String scene) {
         // 构建密钥文件路径
         File keyFile = new File(projectPath, "private." + appId + ".key");
         if (!keyFile.exists()) {
@@ -757,7 +758,7 @@ public class NovelAppPublishUtil {
                 projectPath,
                 appId,
                 keyFile.getAbsolutePath(),
-                "2.0.7",    //TODO jianrui
+                version,
                 "test",
                 path,
                 query,

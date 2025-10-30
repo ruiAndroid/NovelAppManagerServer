@@ -8,6 +8,7 @@ import com.fun.novel.enums.OpType;
 import com.fun.novel.service.UserOpLogService;
 import com.fun.novel.service.UserService;
 import com.fun.novel.utils.JwtUtil;
+import com.fun.novel.utils.MailSender;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.AfterReturning;
@@ -31,6 +32,7 @@ import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Set;
 
 /**
  * 操作日志记录切面
@@ -41,16 +43,23 @@ public class OperationLogAspect {
     
     private static final Logger log = LoggerFactory.getLogger(OperationLogAspect.class);
     
+    // 定义敏感操作类型
+    private static final Set<Integer> SENSITIVE_OPERATION_TYPES = Set.of(2, 3, 4, 7);
+    
     private final UserOpLogService userOpLogService;
     
     private final UserService userService;
     
     private final JwtUtil jwtUtil;
     
-    public OperationLogAspect(UserOpLogService userOpLogService, @Lazy UserService userService, JwtUtil jwtUtil) {
+    // 注入MailSender bean
+    private final MailSender mailSender;
+    
+    public OperationLogAspect(UserOpLogService userOpLogService, @Lazy UserService userService, JwtUtil jwtUtil, MailSender mailSender) {
         this.userOpLogService = userOpLogService;
         this.userService = userService;
         this.jwtUtil = jwtUtil;
+        this.mailSender = mailSender;
     }
     
     /**
@@ -154,6 +163,11 @@ public class OperationLogAspect {
             
             // 保存数据库
             userOpLogService.saveOpLog(userOpLog);
+            
+            // 检查是否为敏感操作，如果是则触发告警
+            if (isSensitiveOperation(userOpLog.getOpType())) {
+                triggerAlert(userOpLog);
+            }
         } catch (Exception exp) {
             // 记录本地异常日志
             log.error("==前置通知异常==");
@@ -238,5 +252,30 @@ public class OperationLogAspect {
             return true;
         }
         return o instanceof MultipartFile || o instanceof HttpServletRequest || o instanceof HttpServletResponse;
+    }
+    
+    /**
+     * 判断是否为敏感操作
+     * @param opType 操作类型
+     * @return 是否为敏感操作
+     */
+    private boolean isSensitiveOperation(Integer opType) {
+        return opType != null && SENSITIVE_OPERATION_TYPES.contains(opType);
+    }
+    
+    /**
+     * 触发敏感操作告警
+     * @param userOpLog 操作日志
+     */
+    private void triggerAlert(UserOpLog userOpLog) {
+        try {
+            // 发送告警邮件（异步方式）
+            mailSender.sendSensitiveOperationAlertAsync(userOpLog);
+            
+            log.info("敏感操作告警已触发: 用户ID={}, 用户名={}, 操作类型={}, 操作名称={}", 
+                    userOpLog.getUserId(), userOpLog.getUserName(), userOpLog.getOpType(), userOpLog.getOpName());
+        } catch (Exception e) {
+            log.error("触发敏感操作告警失败: {}", e.getMessage(), e);
+        }
     }
 }
