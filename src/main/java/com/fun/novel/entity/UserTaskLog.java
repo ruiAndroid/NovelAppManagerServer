@@ -1,5 +1,6 @@
 package com.fun.novel.entity;
 
+
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -8,40 +9,32 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("user_task")
-@Schema(description = "用户任务")
-public class UserTask {
+@TableName("user_task_log")
+@Schema(description = "用户任务日志")
+public class UserTaskLog {
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键ID")
     private Long id;
 
-    @TableField("user_id")
-    @Schema(description = "用户ID")
-    private Long userId;
-
-    @TableField("appid")
-    @Schema(description = "应用ID")
-    private String appid;
+    @TableField("task_id")
+    @Schema(description = "任务ID")
+    private Long taskId;
 
     @TableField("task_type")
     @Schema(description = "任务类型")
     private String taskType;
 
-    @TableField("task_name")
-    @Schema(description = "任务名称")
-    private String taskName;
+    @TableField("log_type")
+    @Schema(description = "日志类型")
+    private String logType;
 
-    @TableField("task_status")
-    @Schema(description = "任务状态")
-    private String taskStatus;
+    @TableField("message")
+    @Schema(description = "日志内容")
+    private String message;
 
-    @TableField("start_time")
-    @Schema(description = "开始时间")
-    private LocalDateTime startTime;
-
-    @TableField("end_time")
-    @Schema(description = "结束时间")
-    private LocalDateTime endTime;
+    @TableField("log_data")
+    @Schema(description = "日志详细数据")
+    private String logData; // JSON格式存储
 
     @Schema(description = "创建时间")
     @TableField(value = "create_time", fill = FieldFill.INSERT)

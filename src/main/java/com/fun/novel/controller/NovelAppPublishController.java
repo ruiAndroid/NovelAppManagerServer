@@ -10,6 +10,7 @@ import com.fun.novel.dto.NovelAppPublishDTO;
 import com.fun.novel.entity.NovelApp;
 import com.fun.novel.enums.OpType;
 import com.fun.novel.service.NovelAppService;
+import com.fun.novel.service.impl.TaskManagementService;
 import com.fun.novel.utils.NovelAppBuildUtil;
 import com.fun.novel.utils.NovelAppPublishUtil;
 import com.fun.novel.utils.PublishTaskManager;
@@ -54,6 +55,8 @@ public class NovelAppPublishController {
 
     @Autowired
     private PublishTaskManager publishTaskManager;
+
+
 
     private static final Map<String, String> PLATFORM_NAMES = new HashMap<>();
     static {
@@ -236,6 +239,7 @@ public class NovelAppPublishController {
     public Result<NovelAppPreviewQrCodeDTO> previewQrCode(@RequestBody Map<String, String> params) {
         try{
             String platformCode = params.get("platformCode");
+            Long userId = Long.valueOf(params.get("userId"));
             String appId = params.get("appId");
             String projectPath = params.get("projectPath");
             String douyinAppToken = params.get("douyinAppToken");
@@ -281,6 +285,7 @@ public class NovelAppPublishController {
 
             // 创建发布任务
             String taskId = novelAppPublishUtil.previewQrCode(
+                    userId,
                     platformCode,
                     appId,
                     projectPath,
