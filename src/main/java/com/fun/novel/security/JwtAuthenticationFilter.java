@@ -74,7 +74,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 sendErrorResponse(response, "不支持的JWT Token");
                 return;
             } catch (Exception e) {
-                logger.warn("JWT Token处理异常: {}", e.getMessage(), e);
+                logger.warn("JWT Token处理异常: {}", e.getMessage());
                 sendErrorResponse(response, "JWT Token无效");
                 return;
             }
@@ -95,7 +95,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         return;
                     }
                 } catch (Exception e) {
-                    logger.warn("用户认证失败: {}", e.getMessage(), e);
+                    logger.warn("用户认证失败: {}", e.getMessage());
                     sendErrorResponse(response, "用户认证失败");
                     return;
                 }

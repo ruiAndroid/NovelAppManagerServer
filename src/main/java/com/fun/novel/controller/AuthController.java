@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -96,9 +97,12 @@ public class AuthController {
             
             logger.info("Login successful for user: {}", loginRequest.getUserName());
             return Result.success(user);
-        } catch (Exception e) {
-            logger.error("Login failed for user: " + loginRequest.getUserName(), e);
+        } catch (BadCredentialsException e) {
+            logger.warn("Login failed for user: {}, reason: Bad credentials", loginRequest.getUserName());
             return Result.error("用户名或密码错误");
+        } catch (Exception e) {
+            logger.error("Login failed for user: {}, reason: {}", loginRequest.getUserName(), e.getMessage());
+            return Result.error("登录失败，请稍后重试");
         }
     }
 
