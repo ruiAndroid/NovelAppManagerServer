@@ -300,6 +300,9 @@ public class AppPayController {
             case "wxVirtualPay":
                 paymentConfig.setWxVirtualPay(payTypeConfig);
                 break;
+            case "wxVirtualRenewPay":
+                paymentConfig.setWxVirtualRenewPay(payTypeConfig);
+                break;
         }
         req.setPaymentConfig(paymentConfig);
 
@@ -375,6 +378,9 @@ public class AppPayController {
                 break;
             case "wxVirtualPay":
                 paymentConfig.setWxVirtualPay(payTypeConfig);
+                break;
+            case "wxVirtualRenewPay":
+                paymentConfig.setWxVirtualRenewPay(payTypeConfig);
                 break;
         }
         req.setPaymentConfig(paymentConfig);
@@ -506,6 +512,19 @@ public class AppPayController {
                     wxVirtualPay.setEnabled(false);
                 }
                 paymentConfig.setWxVirtualPay(wxVirtualPay);
+            }
+            // wxVirtualPay
+            if (appPayWithConfigDTO.getWxVirtualRenewPay() != null) {
+                CreateNovelAppRequest.PayTypeConfig wxVirtualRenewPay = new CreateNovelAppRequest.PayTypeConfig();
+                wxVirtualRenewPay.setEnabled(appPayWithConfigDTO.getWxVirtualRenewPay().getEnabled());
+                wxVirtualRenewPay.setGatewayAndroid(appPayWithConfigDTO.getWxVirtualRenewPay().getGatewayAndroid() == null ? null : appPayWithConfigDTO.getWxVirtualRenewPay().getGatewayAndroid().toString());
+                wxVirtualRenewPay.setGatewayIos(appPayWithConfigDTO.getWxVirtualRenewPay().getGatewayIos() == null ? null : appPayWithConfigDTO.getWxVirtualRenewPay().getGatewayIos().toString());
+
+                // 如果是删除的支付类型，则设置为禁用
+                if ("wxVirtualRenewPay".equals(payType)) {
+                    wxVirtualRenewPay.setEnabled(false);
+                }
+                paymentConfig.setWxVirtualRenewPay(wxVirtualRenewPay);
             }
         }
         req.setPaymentConfig(paymentConfig);

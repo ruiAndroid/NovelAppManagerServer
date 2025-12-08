@@ -102,6 +102,21 @@ public class AppPay {
     @JsonProperty("wx_virtual_pay_gateway_ios")
     private Integer wxVirtualPayGatewayIos;
 
+    @TableField("wx_virtual_renew_pay_enabled")
+    @Schema(description = "是否启用微信虚拟连包支付")
+    @JsonProperty("wx_virtual_renew_pay_enabled")
+    private Integer wxVirtualRenewPayEnabled;
+
+    @TableField("wx_virtual_renew_pay_gateway_android")
+    @Schema(description = "微信虚拟连包支付Android网关")
+    @JsonProperty("wx_virtual_renew_pay_gateway_android")
+    private Integer wxVirtualRenewPayGatewayAndroid;
+
+    @TableField("wx_virtual_renew_pay_gateway_ios")
+    @Schema(description = "微信虚拟连包支付iOS网关")
+    @JsonProperty("wx_virtual_renew_pay_gateway_ios")
+    private Integer wxVirtualRenewPayGatewayIos;
+
     @TableField("im_pay_enabled")
     @Schema(description = "是否启用IM支付")
     @JsonProperty("im_pay_enabled")
@@ -186,4 +201,20 @@ public class AppPay {
     public Integer getWxVirtualPayGatewayIos() {
         return wxVirtualPayGatewayIos == null ? 0 : wxVirtualPayGatewayIos;
     }
+
+    public Integer getWxVirtualRenewPayEnabled() {
+        return wxVirtualRenewPayEnabled == null ? 0 : wxVirtualRenewPayEnabled;
+    }
+
+    public Integer getWxVirtualRenewPayGatewayAndroid() {
+        return wxVirtualRenewPayGatewayAndroid == null ? 0 : wxVirtualRenewPayGatewayAndroid;
+    }
+
+    public Integer getWxVirtualRenewPayGatewayIos() {
+        return wxVirtualRenewPayGatewayIos == null ? 0 : wxVirtualRenewPayGatewayIos;
+    }
+
+
+
+
 } 

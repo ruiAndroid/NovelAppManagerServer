@@ -19,7 +19,7 @@ import java.util.List;
 public class AppPayServiceImpl extends ServiceImpl<AppPayMapper, AppPay> implements AppPayService {
 
     private static final List<String> VALID_PAY_TYPES = Arrays.asList(
-            "normalPay", "orderPay", "renewPay", "douzuanPay","imPay", "wxVirtualPay");
+            "normalPay", "orderPay", "renewPay", "douzuanPay","imPay", "wxVirtualPay","wxVirtualRenewPay");
 
     @Override
     public AppPayWithConfigDTO createAppPay(CreateAppPayRequest request) {
@@ -82,6 +82,12 @@ public class AppPayServiceImpl extends ServiceImpl<AppPayMapper, AppPay> impleme
                 appPay.setWxVirtualPayGatewayAndroid(request.getGatewayAndroid());
                 appPay.setWxVirtualPayGatewayIos(request.getGatewayIos());
                 break;
+            case "wxVirtualRenewPay":
+                appPay.setWxVirtualRenewPayEnabled(enabledValue);
+                appPay.setWxVirtualRenewPayGatewayAndroid(request.getGatewayAndroid());
+                appPay.setWxVirtualRenewPayGatewayIos(request.getGatewayIos());
+                break;
+
         }
 
         save(appPay);
@@ -147,6 +153,14 @@ public class AppPayServiceImpl extends ServiceImpl<AppPayMapper, AppPay> impleme
                     wxVirtualPayConfig.setGatewayIos(appPay.getWxVirtualPayGatewayIos());
                     result.setWxVirtualPay(wxVirtualPayConfig);
                     break;
+                case "wxVirtualRenewPay":
+                    WxVirtualRenewPayConfigDetail wxVirtualRenewPayConfig = new WxVirtualRenewPayConfigDetail();
+                    wxVirtualRenewPayConfig.setEnabled(appPay.getWxVirtualRenewPayEnabled() == 1);
+                    wxVirtualRenewPayConfig.setGatewayAndroid(appPay.getWxVirtualRenewPayGatewayAndroid());
+                    wxVirtualRenewPayConfig.setGatewayIos(appPay.getWxVirtualRenewPayGatewayIos());
+                    result.setWxVirtualRenewPay(wxVirtualRenewPayConfig);
+                    break;
+
             }
         }
 
@@ -208,6 +222,11 @@ public class AppPayServiceImpl extends ServiceImpl<AppPayMapper, AppPay> impleme
                 existingAppPay.setWxVirtualPayEnabled(enabledValue);
                 existingAppPay.setWxVirtualPayGatewayAndroid(request.getGatewayAndroid());
                 existingAppPay.setWxVirtualPayGatewayIos(request.getGatewayIos());
+                break;
+            case "wxVirtualRenewPay":
+                existingAppPay.setWxVirtualRenewPayEnabled(enabledValue);
+                existingAppPay.setWxVirtualRenewPayGatewayAndroid(request.getGatewayAndroid());
+                existingAppPay.setWxVirtualRenewPayGatewayIos(request.getGatewayIos());
                 break;
         }
 

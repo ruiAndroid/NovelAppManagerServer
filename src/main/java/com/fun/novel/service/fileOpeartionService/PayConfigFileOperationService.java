@@ -626,6 +626,8 @@ public class PayConfigFileOperationService extends AbstractConfigFileOperationSe
                 return "im_pay";
             case "wxVirtualPay":
                 return "wx_virtual_pay";
+            case "wxVirtualRenewPay":
+                return "wx_virtual_renew_pay";
             default:
                 return payType;
         }
@@ -732,6 +734,10 @@ public class PayConfigFileOperationService extends AbstractConfigFileOperationSe
                         platformConfig.put("wx_virtual_pay", buildPayTypeMap(paymentConfig.getWxVirtualPay()));
                     }
                     break;
+                case "wxVirtualRenewPay":
+                    if (paymentConfig.getWxVirtualRenewPay() != null) {
+                        platformConfig.put("wx_virtual_renew_pay", buildPayTypeMap(paymentConfig.getWxVirtualRenewPay()));
+                    }
             }
             
             // 更新指定平台的配置
