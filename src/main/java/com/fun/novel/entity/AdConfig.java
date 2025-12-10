@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
-import javax.validation.constraints.*;
+import jakarta.validation.constraints.*;
 import java.time.LocalDateTime;
 
 @Data

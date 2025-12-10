@@ -74,6 +74,8 @@ public class NovelAppDatabaseOperationServiceImpl implements NovelAppDatabaseOpe
         payTypeMap.put("imPay", paymentConfig.getImPay());
         payTypeMap.put("renewPay", paymentConfig.getRenewPay());
         payTypeMap.put("wxVirtualPay", paymentConfig.getWxVirtualPay());
+        payTypeMap.put("wxVirtualRenewPay", paymentConfig.getWxVirtualRenewPay());
+
         for (Map.Entry<String, CreateNovelAppRequest.PayTypeConfig> entry : payTypeMap.entrySet()) {
             String payType = entry.getKey();
             CreateNovelAppRequest.PayTypeConfig payConfig = entry.getValue();
@@ -89,6 +91,7 @@ public class NovelAppDatabaseOperationServiceImpl implements NovelAppDatabaseOpe
                     case "imPay": exists = appPayConfigDTO.getImPay() != null; break;
                     case "renewPay": exists = appPayConfigDTO.getRenewPay() != null; break;
                     case "wxVirtualPay": exists = appPayConfigDTO.getWxVirtualPay() != null; break;
+                    case "wxVirtualRenewPay": exists = appPayConfigDTO.getWxVirtualRenewPay() != null; break;
                 }
             }
             if (!exists) {
@@ -187,6 +190,7 @@ public class NovelAppDatabaseOperationServiceImpl implements NovelAppDatabaseOpe
         commonConfigDTO.setKuaishouClientSecret(commonConfig.getKuaishouClientSecret());
         commonConfigDTO.setKuaishouAppToken(commonConfig.getKuaishouAppToken());
         commonConfigDTO.setWeixinAppToken(commonConfig.getWeixinAppToken());
+        commonConfigDTO.setBaiduAppToken(commonConfig.getBaiduAppToken());
         commonConfigDTO.setBuildCode(commonConfig.getBuildCode());
         commonConfigDTO.setDouyinAppToken(commonConfig.getDouyinAppToken());
         commonConfigDTO.setIaaMode(commonConfig.getIaaMode());

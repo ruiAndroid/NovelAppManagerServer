@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 @Data
 @Schema(description = "应用通用配置信息")
@@ -38,6 +38,9 @@ public class AppCommonConfigDTO {
 
     @Schema(description = "抖音app token")
     private String douyinAppToken;
+
+    @Schema(description = "百度app token")
+    private String baiduAppToken;
 
     @Schema(description = "支付卡片样式")
     private Integer payCardStyle;

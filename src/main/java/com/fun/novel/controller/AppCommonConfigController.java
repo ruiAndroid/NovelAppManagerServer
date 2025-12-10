@@ -18,7 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import java.util.List;
 
 @Tag(name = "应用通用配置接口")
@@ -167,6 +167,7 @@ public class AppCommonConfigController {
             commonConfig.setReaderLoginType(dbCommonConfig.getReaderLoginType());
             commonConfig.setWeixinAppToken(dbCommonConfig.getWeixinAppToken());
             commonConfig.setDouyinAppToken(dbCommonConfig.getDouyinAppToken());
+            commonConfig.setBaiduAppToken(dbCommonConfig.getBaiduAppToken());
             commonConfig.setIaaMode(dbCommonConfig.getIaaMode());
             commonConfig.setIaaDialogStyle(dbCommonConfig.getIaaDialogStyle());
         }

@@ -2,7 +2,7 @@ package com.fun.novel.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
-import javax.validation.constraints.*;
+import jakarta.validation.constraints.*;
 
 @Data
 @Schema(description = "更新广告配置请求")

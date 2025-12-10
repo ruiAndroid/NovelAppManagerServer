@@ -176,6 +176,7 @@ public class NovelAppPublishController {
             String douyinAppToken = params.get("douyinAppToken");
             String kuaishouAppToken = params.get("kuaishouAppToken");
             String weixinAppToken = params.get("weixinAppToken");
+            String baiduAppToken = params.get("baiduAppToken");
             String version = params.get("version");
             String log = params.get("log");
 
@@ -210,6 +211,11 @@ public class NovelAppPublishController {
                 return Result.error("微信平台发布需要提供 weixinAppToken");
             }
 
+            // 如果是微信平台，验证token
+            if ("mp-baidu".equals(platformCode) && (baiduAppToken == null || baiduAppToken.trim().isEmpty())) {
+                return Result.error("百度平台发布需要提供 baiduAppToken");
+            }
+
             // 创建发布任务
             String taskId = novelAppPublishUtil.publishNovelApp(
                 platformCode,
@@ -217,6 +223,7 @@ public class NovelAppPublishController {
                 projectPath,
                 douyinAppToken,
                 kuaishouAppToken, weixinAppToken,
+                baiduAppToken,
                 version,
                 log
             );
@@ -245,6 +252,7 @@ public class NovelAppPublishController {
             String douyinAppToken = params.get("douyinAppToken");
             String kuaishouAppToken = params.get("kuaishouAppToken");
             String weixinAppToken = params.get("weixinAppToken");
+            String baiduAppToken = params.get("baiduAppToken");
             String path = params.get("path");
             String query = params.get("query");
             String scene = params.get("scene");
@@ -279,7 +287,10 @@ public class NovelAppPublishController {
             if ("mp-weixin".equals(platformCode) && (weixinAppToken == null || weixinAppToken.trim().isEmpty())) {
                 return Result.error("微信平台发布需要提供 weixinAppToken");
             }
-
+            // 如果是百度平台，验证token
+            if ("mp-baidu".equals(platformCode) && (baiduAppToken == null || baiduAppToken.trim().isEmpty())) {
+                return Result.error("百度平台发布需要提供 baiduAppToken");
+            }
 
 
 
@@ -291,7 +302,7 @@ public class NovelAppPublishController {
                     projectPath,
                     novelApp.getVersion(),
                     douyinAppToken,
-                    kuaishouAppToken, weixinAppToken,
+                    kuaishouAppToken, weixinAppToken,baiduAppToken,
                     path,
                     query,
                     scene

@@ -124,6 +124,17 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
                 currentPlatformConfig.append("      token_id: ").append(baseConfig.getTokenId()).append(",\n");
                 currentPlatformConfig.append("      version: \"").append(baseConfig.getVersion()).append("\",\n");
                 currentPlatformConfig.append("      cl: \"").append(baseConfig.getCl()).append("\"\n");
+            }else if("baidu".equals(platform)){
+                currentPlatformConfig.append("      app_name: \"").append(baseConfig.getAppName()).append("\",\n");
+                currentPlatformConfig.append("      app_code: \"").append(baseConfig.getAppCode()).append("\",\n");
+                currentPlatformConfig.append("      code: \"").append("baidu").append("\",\n");
+                currentPlatformConfig.append("      product: \"").append(baseConfig.getProduct()).append("\",\n");
+                currentPlatformConfig.append("      customer: \"").append(baseConfig.getCustomer()).append("\",\n");
+                currentPlatformConfig.append("      appid: \"").append(baseConfig.getAppid()).append("\",\n");
+                currentPlatformConfig.append("      token_id: ").append(baseConfig.getTokenId()).append(",\n");
+                currentPlatformConfig.append("      version: \"").append(baseConfig.getVersion()).append("\",\n");
+                currentPlatformConfig.append("      cl: \"").append(baseConfig.getCl()).append("\"\n");
+
             }
             
             String fileContent;
@@ -162,10 +173,18 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
                 sb.append("    },\n");
 
                 // bd
-                sb.append("    'bd': {}\n");
+                sb.append("    'bd': {");
+                if ("baidu".equals(platform)) {
+                    sb.append("\n");
+                    sb.append(currentPlatformConfig.toString());
+                }
+                sb.append("    }\n");
+
+
 
                 sb.append("  }\n");
                 sb.append("}\n");
+
                 fileContent = sb.toString();
             }
             
@@ -204,7 +223,7 @@ public class BaseConfigFileOperationService extends AbstractConfigFileOperationS
             case "weixin":
                 platformKey = "'wx'";
                 break;
-            default:
+            case "baidu":
                 platformKey = "'bd'";
                 break;
         }

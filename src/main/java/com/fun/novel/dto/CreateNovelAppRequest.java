@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import org.checkerframework.checker.guieffect.qual.UI;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 @Data
 @Schema(description = "创建小说小程序请求体")
@@ -149,6 +149,8 @@ public class CreateNovelAppRequest {
         private String weixinAppToken;
         @Schema(description = "抖音AppToken")
         private String douyinAppToken;
+        @Schema(description = "百度AppToken")
+        private String baiduAppToken;
         @Schema(description = "是否Iaa模式")
         private Boolean iaaMode;
         @Schema(description = "iaa弹窗样式")

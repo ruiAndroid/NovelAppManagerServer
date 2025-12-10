@@ -97,6 +97,9 @@ public class PreFileOperationService extends AbstractConfigFileOperationService{
                 case "weixin":
                     pagesFileName = "pages-wx.json";
                     break;
+                case "baidu":
+                    pagesFileName = "pages-bd.json";
+                        break;
                 default:
                     throw new RuntimeException("不支持的平台类型: " + platform);
             }
@@ -152,6 +155,11 @@ public class PreFileOperationService extends AbstractConfigFileOperationService{
                     case "weixin":
                         if (manifestNode.has("mp-weixin")) {
                             ((ObjectNode)manifestNode.get("mp-weixin")).put("appid", baseConfig.getAppid());
+                        }
+                        break;
+                    case "baidu":
+                        if (manifestNode.has("mp-baidu")) {
+                            ((ObjectNode)manifestNode.get("mp-baidu")).put("appid", baseConfig.getAppid());
                         }
                         break;
                 }
@@ -405,6 +413,9 @@ public class PreFileOperationService extends AbstractConfigFileOperationService{
                     break;
                 case "weixin":
                     pagesFileName = "pages-wx.json";
+                    break;
+                case "baidu":
+                    pagesFileName = "pages-bd.json";
                     break;
                 default:
                     throw new RuntimeException("不支持的平台类型: " + platform);

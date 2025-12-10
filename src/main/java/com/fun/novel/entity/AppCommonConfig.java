@@ -8,7 +8,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
 @Data
@@ -49,6 +49,9 @@ public class AppCommonConfig {
     @TableField("weixin_app_token")
     private String weixinAppToken;
 
+    @Schema(description = "百度app token")
+    @TableField("baidu_app_token")
+    private String baiduAppToken;
 
     @NotNull(message = "阅读页登录类型不能为空")
     @Schema(description = "阅读页登录类型")

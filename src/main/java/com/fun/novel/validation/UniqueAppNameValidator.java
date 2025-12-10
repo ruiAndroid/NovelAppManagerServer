@@ -5,8 +5,8 @@ import com.fun.novel.entity.NovelApp;
 import com.fun.novel.mapper.NovelAppMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorContext;
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorContext;
 
 public class UniqueAppNameValidator implements ConstraintValidator<UniqueAppName, String> {
 
@@ -22,4 +22,4 @@ public class UniqueAppNameValidator implements ConstraintValidator<UniqueAppName
         wrapper.eq(NovelApp::getAppName, appName);
         return novelAppMapper.selectCount(wrapper) == 0;
     }
-} 
+}

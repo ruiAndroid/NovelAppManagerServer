@@ -25,10 +25,9 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
@@ -64,9 +63,9 @@ public class SecurityConfig {
 
              // 配置拦截规则
             .and()
-            .authorizeRequests()
-            .antMatchers(URL_WHITELIST).permitAll() // 接口请求白名单
-//            .antMatchers("/api/novel-apps/**").hasAnyRole("USER_TYPE_2_3", "ADMIN") // type=2或3可以访问的接口
+            .authorizeHttpRequests()
+            .requestMatchers(URL_WHITELIST).permitAll() // 接口请求白名单
+//            .requestMatchers("/api/novel-apps/**").hasAnyRole("USER_TYPE_2_3", "ADMIN") // type=2或3可以访问的接口
             .anyRequest().authenticated() // 其他请求需要认证
 
              //配置自定义的过滤器
@@ -111,6 +110,7 @@ public class SecurityConfig {
     public static final String[] URL_WHITELIST = {
         "/swagger-ui.html",//接口文档
         "/swagger-ui/**",
+        "/chatui/**",
         "/v3/api-docs/**",
         "/webjars/**",
         "/api/novel-auth/login",  //登录

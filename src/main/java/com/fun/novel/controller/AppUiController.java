@@ -19,7 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -197,6 +197,7 @@ public class AppUiController {
             commonConfig.setReaderLoginType(dbCommonConfig.getReaderLoginType());
             commonConfig.setWeixinAppToken(dbCommonConfig.getWeixinAppToken());
             commonConfig.setDouyinAppToken(dbCommonConfig.getDouyinAppToken());
+            commonConfig.setBaiduAppToken(dbCommonConfig.getBaiduAppToken());
             commonConfig.setIaaMode(dbCommonConfig.getIaaMode());
             commonConfig.setIaaDialogStyle(dbCommonConfig.getIaaDialogStyle());
         }

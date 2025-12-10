@@ -36,7 +36,7 @@ public class NovelAppPublishUtil {
     /**
      * 发布小程序到指定平台
      */
-    public String publishNovelApp(String platformCode, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken,String weixinAppToken, String version, String log) {
+    public String publishNovelApp(String platformCode, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken,String weixinAppToken,String baiduAppToken, String version, String log) {
         // 创建任务，检查平台是否已有任务在运行
         String taskId = publishTaskManager.createTask(platformCode);
         if (taskId == null) {
@@ -76,7 +76,7 @@ public class NovelAppPublishUtil {
                 // 根据平台选择对应的发布处理器
                 PlatformPublishHandler handler = getPlatformHandler(platformCode);
                 if (handler != null) {
-                    handler.handlePublish(taskId, appId, projectPath, douyinAppToken, kuaishouAppToken,weixinAppToken, version, log, processBuilder);
+                    handler.handlePublish(taskId, appId, projectPath, douyinAppToken, kuaishouAppToken,weixinAppToken,baiduAppToken, version, log, processBuilder);
 
                 } else {
                     String errorMsg = "发布过程发生错误: handler is null ";
@@ -115,6 +115,7 @@ public class NovelAppPublishUtil {
                                 String douyinAppToken,
                                 String kuaishouAppToken,
                                 String weixinAppToken,
+                                String baiduAppToken,
                                 String path,
                                 String query,
                                 String scene
@@ -167,7 +168,7 @@ public class NovelAppPublishUtil {
                 // 根据平台选择对应的处理器
                 PlatformPublishHandler handler = getPlatformHandler(platformCode);
                 if (handler != null) {
-                    handler.handlePreview(taskId, appId, projectPath,version, douyinAppToken, kuaishouAppToken,weixinAppToken,path, query, scene, processBuilder);
+                    handler.handlePreview(taskId, appId, projectPath,version, douyinAppToken, kuaishouAppToken,weixinAppToken,baiduAppToken,path, query, scene, processBuilder);
                 } else {
                     String errorMsg = "生成预览码过程发生错误: handler is null ";
                     logger.error(errorMsg);
@@ -299,8 +300,8 @@ public class NovelAppPublishUtil {
      * 平台发布处理器接口
      */
     private interface PlatformPublishHandler {
-        void handlePublish(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken,String weixinAppToken, String version, String log, ProcessBuilder processBuilder);
-        void handlePreview(String taskId, String appId, String projectPath,String version, String douyinAppToken, String kuaishouAppToken,String weixinAppToken, String path, String query, String scene, ProcessBuilder processBuilder);
+        void handlePublish(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken,String weixinAppToken,String baiduAppToken, String version, String log, ProcessBuilder processBuilder);
+        void handlePreview(String taskId, String appId, String projectPath,String version, String douyinAppToken, String kuaishouAppToken,String weixinAppToken,String baiduAppToken, String path, String query, String scene, ProcessBuilder processBuilder);
     }
 
     /**
@@ -315,7 +316,7 @@ public class NovelAppPublishUtil {
      */
     private class DouyinPublishHandler implements PlatformPublishHandler {
         @Override
-        public void handlePublish(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken, String weixinAppToken,String version, String log, ProcessBuilder processBuilder) {
+        public void handlePublish(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken, String weixinAppToken, String baiduAppToken,String version, String log, ProcessBuilder processBuilder) {
             // 步骤1：设置token
             messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[抖音] 开始设置Token...");
             String tokenCmd = buildDouyinTokenCommand(appId, douyinAppToken);
@@ -357,7 +358,7 @@ public class NovelAppPublishUtil {
         }
 
         @Override
-        public void handlePreview(String taskId, String appId, String projectPath,String version, String douyinAppToken, String kuaishouAppToken, String weixinAppToken, String path, String query, String scene, ProcessBuilder processBuilder) {
+        public void handlePreview(String taskId, String appId, String projectPath,String version, String douyinAppToken, String kuaishouAppToken, String weixinAppToken, String baiduAppToken, String path, String query, String scene, ProcessBuilder processBuilder) {
             // 步骤1：设置token
             try {
                 messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[抖音] 开始设置Token...");
@@ -405,7 +406,7 @@ public class NovelAppPublishUtil {
      */
     private class KuaishouPublishHandler implements PlatformPublishHandler {
         @Override
-        public void handlePublish(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken,String weixinAppToken, String version, String log, ProcessBuilder processBuilder) {
+        public void handlePublish(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken,String weixinAppToken, String baiduAppToken, String version, String log, ProcessBuilder processBuilder) {
             // 步骤1：生成密钥
             try {
                 // 发送开始生成密钥的消息
@@ -462,7 +463,7 @@ public class NovelAppPublishUtil {
         }
 
         @Override
-        public void handlePreview(String taskId, String appId, String projectPath,String version, String douyinAppToken, String kuaishouAppToken, String weixinAppToken, String path, String query, String scene, ProcessBuilder processBuilder) {
+        public void handlePreview(String taskId, String appId, String projectPath,String version, String douyinAppToken, String kuaishouAppToken, String weixinAppToken,  String baiduAppToken,String path, String query, String scene, ProcessBuilder processBuilder) {
             // 步骤1：生成密钥
             try {
                 // 发送开始生成密钥的消息
@@ -504,7 +505,7 @@ public class NovelAppPublishUtil {
      */
     private class WeixinPublishHandler implements PlatformPublishHandler {
         @Override
-        public void handlePublish(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken,String weixinAppToken, String version, String log, ProcessBuilder processBuilder) {
+        public void handlePublish(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken,String weixinAppToken,  String baiduAppToken,String version, String log, ProcessBuilder processBuilder) {
             // 步骤1：生成密钥
             try {
                 // 发送开始生成密钥的消息
@@ -558,7 +559,7 @@ public class NovelAppPublishUtil {
         }
 
         @Override
-        public void handlePreview(String taskId, String appId, String projectPath,String version, String douyinAppToken, String kuaishouAppToken, String weixinAppToken, String path, String query, String scene, ProcessBuilder processBuilder) {
+        public void handlePreview(String taskId, String appId, String projectPath,String version, String douyinAppToken, String kuaishouAppToken, String weixinAppToken,  String baiduAppToken,String path, String query, String scene, ProcessBuilder processBuilder) {
             // 步骤1：生成密钥
             try {
                 // 发送开始生成密钥的消息

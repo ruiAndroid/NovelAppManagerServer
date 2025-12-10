@@ -15,7 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
 
@@ -142,6 +142,7 @@ public class NovelAppController {
             commonConfig.setReaderLoginType(dbCommonConfig.getReaderLoginType());
             commonConfig.setWeixinAppToken(dbCommonConfig.getWeixinAppToken());
             commonConfig.setDouyinAppToken(dbCommonConfig.getDouyinAppToken());
+            commonConfig.setBaiduAppToken(dbCommonConfig.getBaiduAppToken());
             commonConfig.setIaaMode(dbCommonConfig.getIaaMode());
             commonConfig.setIaaDialogStyle(dbCommonConfig.getIaaDialogStyle());
 
