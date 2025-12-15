@@ -50,16 +50,7 @@ public class UserLocationTool implements ToolCallback {
         System.out.println("UserLocationTool processing query: " + query);
         
         // 根据查询参数确定位置
-        String location = "北京";
-        if (query.contains("1")) {
-            location = "武汉";
-        } else if (query.contains("2")) {
-            location = "上海";
-        } else if (query.contains("天气")) {
-            // 对于像"我所在城市的天气咋样?"这样的查询，默认返回武汉
-            location = "武汉";
-        }
-        
+        String location = "武汉";
         System.out.println("UserLocationTool returning location: " + location);
         return location;
     }

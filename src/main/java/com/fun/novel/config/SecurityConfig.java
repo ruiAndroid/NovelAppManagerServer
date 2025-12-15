@@ -111,6 +111,7 @@ public class SecurityConfig {
         "/swagger-ui.html",//接口文档
         "/swagger-ui/**",
         "/chatui/**",
+        "/api/ai/chat/**",
         "/v3/api-docs/**",
         "/webjars/**",
         "/api/novel-auth/login",  //登录

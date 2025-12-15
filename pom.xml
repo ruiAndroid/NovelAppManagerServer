@@ -1,23 +1,55 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.0</version>
+        <version>3.5.7</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.fun</groupId>
-    
+
     <artifactId>novel</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>novel</name>
     <description>Novel App Manager Server</description>
     <properties>
         <java.version>17</java.version>
-        <jackson.version>2.16.1</jackson.version>
+        <!-- Spring AI -->
+        <spring-ai.version>1.0.0-M3</spring-ai.version>
+        <!-- Spring AI Alibaba -->
+        <spring-ai-alibaba.version>1.1.0.0-RC1</spring-ai-alibaba.version>
+        <jackson.version>2.15.2</jackson.version>
     </properties>
+    
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba.cloud.ai</groupId>
+                <artifactId>spring-ai-alibaba-bom</artifactId>
+                <version>${spring-ai-alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- 确保所有 Jackson 组件版本一致 -->
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+    
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -75,7 +107,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
-        
+
         <!-- 添加 Spring Security 依赖 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -88,14 +120,14 @@
             <artifactId>jjwt</artifactId>
             <version>0.9.1</version>
         </dependency>
-        
+
         <!-- 添加 fastjson 依赖 -->
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
             <version>1.2.83</version>
         </dependency>
-        
+
         <!-- 添加 AspectJ 依赖 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -108,7 +140,7 @@
             <artifactId>rocketmq-client</artifactId>
             <version>5.3.3</version>
         </dependency>
-        
+
         <!-- 添加邮件发送依赖 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -121,14 +153,14 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        
+
         <!-- 显式添加较新版本的 jakarta.mail 依赖 -->
         <dependency>
             <groupId>com.sun.mail</groupId>
             <artifactId>jakarta.mail</artifactId>
             <version>2.0.1</version>
         </dependency>
-        
+
         <!-- 添加 Jakarta Activation 依赖 -->
         <dependency>
             <groupId>com.sun.activation</groupId>
@@ -154,7 +186,6 @@
         <dependency>
             <groupId>com.alibaba.cloud.ai</groupId>
             <artifactId>spring-ai-alibaba-agent-framework</artifactId>
-            <version>1.1.0.0-M5</version>
             <exclusions>
                 <exclusion>
                     <groupId>com.fasterxml.jackson.core</groupId>
@@ -166,36 +197,21 @@
         <dependency>
             <groupId>com.alibaba.cloud.ai</groupId>
             <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
-            <version>1.1.0.0-M5</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>jackson-databind</artifactId>
-                </exclusion>
-            </exclusions>
+            <version>${spring-ai-alibaba.version}</version>
         </dependency>
-        <!-- 【可选】OpenAi ChatModel 支持（如果使用其他模型，请参考文档选择对应的 starter） -->
-<!--        -->
-<!--         <dependency>-->
-<!--           <groupId>org.springframework.ai</groupId>-->
-<!--           <artifactId>spring-ai-starter-model-openai</artifactId>-->
-<!--           <version>1.0.0-M5</version>-->
-<!--         </dependency>-->
-
-        <!-- 【可选】为智能体原生增加 Chat UI 支持-->
-
-<!--        <dependency>-->
-<!--            <groupId>com.alibaba.cloud.ai</groupId>-->
-<!--            <artifactId>spring-ai-alibaba-studio</artifactId>-->
-<!--            <version>1.0.0-M5</version>-->
-<!--        </dependency>-->
-
         
+        <!-- 添加内存支持 -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-starter-memory</artifactId>
+            <version>${spring-ai-alibaba.version}</version>
+        </dependency>
+
         <!-- 添加 Spring AI Core 依赖 -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-core</artifactId>
-            <version>1.0.0-M5</version>
+            <version>${spring-ai.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>com.fasterxml.jackson.core</groupId>
@@ -208,21 +224,22 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>${jackson.version}</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
-            <version>${jackson.version}</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
-            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
         </dependency>
 
     </dependencies>
-    
+
     <repositories>
         <repository>
             <id>spring-milestones</id>
@@ -268,7 +285,7 @@
             </releases>
         </repository>
     </repositories>
-    
+
     <build>
         <plugins>
             <plugin>

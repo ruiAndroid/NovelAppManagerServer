@@ -82,13 +82,15 @@ public class NovelAppPublishController {
                 .filter(File::isDirectory)
                 .map(buildCodeDir -> {
                     NovelAppBuildInfoDTO buildInfo = new NovelAppBuildInfoDTO();
-                    // 获取任意一个平台下的 project.config.json 中的 projectName
+                    // 获取任意一个平台下的配置文件中的 projectName
                     File[] platformDirs = buildCodeDir.listFiles();
                     String appName = "UnknownApp"; // 默认名称
                     if (platformDirs != null) {
                         for (File platformDir : platformDirs) {
                             if (PLATFORM_NAMES.containsKey(platformDir.getName())) {
-                                File configFile = new File(platformDir, "project.config.json");
+                                // 根据平台确定配置文件名
+                                String configFileName = getConfigFileNameByPlatform(platformDir.getName());
+                                File configFile = new File(platformDir, configFileName);
                                 if (configFile.exists()) {
                                     try {
                                         JsonNode configJson = new ObjectMapper().readTree(configFile);
@@ -115,8 +117,9 @@ public class NovelAppPublishController {
                             // 设置项目路径
                             platformInfo.setProjectPath(platformDir.getAbsolutePath());
                             
-                            // 从 project.config.json 获取 appId
-                            File configFile = new File(platformDir, "project.config.json");
+                            // 根据平台确定配置文件名并获取 appId
+                            String configFileName = getConfigFileNameByPlatform(platformDir.getName());
+                            File configFile = new File(platformDir, configFileName);
                             if (configFile.exists()) {
                                 try {
                                     JsonNode configJson = new ObjectMapper().readTree(configFile);
@@ -161,6 +164,19 @@ public class NovelAppPublishController {
             return Result.success("获取成功", buildInfoList);
         } catch (Exception e) {
             return Result.error("获取小程序列表失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 根据平台代码获取对应的配置文件名
+     * @param platformCode 平台代码
+     * @return 配置文件名
+     */
+    private String getConfigFileNameByPlatform(String platformCode) {
+        if ("mp-baidu".equals(platformCode)) {
+            return "project.swan.json";
+        } else {
+            return "project.config.json";
         }
     }
 

@@ -217,6 +217,8 @@ public class NovelAppPublishUtil {
                 return new KuaishouPublishHandler();
             case "mp-weixin":
                 return new WeixinPublishHandler();
+            case "mp-baidu":
+                return new BaiduPublishHandler();
             default:
                 return null;
         }
@@ -598,6 +600,18 @@ public class NovelAppPublishUtil {
         }
     }
 
+    private class BaiduPublishHandler implements PlatformPublishHandler {
+
+        @Override
+        public void handlePublish(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken, String weixinAppToken, String baiduAppToken, String version, String log, ProcessBuilder processBuilder) {
+
+        }
+
+        @Override
+        public void handlePreview(String taskId, String appId, String projectPath, String version, String douyinAppToken, String kuaishouAppToken, String weixinAppToken, String baiduAppToken, String path, String query, String scene, ProcessBuilder processBuilder) {
+
+        }
+    }
     /**
      * 快手平台：生成密钥文件
      */
