@@ -7,6 +7,9 @@ import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import com.alibaba.cloud.ai.dashscope.rag.DashScopeDocumentRetriever;
 import com.alibaba.cloud.ai.dashscope.rag.DashScopeDocumentRetrieverOptions;
 import com.fun.novel.ai.advisor.ReasoningContentAdvisor;
+import com.fun.novel.ai.tools.CreateAppTool;
+import com.fun.novel.ai.tools.UserLocationTool;
+import com.fun.novel.ai.tools.WeatherForLocationTool;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,11 +19,14 @@ import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.ai.tool.ToolCallback;
+
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -50,14 +56,19 @@ public class AiChatService {
     //集成文档检索
     private DocumentRetrievalAdvisor retrievalAdvisor;
 
+    private final List<ToolCallback> tools;
+
     public AiChatService(
             DashScopeApi dashscopeApi,
             SimpleLoggerAdvisor simpleLoggerAdvisor,
             MessageChatMemoryAdvisor messageChatMemoryAdvisor,
             @Qualifier("dashScopeChatModel") ChatModel chatModel,
-            @Qualifier("systemPromptTemplate") PromptTemplate systemPromptTemplate,
-            @Qualifier("deepThinkPromptTemplate") PromptTemplate deepThinkPromptTemplate
+            @Qualifier("mainPromptTemplate") PromptTemplate systemPromptTemplate,
+            @Qualifier("deepThinkPromptTemplate") PromptTemplate deepThinkPromptTemplate,
+            CreateAppTool createAppTool
     ) {
+        // 初始化工具列表
+        this.tools = List.of(createAppTool);
         this.dashscopeApi = dashscopeApi;
         this.chatClient = ChatClient.builder(chatModel)
                 .defaultSystem(
@@ -65,9 +76,12 @@ public class AiChatService {
                 ).defaultAdvisors(
                         simpleLoggerAdvisor,
                         messageChatMemoryAdvisor
-                ).build();
+                ).defaultToolCallbacks(this.tools)
+                .build()
+                ;
         this.deepThinkPromptTemplate = deepThinkPromptTemplate;
         this.reasoningContentAdvisor = new ReasoningContentAdvisor(1);
+        
 
     }
 

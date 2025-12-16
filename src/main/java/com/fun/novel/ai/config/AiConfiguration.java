@@ -25,6 +25,7 @@ public class AiConfiguration {
         return MessageChatMemoryAdvisor.builder(chatMemory).build();
     }
 
+
     @Bean
     public ToolCallingManager toolCallingManager() {
         return ToolCallingManager.builder().build();

@@ -609,6 +609,24 @@ public class NovelAppPublishUtil {
 
         @Override
         public void handlePreview(String taskId, String appId, String projectPath, String version, String douyinAppToken, String kuaishouAppToken, String weixinAppToken, String baiduAppToken, String path, String query, String scene, ProcessBuilder processBuilder) {
+            logger.info("[百度] 开始生成预览码...");
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[百度] 开始生成二维码...");
+            String previewCmd = buildBaiduAppointQrCodePreviewCommand(appId,projectPath,version,baiduAppToken, path,query,scene);
+            logger.info("[百度] previewCmd :{}",previewCmd);
+            boolean previewExecuteCommandResult = executeCommand(taskId, previewCmd, processBuilder, line -> {
+//                logger.info("[百度] previewCmd line:{}",line);
+
+                if (line.contains("url")) {
+                    String qrCodeUrl = line.substring(line.indexOf("url"));
+                    messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Preview QrCode success [百度] 二维码生成成功: " + qrCodeUrl);
+                }
+            });
+            if(!previewExecuteCommandResult){
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Preview QrCode error [百度] 二维码生成失败");
+            }
+
+
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Preview QrCode success [百度] 生成二维码完成");
 
         }
     }
@@ -825,6 +843,16 @@ public class NovelAppPublishUtil {
                 scene,
                 qrcodePath
         );
+    }
+
+    private String buildBaiduAppointQrCodePreviewCommand(String appId, String projectPath,String version,String baiduAppToken, String path, String query, String scene) {
+        logger.info("百度平台：生成预览二维码命令 projectPath:"+projectPath);
+        // 构建发布命令
+        return String.format("swan preview --project-path \"%s\" --min-swan-version %s --index-page %s --token %s  --json --verbose --force-use-new-compiler",
+                projectPath,
+                "4.540.1",
+                path,
+                baiduAppToken);
     }
 
     /**
