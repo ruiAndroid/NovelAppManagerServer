@@ -604,6 +604,24 @@ public class NovelAppPublishUtil {
 
         @Override
         public void handlePublish(String taskId, String appId, String projectPath, String douyinAppToken, String kuaishouAppToken, String weixinAppToken, String baiduAppToken, String version, String log, ProcessBuilder processBuilder) {
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[百度] 开始上传小程序...");
+            String uploadCmd = buildBaiduUploadCommand(baiduAppToken,version, log, projectPath);
+            boolean uploadExecuteCommandResult = executeCommand(taskId, uploadCmd, processBuilder, line -> {
+                if (line.contains("\"schemeUrl\": \"")) {
+                    String qrCodeUrl = line.substring(line.indexOf("\"schemeUrl\": \""),line.length()-2);
+                    messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[百度] 二维码生成成功: " + qrCodeUrl);
+                }
+            });
+            if(!uploadExecuteCommandResult){
+                messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "Publish error [百度]上传小程序失败");
+                return;
+            }
+
+
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, "[百度]上传小程序成功");
+
+            String completeMsg = "Publish success [百度] 发布流程全部完成";
+            messagingTemplate.convertAndSend("/topic/publish-logs/" + taskId, completeMsg);
 
         }
 
@@ -845,12 +863,27 @@ public class NovelAppPublishUtil {
         );
     }
 
-    private String buildBaiduAppointQrCodePreviewCommand(String appId, String projectPath,String version,String baiduAppToken, String path, String query, String scene) {
-        logger.info("百度平台：生成预览二维码命令 projectPath:"+projectPath);
-        // 构建发布命令
-        return String.format("swan preview --project-path \"%s\" --min-swan-version %s --index-page %s --token %s  --json --verbose --force-use-new-compiler",
+
+    /**
+     * 百度平台：发布命令
+     */
+    private String buildBaiduUploadCommand(String baiduAppToken,String version, String log, String projectPath) {
+        return String.format("swan upload  --project-path \"%s\" --min-swan-version %s --release-version %s  --token %s --desc %s --json --verbose --force-use-new-compiler",
                 projectPath,
                 "4.540.1",
+                version,
+                baiduAppToken,
+                log);
+    }
+    /**
+     * 百度平台：预览生成二维码命令
+     */
+    private String buildBaiduAppointQrCodePreviewCommand(String appId, String projectPath,String version,String baiduAppToken, String path, String query, String scene) {
+        // 构建发布命令
+        return String.format("swan preview --project-path \"%s\" --min-swan-version %s --release-version %s  --token %s  --json --verbose --force-use-new-compiler",
+                projectPath,
+                "4.540.1",
+                version,
                 path,
                 baiduAppToken);
     }
