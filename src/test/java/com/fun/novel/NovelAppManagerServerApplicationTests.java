@@ -1,10 +1,10 @@
-package com.example.novelappmanagerserver;
+package com.fun.novel;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class NovelAppAppManagerServerApplicationTests {
+class NovelAppManagerServerApplicationTests {
 
     @Test
     void contextLoads() {
