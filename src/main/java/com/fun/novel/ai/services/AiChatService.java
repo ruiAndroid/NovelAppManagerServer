@@ -132,7 +132,24 @@ public class AiChatService {
             clientRequestSpec.advisors(retrievalAdvisor);
         }
 
-        return clientRequestSpec.stream().content();
+        // 获取原始的流式响应
+        Flux<String> originalFlux = clientRequestSpec.stream().content();
+
+        // 处理流式响应，将工具调用的多步骤结果拆分为多个数据块
+        return originalFlux.flatMap(content -> {
+            // 检查内容是否包含工具调用的多步骤结果（包含换行符）
+            if (content.contains("\n")) {
+                // 将内容按换行符拆分成多个数据块
+                String[] chunks = content.split("\n");
+                // 为每个数据块创建一个延迟的Flux
+                return Flux.fromArray(chunks)
+                        .filter(chunk -> !chunk.trim().isEmpty()) // 过滤空行
+                        .delayElements(java.time.Duration.ofMillis(500)); // 每个数据块延迟500ms发送，模拟流式效果
+            }
+            // 如果不包含换行符，直接返回内容
+            return Flux.just(content);
+        })
+        .concatWith(Flux.just("[DONE]")); // 添加结束标记
     }
 
 

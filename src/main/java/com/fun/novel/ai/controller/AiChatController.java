@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -44,10 +46,9 @@ public class AiChatController {
      * @param chatId
      * @return
      */
-    @PostMapping("/chat")
+    @PostMapping(path="/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "DashScope Flux Chat")
     public Flux<String> chat(
-            HttpServletResponse response,
             @Validated @RequestBody String prompt,
             @RequestHeader(value = "model", required = false) String model,
             @RequestHeader(value = "chatId", required = false, defaultValue = "default-chat-id") String chatId
@@ -66,9 +67,6 @@ public class AiChatController {
         else {
             model = DashScopeModel.ChatModel.QWEN_PLUS.getValue();
         }
-
-        response.setCharacterEncoding("UTF-8");
-
 
         return aiChatService.chat(chatId, model, prompt);
 
