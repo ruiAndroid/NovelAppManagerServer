@@ -53,6 +53,7 @@ public class CreateAppTool implements ToolCallback {
             String platform = jsonNode.get("platform").asText();
             String appName = jsonNode.get("appName").asText();
             logger.info(String.format("根据用户需求生成的小程序信息: %s", toolInput));
+            logger.debug("Processing create app request for platform: {}, appName: {}", platform, appName);
 
             // 模拟创建小程序的多个步骤，用于测试流式数据返回
             StringBuilder result = new StringBuilder();
@@ -61,24 +62,31 @@ public class CreateAppTool implements ToolCallback {
             result.append("开始创建小程序...\n");
             result.append(String.format("初始化%s平台的%s项目...\n", getPlatformName(platform), appName));
             Thread.sleep(500); // 模拟处理时间
+            logger.debug("Step 1 completed: Initialization {}",result);
             
             // 步骤2：配置基础信息
             result.append("配置小程序基础信息...\n");
             Thread.sleep(500); // 模拟处理时间
+            logger.debug("Step 2 completed: Basic configuration {}",result);
             
             // 步骤3：创建核心页面
             result.append("创建小程序核心页面结构...\n");
             Thread.sleep(500); // 模拟处理时间
+            logger.debug("Step 3 completed: Page structure creation {}",result);
             
             // 步骤4：配置API接口
             result.append("配置小程序API接口...\n");
             Thread.sleep(500); // 模拟处理时间
+            logger.debug("Step 4 completed: API configuration {}",result);
             
             // 步骤5：完成创建
             result.append(String.format("已成功创建名为'%s'的%s小程序\n", appName, getPlatformName(platform)));
             result.append("小程序创建完成！可以开始使用了。\n");
+            logger.debug("Step 5 completed: App creation finished");
             
-            return result.toString();
+            String finalResult = result.toString();
+            logger.debug("CreateAppTool returning result: '{}'", finalResult);
+            return finalResult;
         } catch (Exception e) {
             return "创建小程序时出现错误: " + e.getMessage();
         }

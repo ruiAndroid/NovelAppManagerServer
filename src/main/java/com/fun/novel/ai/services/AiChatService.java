@@ -77,8 +77,7 @@ public class AiChatService {
                         simpleLoggerAdvisor,
                         messageChatMemoryAdvisor
                 ).defaultToolCallbacks(this.tools)
-                .build()
-                ;
+                .build();
         this.deepThinkPromptTemplate = deepThinkPromptTemplate;
         this.reasoningContentAdvisor = new ReasoningContentAdvisor(1);
         
@@ -132,24 +131,45 @@ public class AiChatService {
             clientRequestSpec.advisors(retrievalAdvisor);
         }
 
-        // 获取原始的流式响应
-        Flux<String> originalFlux = clientRequestSpec.stream().content();
-
-        // 处理流式响应，将工具调用的多步骤结果拆分为多个数据块
-        return originalFlux.flatMap(content -> {
-            // 检查内容是否包含工具调用的多步骤结果（包含换行符）
-            if (content.contains("\n")) {
-                // 将内容按换行符拆分成多个数据块
-                String[] chunks = content.split("\n");
-                // 为每个数据块创建一个延迟的Flux
-                return Flux.fromArray(chunks)
-                        .filter(chunk -> !chunk.trim().isEmpty()) // 过滤空行
-                        .delayElements(java.time.Duration.ofMillis(500)); // 每个数据块延迟500ms发送，模拟流式效果
+        try {
+            // 直接调用获取完整响应，因为工具调用不支持真正的流式返回
+            log.debug("Making direct call to get complete response...");
+            var response = clientRequestSpec.call().chatResponse();
+            
+            if (response != null && response.getResults() != null && !response.getResults().isEmpty()) {
+                var generation = response.getResults().get(0);
+                var output = generation.getOutput();
+                var content = output.getText();
+                
+                log.debug("Complete response content: '{}', contains newline: {}", content, content.contains("\n"));
+                
+                // 检查内容是否包含多步骤结果（包含换行符）
+                if (content != null && content.contains("\n")) {
+                    // 将内容按换行符拆分成多个数据块
+                    String[] chunks = content.split("\n");
+                    log.debug("Splitting content into {} chunks", chunks.length);
+                    
+                    // 为每个数据块创建一个延迟的Flux，模拟流式效果
+                    return Flux.fromArray(chunks)
+                            .filter(chunk -> !chunk.trim().isEmpty()) // 过滤空行
+                            .doOnNext(chunk -> log.debug("Sending chunk: '{}'", chunk))
+                            .delayElements(java.time.Duration.ofMillis(500)) // 每个数据块延迟500ms发送
+                            .concatWith(Flux.just("[DONE]")); // 添加结束标记
+                }
+                
+                // 如果没有换行符，直接返回内容
+                return Flux.just(content != null ? content : "")
+                        .concatWith(Flux.just("[DONE]"));
             }
-            // 如果不包含换行符，直接返回内容
-            return Flux.just(content);
-        })
-        .concatWith(Flux.just("[DONE]")); // 添加结束标记
+            
+            // 如果响应为空，返回空结果
+            return Flux.just("")
+                    .concatWith(Flux.just("[DONE]"));
+        } catch (Exception e) {
+            log.error("Error processing chat request", e);
+            return Flux.just("处理聊天请求时出错: " + e.getMessage())
+                    .concatWith(Flux.just("[DONE]"));
+        }
     }
 
 
