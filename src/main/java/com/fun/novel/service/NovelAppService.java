@@ -50,4 +50,5 @@ public interface NovelAppService {
      */
     List<NovelApp> getAppsByAppName(String appName);
 
+    NovelApp getAppsByNameAndPlatform(String appName,String platform);
 }

@@ -4,8 +4,10 @@ import com.fun.novel.annotation.OperationLog;
 import com.fun.novel.common.Result;
 import com.fun.novel.dto.CreateNovelAppRequest;
 import com.fun.novel.dto.CreateNovelLogType;
+import com.fun.novel.entity.NovelApp;
 import com.fun.novel.enums.OpType;
 import com.fun.novel.service.NovelAppCreationService;
+import com.fun.novel.service.NovelAppService;
 import com.fun.novel.utils.CreateNovelTaskManager;
 import com.fun.novel.utils.CreateNovelTaskLogger;
 import io.swagger.v3.oas.annotations.Operation;
@@ -41,11 +43,19 @@ public class NovelAppCreateController {
     @Autowired
     private NovelAppCreationService novelAppCreationService;
 
+    @Autowired
+    private NovelAppService novelAppService;
     @Operation(summary = "创建小说小程序")
     @PostMapping("/createNovelApp")
     @PreAuthorize("hasAnyRole('ROLE_0','ROLE_1')")
     @OperationLog(opType = OpType.INSERT_CODE, opName = "创建小说小程序")
     public Result<Map<String, String>> createNovelApp(@RequestBody CreateNovelAppRequest params) {
+
+
+        NovelApp appsByNameAndPlatform = novelAppService.getAppsByNameAndPlatform(params.getBaseConfig().getAppName(), params.getBaseConfig().getPlatform());
+        if(appsByNameAndPlatform!= null){
+            return Result.error("已存在同名同平台的小程序，请重试");
+        }
         String taskId = createNovelTaskManager.createTask();
         if (taskId == null) {
             return Result.error("已有小说创建任务正在进行中，请稍后再试");

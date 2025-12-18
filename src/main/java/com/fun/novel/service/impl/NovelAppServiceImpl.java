@@ -7,6 +7,7 @@ import com.fun.novel.mapper.NovelAppMapper;
 import com.fun.novel.service.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,8 @@ public class NovelAppServiceImpl extends ServiceImpl<NovelAppMapper, NovelApp> i
     private final AppWeijuDeliverService deliverService;
     private final AppCommonConfigService commonConfigService;
     private final AppUIConfigService    uiConfigService;
+    @Autowired
+    private NovelAppMapper novelAppMapper;
     @Override
     @Transactional(rollbackFor = Exception.class)
     public NovelApp addNovelApp(NovelApp novelApp) {
@@ -44,6 +47,17 @@ public class NovelAppServiceImpl extends ServiceImpl<NovelAppMapper, NovelApp> i
         LambdaQueryWrapper<NovelApp> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(NovelApp::getAppName, appName);
         return list(wrapper);
+    }
+
+    @Override
+    public NovelApp getAppsByNameAndPlatform(String appName, String platform) {
+
+        LambdaQueryWrapper<NovelApp> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(NovelApp::getAppName, appName)
+                .eq(NovelApp::getPlatform, platform);
+        NovelApp novelApp = novelAppMapper.selectOne(wrapper);
+        log.info("获取应用信息成功，appName: {}, platform: {}, app: {}", appName, platform, novelApp);
+        return novelApp;
     }
 
     @Override
