@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import com.fun.novel.ai.utils.StreamingContentProcessor;
 import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
@@ -25,6 +26,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Objects;
@@ -132,39 +134,23 @@ public class AiChatService {
         }
 
         try {
-            // 直接调用获取完整响应，因为工具调用不支持真正的流式返回
-            log.debug("Making direct call to get complete response...");
-            var response = clientRequestSpec.call().chatResponse();
-            
-            if (response != null && response.getResults() != null && !response.getResults().isEmpty()) {
-                var generation = response.getResults().get(0);
-                var output = generation.getOutput();
-                var content = output.getText();
-                
-                log.debug("Complete response content: '{}', contains newline: {}", content, content.contains("\n"));
-                
-                // 检查内容是否包含多步骤结果（包含换行符）
-                if (content != null && content.contains("\n")) {
-                    // 将内容按换行符拆分成多个数据块
-                    String[] chunks = content.split("\n");
-                    log.debug("Splitting content into {} chunks", chunks.length);
-                    
-                    // 为每个数据块创建一个延迟的Flux，模拟流式效果
-                    return Flux.fromArray(chunks)
-                            .filter(chunk -> !chunk.trim().isEmpty()) // 过滤空行
-                            .doOnNext(chunk -> log.debug("Sending chunk: '{}'", chunk))
-                            .delayElements(java.time.Duration.ofMillis(500)) // 每个数据块延迟500ms发送
-                            .concatWith(Flux.just("[DONE]")); // 添加结束标记
-                }
-                
-                // 如果没有换行符，直接返回内容
-                return Flux.just(content != null ? content : "")
-                        .concatWith(Flux.just("[DONE]"));
-            }
-            
-            // 如果响应为空，返回空结果
-            return Flux.just("")
-                    .concatWith(Flux.just("[DONE]"));
+            // 使用chatClient的原生流式输出能力，并通过工具类处理流式片段
+            return StreamingContentProcessor.processFlux(
+                clientRequestSpec
+                    .stream()
+                    .chatResponse()
+                    .map(response -> {
+                        if (response != null && response.getResults() != null && !response.getResults().isEmpty()) {
+                            var generation = response.getResults().get(0);
+                            var output = generation.getOutput();
+                            var content = output.getText();
+                            log.debug("Received streaming content: '{}'", content);
+                            return content != null ? content : "";
+                        }
+                        return "";
+                    })
+            )
+            .concatWith(Flux.just("[DONE]")); // 添加结束标记
         } catch (Exception e) {
             log.error("Error processing chat request", e);
             return Flux.just("处理聊天请求时出错: " + e.getMessage())
