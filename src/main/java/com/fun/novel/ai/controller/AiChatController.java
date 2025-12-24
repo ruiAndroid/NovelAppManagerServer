@@ -40,7 +40,6 @@ public class AiChatController {
 
     /**
      * 当发送的提示词(prompt)为空时，接口会返回错误信息
-     * @param response
      * @param prompt
      * @param model
      * @param chatId

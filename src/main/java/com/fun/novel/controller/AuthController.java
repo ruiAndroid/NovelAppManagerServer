@@ -4,10 +4,13 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fun.novel.annotation.OperationLog;
 import com.fun.novel.common.Const;
 import com.fun.novel.common.Result;
+import com.fun.novel.dto.FunAiRegisterRequest;
 import com.fun.novel.dto.LoginRequest;
 import com.fun.novel.dto.RegisterRequest;
+import com.fun.novel.entity.FunAiUser;
 import com.fun.novel.entity.User;
 import com.fun.novel.enums.OpType;
+import com.fun.novel.service.FunAiUserService;
 import com.fun.novel.service.UserService;
 import com.fun.novel.utils.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -43,6 +46,8 @@ public class AuthController {
     private UserService userService;
 
     @Autowired
+    private FunAiUserService  funAiUserService;
+    @Autowired
     private JwtUtil jwtUtil;
 
     @Autowired
@@ -74,14 +79,20 @@ public class AuthController {
             }
 
             // 认证用户
-            Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        loginRequest.getUserName(),
-                        loginRequest.getPassword()
-                )
-            );
-
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+//            Authentication authentication = authenticationManager.authenticate(
+//                new UsernamePasswordAuthenticationToken(
+//                        loginRequest.getUserName(),
+//                        loginRequest.getPassword()
+//                )
+//            );
+//
+//            SecurityContextHolder.getContext().setAuthentication(authentication);
+            // 直接验证密码，而不是使用AuthenticationManager
+            boolean passwordMatch = passwordEncoder.matches(loginRequest.getPassword(), user.getPassword());
+            if (!passwordMatch) {
+                logger.warn("Login failed for fun ai user: {}, reason: 密码错误", loginRequest.getUserName());
+                return Result.error("用户名或密码错误");
+            }
             
             // 生成JWT Token
             String token = jwtUtil.generateToken(loginRequest.getUserName());
@@ -173,7 +184,73 @@ public class AuthController {
             return Result.error("注册失败: " + e.getMessage());
         }
     }
-    
+
+
+    @PostMapping("/fun-ai-login")
+    @Operation(summary = "风行AI平台用户登录", description = "风行AI用户登录并获取JWT Token")
+    public Result<FunAiUser> funAiLogin(@Valid @RequestBody LoginRequest loginRequest, HttpServletResponse response) {
+        try {
+            // 先根据用户名查找用户，检查用户状态
+            FunAiUser user = funAiUserService.findByUsername(loginRequest.getUserName());
+            if (user == null) {
+                logger.warn("Login failed for fun ai user: {}, reason: 用户不存在", loginRequest.getUserName());
+                return Result.error("用户名或密码错误");
+            }
+            logger.info("funAiLogin user:{}",user);
+            
+            // 直接验证密码，而不是使用AuthenticationManager
+            boolean passwordMatch = passwordEncoder.matches(loginRequest.getPassword(), user.getPassword());
+            if (!passwordMatch) {
+                logger.warn("Login failed for fun ai user: {}, reason: 密码错误", loginRequest.getUserName());
+                return Result.error("用户名或密码错误");
+            }
+
+            // 生成JWT Token
+            String token = jwtUtil.generateToken(loginRequest.getUserName());
+            logger.info("Generated JWT Token for fun ai user {}: length={}", loginRequest.getUserName(), token.length());
+
+            // 设置Authorization响应头
+            response.setHeader("Authorization", "Bearer " + token);
+            response.setHeader("Access-Control-Expose-Headers", "Authorization");
+
+            // 更新上次登录时间
+            user.setLastLoginTime(LocalDateTime.now());
+            funAiUserService.updateById(user);
+
+            logger.info("Login successful for fun ai user: {}", loginRequest.getUserName());
+            return Result.success(user);
+        } catch (Exception e) {
+            logger.error("Login failed for fun ai user: {}, reason: {}", loginRequest.getUserName(), e.getMessage());
+            return Result.error("登录失败，请稍后重试");
+        }
+    }
+    @PostMapping("/fun-ai-register")
+    @Operation(summary = "风行ai平台用户注册", description = "风行ai平台注册新用户")
+    public Result<FunAiUser> funAiRegister(@Valid @RequestBody FunAiRegisterRequest registerRequest) {
+        try {
+            // 检查用户是否已存在
+            if (funAiUserService.findByUsername(registerRequest.getUserName()) != null) {
+                return Result.error("用户名已存在");
+            }
+
+            // 创建用户对象
+            FunAiUser user = new FunAiUser();
+            user.setUserName(registerRequest.getUserName());
+            user.setPassword(registerRequest.getPassword());
+            user.setPhone(registerRequest.getPhone());
+            user.setEmail(registerRequest.getEmail());
+            user.setAvatar(Const.USER_DEFAULT_AVATAR);
+
+
+            // 注册用户
+            FunAiUser registeredUser = funAiUserService.register(user);
+            return Result.success("注册成功", registeredUser);
+        } catch (Exception e) {
+            return Result.error("注册失败: " + e.getMessage());
+        }
+    }
+
+
     @GetMapping("/users")
     @Operation(summary = "分页查询用户信息", description = "分页查询所有用户信息，按更新时间排序")
     @PreAuthorize("hasAnyRole('ROLE_0')")

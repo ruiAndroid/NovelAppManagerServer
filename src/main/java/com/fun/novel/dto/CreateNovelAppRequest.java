@@ -1,10 +1,10 @@
 package com.fun.novel.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
-import org.checkerframework.checker.guieffect.qual.UI;
-
 import jakarta.validation.constraints.NotNull;
 
 @Data
@@ -65,6 +65,24 @@ public class CreateNovelAppRequest {
         @NotNull
         @Schema(description = "deliverId")
         private String deliverId;
+
+        /**
+         * 将BaseConfig对象转换为JSON字符串
+         * @return JSON格式的字符串，包含所有字段
+         */
+        public String toJson() {
+            Gson gson = new Gson();
+            return gson.toJson(this);
+        }
+
+        /**
+         * 将BaseConfig对象转换为格式化的JSON字符串（带缩进）
+         * @return 格式化的JSON字符串，包含所有字段
+         */
+        public String toPrettyJson() {
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            return gson.toJson(this);
+        }
     }
 
 
@@ -77,6 +95,10 @@ public class CreateNovelAppRequest {
         private PayTypeConfig wxVirtualPay;
         private PayTypeConfig wxVirtualRenewPay;
         private PayTypeConfig imPay;
+         public String toPrettyJson() {
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            return gson.toJson(this);
+        }
     }
 
     @Data
@@ -84,6 +106,10 @@ public class CreateNovelAppRequest {
         private Boolean enabled;
         private String gatewayAndroid;
         private String gatewayIos;
+        public String toPrettyJson() {
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            return gson.toJson(this);
+        }
     }
 
     @Data
@@ -92,6 +118,10 @@ public class CreateNovelAppRequest {
         private InterstitialAdConfig interstitialAd;
         private BannerAdConfig bannerAd;
         private FeedAdConfig feedAd;
+        public String toPrettyJson() {
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            return gson.toJson(this);
+        }
     }
 
     @Data
@@ -99,6 +129,10 @@ public class CreateNovelAppRequest {
         private Boolean enabled;
         private String rewardAdId;
         private Integer rewardCount;
+        public String toPrettyJson() {
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            return gson.toJson(this);
+        }
     }
 
     @Data
@@ -106,18 +140,30 @@ public class CreateNovelAppRequest {
         private Boolean enabled;
         private String interstitialAdId;
         private Integer interstitialCount;
+        public String toPrettyJson() {
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            return gson.toJson(this);
+        }
     }
 
     @Data
     public static class BannerAdConfig {
         private Boolean enabled;
         private String bannerAdId;
+        public String toPrettyJson() {
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            return gson.toJson(this);
+        }
     }
 
     @Data
     public static class FeedAdConfig {
         private Boolean enabled;
         private String feedAdId;
+        public String toPrettyJson() {
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            return gson.toJson(this);
+        }
     }
 
     @Data
@@ -160,6 +206,10 @@ public class CreateNovelAppRequest {
         @Schema(description = "是否屏蔽移动积分入口")
         private Boolean hideScoreExchange;
 
+         public String toPrettyJson() {
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            return gson.toJson(this);
+        }
     }
 
     @Data
@@ -180,5 +230,9 @@ public class CreateNovelAppRequest {
         @NotNull
         @Schema(description = "第二主题色")
         private String secondTheme;
+        public String toPrettyJson() {
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            return gson.toJson(this);
+        }
     }
 }

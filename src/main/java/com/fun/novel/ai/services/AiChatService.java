@@ -150,11 +150,11 @@ public class AiChatService {
                         return "";
                     })
             )
-            .concatWith(Flux.just("[DONE]")); // 添加结束标记
+            .concatWith(Flux.just("[DONE]-CreateNovelApp")); // 添加结束标记
         } catch (Exception e) {
             log.error("Error processing chat request", e);
             return Flux.just("处理聊天请求时出错: " + e.getMessage())
-                    .concatWith(Flux.just("[DONE]"));
+                    .concatWith(Flux.just("[DONE]-CreateNovelApp"));
         }
     }
 

@@ -2,7 +2,10 @@ package com.fun.novel.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fun.novel.common.Result;
+import com.fun.novel.mapper.FunAiUserMapper;
+import com.fun.novel.security.DynamicJwtAuthenticationFilter;
 import com.fun.novel.security.JwtAuthenticationFilter;
+import com.fun.novel.service.FunAiUserService;
 import com.fun.novel.utils.JwtUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,11 +39,12 @@ public class SecurityConfig {
     private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
     private final UserDetailsService userDetailsService;
-
+    private final FunAiUserMapper funAiUserMapper;
     private final JwtUtil jwtUtil;
 
-    public SecurityConfig(@Lazy UserDetailsService userDetailsService, JwtUtil jwtUtil) {
+    public SecurityConfig(@Lazy UserDetailsService userDetailsService, FunAiUserMapper funAiUserMapper, JwtUtil jwtUtil) {
         this.userDetailsService = userDetailsService;
+        this.funAiUserMapper = funAiUserMapper;
         this.jwtUtil = jwtUtil;
     }
 
@@ -70,7 +74,7 @@ public class SecurityConfig {
 
              //配置自定义的过滤器
             .and()
-            .addFilterBefore(new JwtAuthenticationFilter(userDetailsService, jwtUtil), UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(dynamicJwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -106,6 +110,11 @@ public class SecurityConfig {
         return authConfig.getAuthenticationManager();
     }
     
+    @Bean
+    public DynamicJwtAuthenticationFilter dynamicJwtAuthenticationFilter() {
+        return new DynamicJwtAuthenticationFilter(userDetailsService, funAiUserMapper, jwtUtil);
+    }
+    
     //白名单接口，不需要鉴权可以直接调用的
     public static final String[] URL_WHITELIST = {
         "/swagger-ui.html",//接口文档
@@ -116,6 +125,8 @@ public class SecurityConfig {
         "/webjars/**",
         "/api/novel-auth/login",  //登录
         "/api/novel-auth/register",//注册
+        "/api/novel-auth/fun-ai-login",  //风行AI登录
+        "/api/novel-auth/fun-ai-register",//风行AI注册
         "/api/novel-apps/appLists",   //应用列表
         "/api/novel-weiju/banner/getBannerByBannerId",     //微距相关
         "/api/novel-weiju/deliver/getDeliverByDeliverId",
