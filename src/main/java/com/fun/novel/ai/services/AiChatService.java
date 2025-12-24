@@ -30,6 +30,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 public class AiChatService {
@@ -135,7 +136,7 @@ public class AiChatService {
 
         try {
             // 使用chatClient的原生流式输出能力，并通过工具类处理流式片段
-            return StreamingContentProcessor.processFlux(
+            Flux<String> processedFlux = StreamingContentProcessor.processFlux(
                 clientRequestSpec
                     .stream()
                     .chatResponse()
@@ -149,12 +150,31 @@ public class AiChatService {
                         }
                         return "";
                     })
-            )
-            .concatWith(Flux.just("[DONE]-CreateNovelApp")); // 添加结束标记
+            );
+            
+            // 创建一个AtomicReference来跟踪是否包含小程序配置标记
+            AtomicReference<Boolean> containsAppConfig = new AtomicReference<>(false);
+            
+            return processedFlux
+                .doOnNext(content -> {
+                    // 检查内容是否包含小程序配置相关标记
+                    if (content.contains("jsonStart-createNovelApp-baseConfig") || 
+                        content.contains("jsonEnd-createNovelApp-baseConfig") ||
+                        content.contains("createNovelApp")) {
+                        containsAppConfig.set(true);
+                    }
+                })
+                .concatWith(Mono.defer(() -> {
+                    // 只有当内容包含小程序配置标记时，才添加结束标记
+                    if (containsAppConfig.get()) {
+                        return Mono.just("[DONE]-CreateNovelApp");
+                    } else {
+                        return Mono.empty();
+                    }
+                }));
         } catch (Exception e) {
             log.error("Error processing chat request", e);
-            return Flux.just("处理聊天请求时出错: " + e.getMessage())
-                    .concatWith(Flux.just("[DONE]-CreateNovelApp"));
+            return Flux.just("处理聊天请求时出错: " + e.getMessage());
         }
     }
 
