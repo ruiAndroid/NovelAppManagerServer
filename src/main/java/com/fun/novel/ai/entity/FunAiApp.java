@@ -67,14 +67,8 @@ public class FunAiApp {
      */
     @TableField("app_secret")
     @Schema(description = "应用密钥")
+    @JsonIgnore
     private String appSecret;
-
-    /**
-     * 应用配置JSON
-     */
-    @TableField("app_config")
-    @Schema(description = "应用配置JSON")
-    private String appConfig;
 
     /**
      * 创建时间

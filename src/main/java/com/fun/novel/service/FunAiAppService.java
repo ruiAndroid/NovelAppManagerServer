@@ -17,14 +17,6 @@ public interface FunAiAppService extends IService<FunAiApp> {
      */
     List<FunAiApp> getAppsByUserId(Long userId);
 
-    /**
-     * 根据用户ID分页查询应用列表
-     * @param userId 用户ID
-     * @param page 页码
-     * @param size 每页条数
-     * @return 分页应用列表
-     */
-    Page<FunAiApp> getAppsByUserId(Long userId, Integer page, Integer size);
 
     /**
      * 根据应用ID和用户ID查询应用
@@ -56,4 +48,12 @@ public interface FunAiAppService extends IService<FunAiApp> {
      * @return 是否删除成功
      */
     boolean deleteApp(Long appId, Long userId);
+
+    /**
+     * 创建应用（包含完整的业务逻辑：校验、创建文件夹、更新用户计数等）
+     * @param userId 用户ID
+     * @return 创建后的应用信息
+     * @throws IllegalArgumentException 当用户不存在或应用数量已达上限时抛出
+     */
+    FunAiApp createAppWithValidation(Long userId) throws IllegalArgumentException;
 }
