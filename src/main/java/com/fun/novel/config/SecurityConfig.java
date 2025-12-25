@@ -4,8 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fun.novel.common.Result;
 import com.fun.novel.mapper.FunAiUserMapper;
 import com.fun.novel.security.DynamicJwtAuthenticationFilter;
-import com.fun.novel.security.JwtAuthenticationFilter;
-import com.fun.novel.service.FunAiUserService;
 import com.fun.novel.utils.JwtUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,10 +25,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
@@ -68,6 +62,10 @@ public class SecurityConfig {
              // 配置拦截规则
             .and()
             .authorizeHttpRequests()
+            // 确保 Swagger UI 相关路径都被允许（放在最前面，优先级最高）
+            .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/swagger-ui/index.html").permitAll()
+            .requestMatchers("/v3/api-docs/**").permitAll()
+            .requestMatchers("/webjars/**").permitAll()
             .requestMatchers(URL_WHITELIST).permitAll() // 接口请求白名单
 //            .requestMatchers("/api/novel-apps/**").hasAnyRole("USER_TYPE_2_3", "ADMIN") // type=2或3可以访问的接口
             .anyRequest().authenticated() // 其他请求需要认证
@@ -117,8 +115,9 @@ public class SecurityConfig {
     
     //白名单接口，不需要鉴权可以直接调用的
     public static final String[] URL_WHITELIST = {
-        "/swagger-ui.html",//接口文档
-        "/swagger-ui/**",
+        "/swagger-ui.html",//接口文档（兼容旧路径）
+        "/swagger-ui/**",//Swagger UI 新路径
+        "/swagger-ui/index.html",//Swagger UI 首页
         "/chatui/**",
         "/api/ai/chat/**",
         "/v3/api-docs/**",

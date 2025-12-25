@@ -8,9 +8,11 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
-public class SwaggerConfig {
+public class SwaggerConfig implements WebMvcConfigurer {
 
     @Bean
     public OpenAPI customOpenAPI() {
@@ -30,5 +32,17 @@ public class SwaggerConfig {
                                         .type(SecurityScheme.Type.HTTP)
                                         .scheme("bearer")
                                         .bearerFormat("JWT")));
+    }
+    
+    /**
+     * 配置 Swagger UI 路径重定向
+     * 确保访问 /swagger-ui/ 时能正确重定向到 /swagger-ui/index.html
+     */
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        // 将 /swagger-ui/ 重定向到 /swagger-ui/index.html
+        registry.addRedirectViewController("/swagger-ui/", "/swagger-ui/index.html");
+        // 兼容旧路径
+        registry.addRedirectViewController("/swagger-ui.html", "/swagger-ui/index.html");
     }
 }

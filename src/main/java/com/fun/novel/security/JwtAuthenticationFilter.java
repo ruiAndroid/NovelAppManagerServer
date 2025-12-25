@@ -2,7 +2,6 @@ package com.fun.novel.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fun.novel.common.Result;
-import com.fun.novel.service.impl.UserDetailsServiceImpl;
 import com.fun.novel.utils.JwtUtil;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
@@ -16,7 +15,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -46,9 +44,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         
-        final String requestTokenHeader = request.getHeader("Authorization");
         String url = request.getServletPath();
         log.info("doFilterInternal 请求的url：{}", url);
+        
+        // 跳过 Swagger UI 相关路径
+        if (url.startsWith("/swagger-ui") || url.startsWith("/v3/api-docs") || url.startsWith("/webjars")) {
+            chain.doFilter(request, response);
+            return;
+        }
+        
+        final String requestTokenHeader = request.getHeader("Authorization");
 
         String username = null;
         String jwtToken = null;

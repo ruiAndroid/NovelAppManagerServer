@@ -50,8 +50,15 @@ public class DynamicJwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         
-        final String requestTokenHeader = request.getHeader("Authorization");
         String url = request.getServletPath();
+        
+        // 跳过 Swagger UI 相关路径
+        if (url.startsWith("/swagger-ui") || url.startsWith("/v3/api-docs") || url.startsWith("/webjars")) {
+            chain.doFilter(request, response);
+            return;
+        }
+        
+        final String requestTokenHeader = request.getHeader("Authorization");
 
         String username = null;
         String jwtToken = null;
