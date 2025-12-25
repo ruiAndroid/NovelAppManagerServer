@@ -1,4 +1,4 @@
-package com.fun.novel.entity;
+package com.fun.novel.ai.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -53,6 +53,13 @@ public class FunAiUser {
     @TableField("phone")
     @Schema(description = "手机号")
     private String phone;
+
+    /**
+     * 已创建应用数量
+     */
+    @TableField("app_count")
+    @Schema(description = "已创建应用数量")
+    private Integer appCount;
 
     /**
      * 最后登录时间

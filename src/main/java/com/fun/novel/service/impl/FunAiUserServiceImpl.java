@@ -1,14 +1,10 @@
 package com.fun.novel.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.fun.novel.entity.FunAiUser;
-import com.fun.novel.entity.User;
+import com.fun.novel.ai.entity.FunAiUser;
 import com.fun.novel.mapper.FunAiUserMapper;
-import com.fun.novel.mapper.UserMapper;
 import com.fun.novel.service.FunAiUserService;
-import com.fun.novel.service.UserService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 

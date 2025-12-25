@@ -1,8 +1,7 @@
 package com.fun.novel.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.fun.novel.entity.FunAiUser;
-import com.fun.novel.entity.User;
+import com.fun.novel.ai.entity.FunAiUser;
 
 /**
  * 用户服务接口

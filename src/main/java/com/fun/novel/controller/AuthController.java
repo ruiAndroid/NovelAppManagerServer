@@ -7,7 +7,7 @@ import com.fun.novel.common.Result;
 import com.fun.novel.dto.FunAiRegisterRequest;
 import com.fun.novel.dto.LoginRequest;
 import com.fun.novel.dto.RegisterRequest;
-import com.fun.novel.entity.FunAiUser;
+import com.fun.novel.ai.entity.FunAiUser;
 import com.fun.novel.entity.User;
 import com.fun.novel.enums.OpType;
 import com.fun.novel.service.FunAiUserService;
@@ -22,7 +22,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -240,6 +239,7 @@ public class AuthController {
             user.setPhone(registerRequest.getPhone());
             user.setEmail(registerRequest.getEmail());
             user.setAvatar(Const.USER_DEFAULT_AVATAR);
+            user.setAppCount(0);
 
 
             // 注册用户
