@@ -16,7 +16,7 @@ public class FunAiAppDeployResponse {
     @Schema(description = "应用名称", example = "我的AI应用")
     private String appName;
 
-    @Schema(description = "应用状态（1=空闲；2=部署中；3=启动中；4=运行中）", example = "4")
+    @Schema(description = "应用状态（0=空壳/草稿；1=已上传；2=部署中；3=可访问；4=部署失败；5=禁用）", example = "2")
     private Integer appStatus;
 
     @Schema(description = "选中的zip包文件名", example = "upload_1703510400000_app.zip")

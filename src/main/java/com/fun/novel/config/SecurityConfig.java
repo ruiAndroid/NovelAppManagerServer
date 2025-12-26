@@ -118,10 +118,12 @@ public class SecurityConfig {
         "/swagger-ui.html",//接口文档（兼容旧路径）
         "/swagger-ui/**",//Swagger UI 新路径
         "/swagger-ui/index.html",//Swagger UI 首页
+        "/favicon.ico", // 浏览器默认请求站点图标
         "/chatui/**",
         "/api/ai/chat/**",
         "/v3/api-docs/**",
         "/webjars/**",
+        "/fun-ai-app/**", // FunAI 应用静态站点访问（dist）
         "/api/novel-auth/login",  //登录
         "/api/novel-auth/register",//注册
         "/api/novel-auth/fun-ai-login",  //风行AI登录

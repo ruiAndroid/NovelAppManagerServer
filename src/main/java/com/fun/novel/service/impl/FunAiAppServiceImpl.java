@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fun.novel.ai.entity.FunAiApp;
 import com.fun.novel.ai.entity.FunAiUser;
+import com.fun.novel.ai.enums.FunAiAppStatus;
 import com.fun.novel.dto.FunAiAppDeployResponse;
 import com.fun.novel.mapper.FunAiAppMapper;
 import com.fun.novel.service.FunAiAppService;
@@ -78,9 +79,9 @@ public class FunAiAppServiceImpl extends ServiceImpl<FunAiAppMapper, FunAiApp> i
         if (!StringUtils.hasText(app.getAppSecret())) {
             app.setAppSecret(generateAppSecret());
         }
-        // 设置默认状态为空闲
+        // 设置默认状态为：空壳/草稿（仅创建记录）
         if (app.getAppStatus() == null) {
-            app.setAppStatus(1);
+            app.setAppStatus(FunAiAppStatus.CREATED.code());
         }
         // 保存应用
         save(app);
@@ -113,7 +114,12 @@ public class FunAiAppServiceImpl extends ServiceImpl<FunAiAppMapper, FunAiApp> i
             throw new IllegalArgumentException("应用不存在或无权限操作");
         }
 
-        // 2) appName 同名校验（仅当传入且非空时才校验/更新）
+        // 部署中不允许修改基础信息（避免目录/部署过程冲突）
+        if (existingApp.getAppStatus() != null && existingApp.getAppStatus() == FunAiAppStatus.DEPLOYING.code()) {
+            throw new IllegalArgumentException("应用部署中，暂不允许修改");
+        }
+
+        // 2) appName 同名校验（仅当传入且非空时才校验/更新），并同步重命名本地目录
         if (StringUtils.hasText(appName)) {
             String trimmedName = appName.trim();
             QueryWrapper<FunAiApp> nameCheck = new QueryWrapper<>();
@@ -124,6 +130,25 @@ public class FunAiAppServiceImpl extends ServiceImpl<FunAiAppMapper, FunAiApp> i
             FunAiApp duplicate = baseMapper.selectOne(nameCheck);
             if (duplicate != null) {
                 throw new IllegalArgumentException("应用名称已存在，请换一个名称");
+            }
+            // 如果名称变化，尝试重命名应用目录（目录名目前依赖 appName）
+            String oldName = existingApp.getAppName();
+            if (oldName != null && !oldName.equals(trimmedName)) {
+                String basePath = getUserPath();
+                if (basePath != null && !basePath.isEmpty()) {
+                    Path userDir = Paths.get(basePath, String.valueOf(userId));
+                    Path oldDir = userDir.resolve(sanitizeFileName(oldName));
+                    Path newDir = userDir.resolve(sanitizeFileName(trimmedName));
+                    try {
+                        if (Files.exists(oldDir) && Files.notExists(newDir)) {
+                            Files.move(oldDir, newDir);
+                            logger.info("应用目录重命名成功: {} -> {}", oldDir, newDir);
+                        }
+                    } catch (Exception e) {
+                        logger.error("应用目录重命名失败: {} -> {}, error={}", oldDir, newDir, e.getMessage(), e);
+                        throw new IllegalArgumentException("应用目录重命名失败，请稍后重试");
+                    }
+                }
             }
             existingApp.setAppName(trimmedName);
         }
@@ -151,9 +176,9 @@ public class FunAiAppServiceImpl extends ServiceImpl<FunAiAppMapper, FunAiApp> i
             throw new IllegalArgumentException("应用不存在或无权限操作");
         }
 
-        // 仅当 appStatus == 1 时允许部署
-        if (app.getAppStatus() == null || app.getAppStatus() != 1) {
-            throw new IllegalArgumentException("当前应用状态不允许发布（仅空闲状态可发布）");
+        // 仅当 UPLOADED 时允许部署
+        if (app.getAppStatus() == null || app.getAppStatus() != FunAiAppStatus.UPLOADED.code()) {
+            throw new IllegalArgumentException("当前应用状态不允许部署（请先上传zip）");
         }
 
         String basePath = getUserPath();
@@ -191,8 +216,8 @@ public class FunAiAppServiceImpl extends ServiceImpl<FunAiAppMapper, FunAiApp> i
             throw new IllegalArgumentException("未找到已上传的zip包，请先上传");
         }
 
-        // 2) 更新状态为部署中（2），并清空上次失败原因，避免并发部署
-        app.setAppStatus(2);
+        // 2) 更新状态为部署中（DEPLOYING），并清空上次失败原因，避免并发部署
+        app.setAppStatus(FunAiAppStatus.DEPLOYING.code());
         app.setLastDeployError(null);
         updateById(app);
 
@@ -214,14 +239,14 @@ public class FunAiAppServiceImpl extends ServiceImpl<FunAiAppMapper, FunAiApp> i
                 throw new IllegalArgumentException("zip内容不是有效的前端项目（缺少package.json）");
             }
         } catch (IllegalArgumentException e) {
-            // 业务校验失败：回滚为空闲，方便用户修复后重试
-            app.setAppStatus(1);
+            // 业务校验失败：进入 FAILED，方便用户修复后重试
+            app.setAppStatus(FunAiAppStatus.FAILED.code());
             app.setLastDeployError(truncateError(e.getMessage()));
             updateById(app);
             throw e;
         } catch (Exception e) {
             logger.error("部署解压失败: userId={}, appId={}, error={}", userId, appId, e.getMessage(), e);
-            app.setAppStatus(1);
+            app.setAppStatus(FunAiAppStatus.FAILED.code());
             app.setLastDeployError(truncateError(e.getMessage()));
             updateById(app);
             throw new RuntimeException("部署解压失败: " + e.getMessage(), e);
@@ -231,27 +256,30 @@ public class FunAiAppServiceImpl extends ServiceImpl<FunAiAppMapper, FunAiApp> i
         final Path finalProjectRoot = projectRoot;
         deployExecutor.submit(() -> {
             try {
-                // 再次确认当前状态仍为部署中，避免重复/并发部署导致状态错乱
+                // 再次确认当前状态仍为 DEPLOYING，避免重复/并发部署导致状态错乱
                 FunAiApp latest = getAppByIdAndUserId(appId, userId);
-                if (latest == null || latest.getAppStatus() == null || latest.getAppStatus() != 2) {
+                if (latest == null || latest.getAppStatus() == null || latest.getAppStatus() != FunAiAppStatus.DEPLOYING.code()) {
                     logger.info("跳过构建：应用状态已变化: userId={}, appId={}, appStatus={}",
                             userId, appId, latest == null ? null : latest.getAppStatus());
                     return;
                 }
 
                 executeCommandNoLog(finalProjectRoot, "npm install");
-                executeCommandNoLog(finalProjectRoot, "npm run build");
+                // 使用相对 base，避免 build 后资源引用变成 /assets/* 导致站点在子路径下无法访问
+                // 对于 Vite：--base=./ 会让 index.html 使用相对资源路径（如 assets/xxx.js）
+                executeCommandNoLog(finalProjectRoot, "npm run build -- --base=./");
 
-                latest.setAppStatus(4); // 运行中
+                // build 成功：进入 READY（dist 已生成，可访问）
+                latest.setAppStatus(FunAiAppStatus.READY.code());
                 latest.setLastDeployError(null);
                 updateById(latest);
-                logger.info("部署构建完成: userId={}, appId={}, status=4", userId, appId);
+                logger.info("部署构建完成: userId={}, appId={}, status=READY", userId, appId);
             } catch (Exception e) {
                 logger.error("部署构建失败: userId={}, appId={}, error={}", userId, appId, e.getMessage(), e);
                 try {
                     FunAiApp latest = getAppByIdAndUserId(appId, userId);
                     if (latest != null) {
-                        latest.setAppStatus(1); // 回滚为空闲
+                        latest.setAppStatus(FunAiAppStatus.FAILED.code());
                         latest.setLastDeployError(truncateError(e.getMessage()));
                         updateById(latest);
                     }
@@ -384,11 +412,12 @@ public class FunAiAppServiceImpl extends ServiceImpl<FunAiAppMapper, FunAiApp> i
             throw new RuntimeException("应用不存在或无权限操作");
         }
         
-        // 校验应用状态：如果不为2（部署/运行中），则不允许删除
-        if (existingApp.getAppStatus() != null && existingApp.getAppStatus() != 1) {
-            logger.warn("尝试删除运行中的应用: appId={}, userId={}, appStatus={}", 
-                appId, userId, existingApp.getAppStatus());
-            throw new IllegalArgumentException("应用正在运行中，需要先停止");
+        // DEPLOYING 或 DISABLED 不允许删除
+        Integer st = existingApp.getAppStatus();
+        if (st != null && (st == FunAiAppStatus.DEPLOYING.code() || st == FunAiAppStatus.DISABLED.code())) {
+            logger.warn("尝试删除不可删除状态的应用: appId={}, userId={}, appStatus={}",
+                    appId, userId, st);
+            throw new IllegalArgumentException("应用部署中或已禁用，暂不允许删除");
         }
         
         // 删除应用文件夹
@@ -482,7 +511,7 @@ public class FunAiAppServiceImpl extends ServiceImpl<FunAiAppMapper, FunAiApp> i
         app.setAppName(appName);
         app.setAppDescription("这是一个默认应用");
         app.setAppType("default");
-        app.setAppStatus(1); // 默认启用
+        app.setAppStatus(FunAiAppStatus.CREATED.code()); // 默认空壳
 
         // 5. 保存到数据库（会自动生成id）
         FunAiApp createdApp = createApp(app);
@@ -673,6 +702,10 @@ public class FunAiAppServiceImpl extends ServiceImpl<FunAiAppMapper, FunAiApp> i
         if (app == null) {
             throw new IllegalArgumentException("应用不存在或无权限操作");
         }
+        // 部署中不允许上传（避免替换构建中的资源）
+        if (app.getAppStatus() != null && app.getAppStatus() == FunAiAppStatus.DEPLOYING.code()) {
+            throw new IllegalArgumentException("应用部署中，暂不允许上传");
+        }
 
         // 4. 获取应用文件夹路径
         String basePath = getUserPath();
@@ -711,7 +744,42 @@ public class FunAiAppServiceImpl extends ServiceImpl<FunAiAppMapper, FunAiApp> i
             throw new RuntimeException("文件保存失败: " + e.getMessage(), e);
         }
 
-        // 8. 返回保存的文件路径（相对路径）
+        // 8. 仅保留最新 3 个 zip，避免占用过多磁盘
+        try {
+            List<Path> zips = Files.list(appDir)
+                    .filter(p -> Files.isRegularFile(p))
+                    .filter(p -> p.getFileName().toString().toLowerCase().endsWith(".zip"))
+                    .sorted((a, b) -> {
+                        try {
+                            return Files.getLastModifiedTime(b).compareTo(Files.getLastModifiedTime(a));
+                        } catch (IOException e) {
+                            return 0;
+                        }
+                    })
+                    .toList();
+
+            for (int i = 3; i < zips.size(); i++) {
+                try {
+                    Files.deleteIfExists(zips.get(i));
+                    logger.info("清理旧zip: {}", zips.get(i));
+                } catch (Exception deleteEx) {
+                    logger.warn("清理旧zip失败: {}, error={}", zips.get(i), deleteEx.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("清理旧zip异常（不影响上传结果）: userId={}, appId={}, error={}", userId, appId, e.getMessage());
+        }
+
+        // 9. 更新状态：UPLOADED，并清空上次部署错误
+        try {
+            app.setAppStatus(FunAiAppStatus.UPLOADED.code());
+            app.setLastDeployError(null);
+            updateById(app);
+        } catch (Exception e) {
+            logger.warn("上传成功但更新应用状态失败: userId={}, appId={}, error={}", userId, appId, e.getMessage());
+        }
+
+        // 10. 返回保存的文件路径（相对路径）
         return appDirPath + File.separator + savedFileName;
     }
 }

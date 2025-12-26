@@ -83,14 +83,12 @@ public interface FunAiAppService extends IService<FunAiApp> {
             throws IllegalArgumentException;
 
     /**
-     * 部署应用（基于用户目录中的 zip 包进行解压）
-     * 规则：
-     * - 必须先上传 zip
-     * - 仅当 appStatus == 1（空闲）时允许发布/部署
-     *
-     * @param userId 用户ID
-     * @param appId 应用ID
-     * @return 部署结果（包含选中的 zip、解压目录、更新后的 appStatus）
+     * 部署应用（基于用户目录中的 zip 包进行解压 + 异步 npm install/build）
+     * 状态机：
+     * - 仅当 appStatus == 1（UPLOADED，已上传）才允许部署
+     * - 接口返回时：置为 2（DEPLOYING，部署中）
+     * - 异步构建成功：置为 3（READY，可访问）
+     * - 异步构建失败：置为 4（FAILED，部署失败）并写 lastDeployError
      */
     FunAiAppDeployResponse deployApp(Long userId, Long appId) throws IllegalArgumentException;
 }

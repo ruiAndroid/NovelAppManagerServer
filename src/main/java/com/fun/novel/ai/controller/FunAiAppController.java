@@ -1,6 +1,7 @@
 package com.fun.novel.ai.controller;
 
 import com.fun.novel.ai.entity.FunAiApp;
+import com.fun.novel.ai.enums.FunAiAppStatus;
 import com.fun.novel.common.Result;
 import com.fun.novel.dto.DeployFunAiAppRequest;
 import com.fun.novel.dto.FunAiAppDeployResponse;
@@ -12,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -36,6 +38,8 @@ public class FunAiAppController {
     @Autowired
     private FunAiAppService funAiAppService;
 
+    @Value("${funai.siteBaseUrl:}")
+    private String siteBaseUrl;
 
     /**
      * 创建应用
@@ -71,11 +75,28 @@ public class FunAiAppController {
      * @return 应用信息
      */
     @GetMapping("/info")
-    @Operation(summary = "获取应用详情", description = "根据应用ID获取应用详情,appStatus: 1:空闲，2:部署中，3:启动中，4：运行中")
+    @Operation(summary = "获取应用详情", description = "根据应用ID获取应用详情,appStatus: 0:空壳/草稿，1:已上传，2:部署中，3:可访问，4:部署失败，5:禁用")
     public Result<FunAiApp> getAppInfo(@Parameter(description = "用户ID", required = true) @RequestParam Long userId, @Parameter(description = "应用ID", required = true) @RequestParam Long appId) {
         FunAiApp app = funAiAppService.getAppByIdAndUserId(appId, userId);
         if (app == null) {
             return Result.error("应用不存在");
+        }
+        // 部署成功后给前端返回可访问路径
+        if (app.getAppStatus() != null && app.getAppStatus() == FunAiAppStatus.READY.code()) {
+            String base = (siteBaseUrl == null) ? "" : siteBaseUrl.trim();
+            if (base.endsWith("/")) {
+                base = base.substring(0, base.length() - 1);
+            }
+            if (base.isEmpty()) {
+                // 未配置时回退到当前请求域名
+                // 注意：如果你后面有反向代理，建议配置 funai.siteBaseUrl
+                // 例如 http://172.17.5.80:8080
+                // 这里不使用 X-Forwarded-*，保持简单
+                base = "http://localhost:8080";
+            }
+            app.setAccessUrl(base + "/fun-ai-app/" + userId + "/" + appId + "/");
+        } else {
+            app.setAccessUrl(null);
         }
         return Result.success(app);
     }
@@ -163,7 +184,7 @@ public class FunAiAppController {
      * - 仅当 appStatus == 1 时允许发布/部署
      */
     @PostMapping("/deploy")
-    @Operation(summary = "部署并启动应用", description = "从用户目录中找到最新上传的 zip 包并解压到 deploy 目录后立即返回；后端异步执行 npm install && npm run build，前端通过轮询 appInfo 根据 appStatus 判断状态（1空闲/2部署中/3启动中/4运行中）")
+    @Operation(summary = "部署应用", description = "仅当 appStatus=1(已上传) 才允许部署；解压后立即返回并置为 2(部署中)；后端异步 npm install && npm run build 成功置 3(可访问)，失败置 4(部署失败) 并写 lastDeployError；前端轮询 appInfo 查看状态")
     public Result<FunAiAppDeployResponse> deployApp(@RequestBody DeployFunAiAppRequest req) {
         try {
             FunAiAppDeployResponse resp = funAiAppService.deployApp(req.getUserId(), req.getAppId());

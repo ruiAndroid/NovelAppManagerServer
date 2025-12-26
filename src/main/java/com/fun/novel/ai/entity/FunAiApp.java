@@ -48,11 +48,8 @@ public class FunAiApp {
     @Schema(description = "应用类型")
     private String appType;
 
-    /**
-     * 应用状态（0：禁用，1：启用）
-     */
     @TableField("app_status")
-    @Schema(description = "应用状态")
+    @Schema(description = "应用状态（0=空壳/草稿；1=已上传；2=部署中；3=可访问；4=部署失败；5=禁用）")
     private Integer appStatus;
 
     /**
@@ -61,6 +58,10 @@ public class FunAiApp {
     @TableField("last_deploy_error")
     @Schema(description = "最近一次部署失败原因（为空表示无错误）")
     private String lastDeployError;
+
+    @TableField(exist = false)
+    @Schema(description = "部署成功后可访问路径（仅当 appStatus=3 可访问时有值）", example = "/fun-ai-app/10000021/20000024/")
+    private String accessUrl;
 
     /**
      * 应用密钥
