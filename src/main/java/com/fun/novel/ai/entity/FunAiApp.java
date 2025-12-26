@@ -56,6 +56,13 @@ public class FunAiApp {
     private Integer appStatus;
 
     /**
+     * 最近一次部署失败原因（用于前端轮询时展示错误）
+     */
+    @TableField("last_deploy_error")
+    @Schema(description = "最近一次部署失败原因（为空表示无错误）")
+    private String lastDeployError;
+
+    /**
      * 应用密钥
      */
     @TableField("app_key")

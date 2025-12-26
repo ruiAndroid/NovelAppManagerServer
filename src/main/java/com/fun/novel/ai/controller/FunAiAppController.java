@@ -2,6 +2,9 @@ package com.fun.novel.ai.controller;
 
 import com.fun.novel.ai.entity.FunAiApp;
 import com.fun.novel.common.Result;
+import com.fun.novel.dto.DeployFunAiAppRequest;
+import com.fun.novel.dto.FunAiAppDeployResponse;
+import com.fun.novel.dto.UpdateFunAiAppBasicInfoRequest;
 import com.fun.novel.service.FunAiAppService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -10,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -67,7 +71,7 @@ public class FunAiAppController {
      * @return 应用信息
      */
     @GetMapping("/info")
-    @Operation(summary = "获取应用详情", description = "根据应用ID获取应用详情")
+    @Operation(summary = "获取应用详情", description = "根据应用ID获取应用详情,appStatus: 1:空闲，2:部署中，3:启动中，4：运行中")
     public Result<FunAiApp> getAppInfo(@Parameter(description = "用户ID", required = true) @RequestParam Long userId, @Parameter(description = "应用ID", required = true) @RequestParam Long appId) {
         FunAiApp app = funAiAppService.getAppByIdAndUserId(appId, userId);
         if (app == null) {
@@ -98,6 +102,78 @@ public class FunAiAppController {
         } catch (Exception e) {
             logger.error("删除应用失败: userId={}, appId={}, error={}", userId, appId, e.getMessage(), e);
             return Result.error("删除应用失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 上传应用文件（zip压缩包）
+     * @param userId 用户ID
+     * @param appId 应用ID
+     * @param file 上传的zip文件
+     * @return 上传结果，包含文件保存路径
+     */
+    @PostMapping("/upload")
+    @Operation(summary = "上传应用文件", description = "上传zip压缩包到指定应用文件夹")
+    public Result<String> uploadAppFile(
+            @Parameter(description = "用户ID", required = true) @RequestParam Long userId,
+            @Parameter(description = "应用ID", required = true) @RequestParam Long appId,
+            @Parameter(description = "zip文件", required = true) @RequestParam("file") MultipartFile file) {
+        try {
+            String filePath = funAiAppService.uploadAppFile(userId, appId, file);
+            logger.info("文件上传成功: userId={}, appId={}, filePath={}", userId, appId, filePath);
+            return Result.success("文件上传成功", filePath);
+        } catch (IllegalArgumentException e) {
+            logger.warn("文件上传失败: userId={}, appId={}, error={}", userId, appId, e.getMessage());
+            return Result.error(e.getMessage());
+        } catch (Exception e) {
+            logger.error("文件上传失败: userId={}, appId={}, error={}", userId, appId, e.getMessage(), e);
+            return Result.error("文件上传失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 修改应用基础信息（appName/appDescription/appType）
+     * - appName：同一用户下不可重名
+     */
+    @PostMapping("/update-basic")
+    @Operation(summary = "修改应用基础信息", description = "允许修改 appName/appDescription/appType，其中 appName 需同一用户下唯一")
+    public Result<FunAiApp> updateBasicInfo(@RequestBody UpdateFunAiAppBasicInfoRequest req) {
+        try {
+            FunAiApp updated = funAiAppService.updateBasicInfo(
+                    req.getUserId(),
+                    req.getAppId(),
+                    req.getAppName(),
+                    req.getAppDescription(),
+                    req.getAppType()
+            );
+            return Result.success("修改成功", updated);
+        } catch (IllegalArgumentException e) {
+            logger.warn("修改应用基础信息失败: req={}, error={}", req, e.getMessage());
+            return Result.error(e.getMessage());
+        } catch (Exception e) {
+            logger.error("修改应用基础信息失败: req={}, error={}", req, e.getMessage(), e);
+            return Result.error("修改应用基础信息失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 部署应用
+     * 校验：
+     * - 必须已上传 zip
+     * - 仅当 appStatus == 1 时允许发布/部署
+     */
+    @PostMapping("/deploy")
+    @Operation(summary = "部署并启动应用", description = "从用户目录中找到最新上传的 zip 包并解压到 deploy 目录后立即返回；后端异步执行 npm install && npm run build，前端通过轮询 appInfo 根据 appStatus 判断状态（1空闲/2部署中/3启动中/4运行中）")
+    public Result<FunAiAppDeployResponse> deployApp(@RequestBody DeployFunAiAppRequest req) {
+        try {
+            FunAiAppDeployResponse resp = funAiAppService.deployApp(req.getUserId(), req.getAppId());
+            return Result.success("部署已开始，请轮询 appInfo 查看状态", resp);
+        } catch (IllegalArgumentException e) {
+            logger.warn("部署应用失败: req={}, error={}", req, e.getMessage());
+            return Result.error(e.getMessage());
+        } catch (Exception e) {
+            logger.error("部署应用失败: req={}, error={}", req, e.getMessage(), e);
+            return Result.error("部署应用失败: " + e.getMessage());
         }
     }
 }

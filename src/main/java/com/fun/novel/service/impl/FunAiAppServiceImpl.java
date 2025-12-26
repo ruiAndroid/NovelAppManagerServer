@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fun.novel.ai.entity.FunAiApp;
 import com.fun.novel.ai.entity.FunAiUser;
+import com.fun.novel.dto.FunAiAppDeployResponse;
 import com.fun.novel.mapper.FunAiAppMapper;
 import com.fun.novel.service.FunAiAppService;
 import com.fun.novel.service.FunAiUserService;
@@ -13,15 +14,27 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.PreDestroy;
 import java.io.File;
+import java.io.IOException;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * AI应用服务实现类
@@ -36,6 +49,8 @@ public class FunAiAppServiceImpl extends ServiceImpl<FunAiAppMapper, FunAiApp> i
 
     @Value("${funai.userPath}")
     private String userPath;
+
+    private final ExecutorService deployExecutor = Executors.newCachedThreadPool();
 
     @Override
     public List<FunAiApp> getAppsByUserId(Long userId) {
@@ -63,7 +78,7 @@ public class FunAiAppServiceImpl extends ServiceImpl<FunAiAppMapper, FunAiApp> i
         if (!StringUtils.hasText(app.getAppSecret())) {
             app.setAppSecret(generateAppSecret());
         }
-        // 设置默认状态为启用
+        // 设置默认状态为空闲
         if (app.getAppStatus() == null) {
             app.setAppStatus(1);
         }
@@ -86,6 +101,282 @@ public class FunAiAppServiceImpl extends ServiceImpl<FunAiAppMapper, FunAiApp> i
     }
 
     @Override
+    public FunAiApp updateBasicInfo(Long userId, Long appId, String appName, String appDescription, String appType)
+            throws IllegalArgumentException {
+        if (userId == null || appId == null) {
+            throw new IllegalArgumentException("userId/appId 不能为空");
+        }
+
+        // 1) 校验应用归属
+        FunAiApp existingApp = getAppByIdAndUserId(appId, userId);
+        if (existingApp == null) {
+            throw new IllegalArgumentException("应用不存在或无权限操作");
+        }
+
+        // 2) appName 同名校验（仅当传入且非空时才校验/更新）
+        if (StringUtils.hasText(appName)) {
+            String trimmedName = appName.trim();
+            QueryWrapper<FunAiApp> nameCheck = new QueryWrapper<>();
+            nameCheck.eq("user_id", userId)
+                    .eq("app_name", trimmedName)
+                    .ne("id", appId)
+                    .last("limit 1");
+            FunAiApp duplicate = baseMapper.selectOne(nameCheck);
+            if (duplicate != null) {
+                throw new IllegalArgumentException("应用名称已存在，请换一个名称");
+            }
+            existingApp.setAppName(trimmedName);
+        }
+
+        // 3) 其他字段更新（允许置空：如果你不想允许置空，可以改成 hasText 才更新）
+        if (appDescription != null) {
+            existingApp.setAppDescription(appDescription);
+        }
+        if (appType != null) {
+            existingApp.setAppType(appType);
+        }
+
+        updateById(existingApp);
+        return existingApp;
+    }
+
+    @Override
+    public FunAiAppDeployResponse deployApp(Long userId, Long appId) throws IllegalArgumentException {
+        if (userId == null || appId == null) {
+            throw new IllegalArgumentException("userId/appId 不能为空");
+        }
+
+        FunAiApp app = getAppByIdAndUserId(appId, userId);
+        if (app == null) {
+            throw new IllegalArgumentException("应用不存在或无权限操作");
+        }
+
+        // 仅当 appStatus == 1 时允许部署
+        if (app.getAppStatus() == null || app.getAppStatus() != 1) {
+            throw new IllegalArgumentException("当前应用状态不允许发布（仅空闲状态可发布）");
+        }
+
+        String basePath = getUserPath();
+        if (basePath == null || basePath.isEmpty()) {
+            throw new IllegalArgumentException("用户路径配置为空");
+        }
+
+        String userDirPath = basePath + File.separator + userId;
+        String appDirName = sanitizeFileName(app.getAppName());
+        Path appDir = Paths.get(userDirPath, appDirName);
+        if (Files.notExists(appDir)) {
+            throw new IllegalArgumentException("应用目录不存在，请先创建应用或重新上传");
+        }
+
+        // 1) 找到最新上传的 zip（兼容 upload_*.zip 或任意 .zip）
+        Path zipPath;
+        try {
+            zipPath = Files.list(appDir)
+                    .filter(p -> Files.isRegularFile(p))
+                    .filter(p -> p.getFileName().toString().toLowerCase().endsWith(".zip"))
+                    .max(Comparator.comparingLong(p -> {
+                        try {
+                            return Files.getLastModifiedTime(p).toMillis();
+                        } catch (IOException e) {
+                            return 0L;
+                        }
+                    }))
+                    .orElse(null);
+        } catch (IOException e) {
+            logger.error("读取应用目录失败: {}", appDir, e);
+            throw new RuntimeException("读取应用目录失败: " + e.getMessage(), e);
+        }
+
+        if (zipPath == null || Files.notExists(zipPath)) {
+            throw new IllegalArgumentException("未找到已上传的zip包，请先上传");
+        }
+
+        // 2) 更新状态为部署中（2），并清空上次失败原因，避免并发部署
+        app.setAppStatus(2);
+        app.setLastDeployError(null);
+        updateById(app);
+
+        Path deployDir = appDir.resolve("deploy");
+        Path projectRoot;
+        try {
+            // 3) 解压到 deploy 目录（每次部署覆盖旧目录）
+            if (Files.exists(deployDir)) {
+                deleteDirectoryRecursively(deployDir);
+            }
+            Files.createDirectories(deployDir);
+            unzipSafely(zipPath, deployDir);
+
+            // 4) 尝试识别项目根目录（兼容 zip 内带一层顶级目录）
+            projectRoot = detectProjectRoot(deployDir);
+
+            // 5) 校验：必须是前端项目（至少要有 package.json）
+            if (Files.notExists(projectRoot.resolve("package.json"))) {
+                throw new IllegalArgumentException("zip内容不是有效的前端项目（缺少package.json）");
+            }
+        } catch (IllegalArgumentException e) {
+            // 业务校验失败：回滚为空闲，方便用户修复后重试
+            app.setAppStatus(1);
+            app.setLastDeployError(truncateError(e.getMessage()));
+            updateById(app);
+            throw e;
+        } catch (Exception e) {
+            logger.error("部署解压失败: userId={}, appId={}, error={}", userId, appId, e.getMessage(), e);
+            app.setAppStatus(1);
+            app.setLastDeployError(truncateError(e.getMessage()));
+            updateById(app);
+            throw new RuntimeException("部署解压失败: " + e.getMessage(), e);
+        }
+
+        // 6) 异步执行 npm install && npm run build（不阻塞接口返回；前端轮询 appInfo 查看状态）
+        final Path finalProjectRoot = projectRoot;
+        deployExecutor.submit(() -> {
+            try {
+                // 再次确认当前状态仍为部署中，避免重复/并发部署导致状态错乱
+                FunAiApp latest = getAppByIdAndUserId(appId, userId);
+                if (latest == null || latest.getAppStatus() == null || latest.getAppStatus() != 2) {
+                    logger.info("跳过构建：应用状态已变化: userId={}, appId={}, appStatus={}",
+                            userId, appId, latest == null ? null : latest.getAppStatus());
+                    return;
+                }
+
+                executeCommandNoLog(finalProjectRoot, "npm install");
+                executeCommandNoLog(finalProjectRoot, "npm run build");
+
+                latest.setAppStatus(4); // 运行中
+                latest.setLastDeployError(null);
+                updateById(latest);
+                logger.info("部署构建完成: userId={}, appId={}, status=4", userId, appId);
+            } catch (Exception e) {
+                logger.error("部署构建失败: userId={}, appId={}, error={}", userId, appId, e.getMessage(), e);
+                try {
+                    FunAiApp latest = getAppByIdAndUserId(appId, userId);
+                    if (latest != null) {
+                        latest.setAppStatus(1); // 回滚为空闲
+                        latest.setLastDeployError(truncateError(e.getMessage()));
+                        updateById(latest);
+                    }
+                } catch (Exception ignore) {
+                }
+            }
+        });
+
+        FunAiAppDeployResponse resp = new FunAiAppDeployResponse();
+        resp.setAppId(appId);
+        resp.setUserId(userId);
+        resp.setAppName(app.getAppName());
+        resp.setAppStatus(app.getAppStatus());
+        resp.setZipFileName(zipPath.getFileName().toString());
+        resp.setProjectPath(projectRoot.toString());
+        return resp;
+    }
+
+    @PreDestroy
+    public void shutdownDeployExecutor() {
+        deployExecutor.shutdown();
+    }
+
+    /**
+     * 执行命令（不输出日志；失败抛出异常）
+     */
+    private void executeCommandNoLog(Path workDir, String cmd) throws IOException, InterruptedException {
+        if (workDir == null || Files.notExists(workDir)) {
+            throw new IOException("工作目录不存在: " + workDir);
+        }
+        if (cmd == null || cmd.isBlank()) {
+            throw new IllegalArgumentException("命令不能为空");
+        }
+
+        ProcessBuilder processBuilder = new ProcessBuilder();
+        String osName = System.getProperty("os.name").toLowerCase();
+        if (osName.contains("win")) {
+            // Windows: 设置 codepage 避免中文乱码；不输出到前端，但仍需读取避免阻塞
+            processBuilder.command("cmd.exe", "/c", "chcp 65001>nul && " + cmd);
+            processBuilder.environment().put("PYTHONIOENCODING", "utf-8");
+        } else {
+            processBuilder.command("sh", "-c", cmd);
+        }
+        processBuilder.directory(workDir.toFile());
+        processBuilder.redirectErrorStream(true);
+
+        Process process = processBuilder.start();
+        StringBuilder output = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                // 只保留最近一部分输出用于报错排查（避免占用过多内存）
+                if (output.length() < 8000) {
+                    output.append(line).append('\n');
+                }
+            }
+        }
+
+        int exitCode = process.waitFor();
+        if (exitCode != 0) {
+            throw new RuntimeException("命令执行失败，exitCode=" + exitCode + "，cmd=" + cmd + "，output=" + output);
+        }
+    }
+
+    private String truncateError(String msg) {
+        if (msg == null) {
+            return null;
+        }
+        String m = msg.trim();
+        if (m.length() <= 2000) {
+            return m;
+        }
+        return m.substring(0, 2000);
+    }
+
+    /**
+     * 安全解压：防止 Zip Slip（路径穿越）
+     */
+    private void unzipSafely(Path zipFile, Path destDir) throws IOException {
+        try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(zipFile))) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                if (entry.getName() == null || entry.getName().isBlank()) {
+                    continue;
+                }
+                Path newPath = destDir.resolve(entry.getName()).normalize();
+                if (!newPath.startsWith(destDir)) {
+                    throw new IOException("非法zip条目路径: " + entry.getName());
+                }
+                if (entry.isDirectory()) {
+                    Files.createDirectories(newPath);
+                } else {
+                    Files.createDirectories(newPath.getParent());
+                    Files.copy(zis, newPath, StandardCopyOption.REPLACE_EXISTING);
+                }
+                zis.closeEntry();
+            }
+        }
+    }
+
+    /**
+     * 识别 react+vite 项目根目录：优先返回包含 package.json 的目录
+     * - 如果 deployDir 下就有 package.json：返回 deployDir
+     * - 如果 deployDir 下只有一个子目录且该子目录包含 package.json：返回该子目录
+     */
+    private Path detectProjectRoot(Path deployDir) {
+        try {
+            if (Files.exists(deployDir.resolve("package.json"))) {
+                return deployDir;
+            }
+            List<Path> children = Files.list(deployDir)
+                    .filter(Files::isDirectory)
+                    .toList();
+            if (children.size() == 1) {
+                Path only = children.get(0);
+                if (Files.exists(only.resolve("package.json"))) {
+                    return only;
+                }
+            }
+        } catch (IOException ignore) {
+        }
+        return deployDir;
+    }
+
+    @Override
     public boolean deleteApp(Long appId, Long userId) {
         // 验证应用是否属于该用户
         FunAiApp existingApp = getAppByIdAndUserId(appId, userId);
@@ -93,8 +384,8 @@ public class FunAiAppServiceImpl extends ServiceImpl<FunAiAppMapper, FunAiApp> i
             throw new RuntimeException("应用不存在或无权限操作");
         }
         
-        // 校验应用状态：如果状态为2（运行中），则不允许删除
-        if (existingApp.getAppStatus() != null && existingApp.getAppStatus() == 2) {
+        // 校验应用状态：如果不为2（部署/运行中），则不允许删除
+        if (existingApp.getAppStatus() != null && existingApp.getAppStatus() != 1) {
             logger.warn("尝试删除运行中的应用: appId={}, userId={}, appStatus={}", 
                 appId, userId, existingApp.getAppStatus());
             throw new IllegalArgumentException("应用正在运行中，需要先停止");
@@ -362,5 +653,65 @@ public class FunAiAppServiceImpl extends ServiceImpl<FunAiAppMapper, FunAiApp> i
         user.setAppCount(appCount);
         funAiUserService.updateById(user);
         logger.info("更新用户应用数量: userId={}, newAppCount={}", userId, appCount);
+    }
+
+    @Override
+    public String uploadAppFile(Long userId, Long appId, MultipartFile file) throws IllegalArgumentException {
+        // 1. 验证文件是否为空
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("上传的文件不能为空");
+        }
+
+        // 2. 验证文件格式是否为 zip
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || !originalFilename.toLowerCase().endsWith(".zip")) {
+            throw new IllegalArgumentException("只能上传 zip 格式的文件");
+        }
+
+        // 3. 验证应用是否存在且属于该用户
+        FunAiApp app = getAppByIdAndUserId(appId, userId);
+        if (app == null) {
+            throw new IllegalArgumentException("应用不存在或无权限操作");
+        }
+
+        // 4. 获取应用文件夹路径
+        String basePath = getUserPath();
+        if (basePath == null || basePath.isEmpty()) {
+            logger.error("用户路径配置为空");
+            throw new IllegalArgumentException("用户路径配置为空");
+        }
+
+        String userDirPath = basePath + File.separator + userId;
+        String appDirName = sanitizeFileName(app.getAppName());
+        String appDirPath = userDirPath + File.separator + appDirName;
+        Path appDir = Paths.get(appDirPath);
+
+        // 5. 确保应用文件夹存在
+        try {
+            if (!Files.exists(appDir)) {
+                Files.createDirectories(appDir);
+                logger.info("创建应用文件夹: {}", appDirPath);
+            }
+        } catch (IOException e) {
+            logger.error("创建应用文件夹失败: {}", appDirPath, e);
+            throw new RuntimeException("创建应用文件夹失败: " + e.getMessage(), e);
+        }
+
+        // 6. 生成保存的文件名（使用时间戳避免覆盖）
+        String timestamp = String.valueOf(System.currentTimeMillis());
+        String savedFileName = "upload_" + timestamp + "_" + originalFilename;
+        Path targetPath = appDir.resolve(savedFileName);
+
+        // 7. 保存文件
+        try {
+            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+            logger.info("文件上传成功: userId={}, appId={}, filePath={}", userId, appId, targetPath);
+        } catch (IOException e) {
+            logger.error("文件保存失败: userId={}, appId={}, error={}", userId, appId, e.getMessage(), e);
+            throw new RuntimeException("文件保存失败: " + e.getMessage(), e);
+        }
+
+        // 8. 返回保存的文件路径（相对路径）
+        return appDirPath + File.separator + savedFileName;
     }
 }
